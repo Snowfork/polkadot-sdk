@@ -30,7 +30,7 @@ use futures::{
 	task::{Context, Poll},
 };
 use schnellru::{ByLength, LruMap};
-use task::{FetchChunksParams, FetchFullParams};
+use task::{FetchChunksParams, FetchFullParams, FetchSystematicChunksParams};
 
 use fatality::Nested;
 use polkadot_erasure_coding::{
@@ -85,6 +85,8 @@ pub enum RecoveryStrategyKind {
 	BackersFirstIfSizeLower(usize),
 	/// We always recover using validator chunks.
 	ChunksAlways,
+	/// First try the backing group. Then systematic chunks.
+	BackersThenSystematicChunks,
 	/// Do not request data from the availability store.
 	/// This is the useful for nodes where the
 	/// availability-store subsystem is not expected to run,
@@ -457,6 +459,7 @@ async fn handle_recover<Context>(
 				erasure_task_tx: erasure_task_tx.clone(),
 			};
 
+			// TODO: add a runtime API to check if systematic chunks shuffling is enabled.
 			let recovery_strategy = if let Some(backing_validators) = backing_validators {
 				match recovery_strategy_kind {
 					RecoveryStrategyKind::BackersFirstAlways |
@@ -470,6 +473,18 @@ async fn handle_recover<Context>(
 						})
 						.then_fetch_chunks_from_validators(fetch_chunks_params),
 					RecoveryStrategyKind::ChunksAlways => RecoveryStrategy::new()
+						.then_fetch_chunks_from_validators(fetch_chunks_params),
+					RecoveryStrategyKind::BackersThenSystematicChunks => RecoveryStrategy::new()
+						.then_fetch_full_from_backers(FetchFullParams {
+							group_name: "backers",
+							validators: backing_validators.to_vec(),
+							skip_if: skip_backing_group_if,
+							erasure_task_tx: erasure_task_tx.clone(),
+						})
+						.then_fetch_systematic_chunks(FetchSystematicChunksParams {
+							validators: backing_validators.to_vec().into_iter().collect(),
+							erasure_task_tx,
+						})
 						.then_fetch_chunks_from_validators(fetch_chunks_params),
 				}
 			} else {
