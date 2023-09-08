@@ -221,6 +221,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::Perbill;
+	use frame_support::traits::OriginTrait;
 
 	/// The current storage version.
 	pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(15);
@@ -232,7 +233,9 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The runtime origin type.
-		type RuntimeOrigin: From<Origin<Self>> + From<<Self as frame_system::Config>::RuntimeOrigin>;
+		type RuntimeOrigin:  From<<Self as frame_system::Config>::RuntimeOrigin>
+			+ From<Origin<Self>>
+			+ OriginTrait<Call = <Self as Config>::RuntimeCall, AccountId = Self::AccountId>;
 
 		/// The time implementation used to supply timestamps to contracts through `seal_now`.
 		type Time: Time;
@@ -280,7 +283,7 @@ pub mod pallet {
 		/// Therefore please make sure to be restrictive about which dispatchables are allowed
 		/// in order to not introduce a new DoS vector like memory allocation patterns that can
 		/// be exploited to drive the runtime into a panic.
-		type CallFilter: Contains<<Self as frame_system::Config>::RuntimeCall>;
+		type CallFilter: Contains<<Self as Config>::RuntimeCall>;
 
 		/// Used to answer contracts' queries regarding the current weight price. This is **not**
 		/// used to calculate the actual fee and is only for informational purposes.
@@ -1131,11 +1134,11 @@ pub enum Origin<T: Config> {
 	Signed(T::AccountId),
 }
 
-impl<T: Config, OuterOrigin> Into<Result<RawOrigin<T::AccountId>, OuterOrigin>> for Origin<T> {
-	fn into(self) -> Result<RawOrigin<T::AccountId>, OuterOrigin> {
-		match self {
-			Origin::Root => Ok(RawOrigin::Root),
-			Origin::Signed(account_id) => Ok(RawOrigin::Signed(account_id)),
+impl<T: Config> From<Origin<T>> for RawOrigin<T::AccountId> {
+	fn from(origin: Origin<T>) -> RawOrigin<T::AccountId> {
+		match origin {
+			Origin::Root => RawOrigin::Root,
+			Origin::Signed(account_id) => RawOrigin::Signed(account_id),
 		}
 	}
 }

@@ -36,7 +36,7 @@ use frame_support::{
 	weights::Weight,
 	Blake2_128Concat, BoundedVec, StorageHasher,
 };
-use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
+use frame_system::{pallet_prelude::BlockNumberFor};
 use pallet_contracts_primitives::{ExecReturnValue, StorageDeposit};
 use smallvec::{Array, SmallVec};
 use sp_core::{

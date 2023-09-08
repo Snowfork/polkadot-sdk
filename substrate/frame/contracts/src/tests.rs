@@ -457,7 +457,17 @@ parameter_types! {
 	pub static UnstableInterface: bool = true;
 }
 
+impl From<Origin<Test>> for RuntimeOrigin {
+	fn from(o: Origin<Test>) -> Self {
+		match o {
+			Origin::Root => RuntimeOrigin::root(),
+			Origin::Signed(a) => RuntimeOrigin::signed(a),
+		}
+	}
+}
+
 impl Config for Test {
+	type RuntimeOrigin = RuntimeOrigin;
 	type Time = Timestamp;
 	type Randomness = Randomness;
 	type Currency = Balances;
