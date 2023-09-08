@@ -218,10 +218,9 @@ pub struct Environment<T: Config> {
 pub mod pallet {
 	use super::*;
 	use crate::debug::Debugger;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, traits::OriginTrait};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::Perbill;
-	use frame_support::traits::OriginTrait;
 
 	/// The current storage version.
 	pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(15);
@@ -233,8 +232,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The runtime origin type.
-		type RuntimeOrigin:  From<<Self as frame_system::Config>::RuntimeOrigin>
-			+ From<Origin<Self>>
+		type RuntimeOrigin: From<Origin<Self>>
 			+ OriginTrait<Call = <Self as Config>::RuntimeCall, AccountId = Self::AccountId>;
 
 		/// The time implementation used to supply timestamps to contracts through `seal_now`.
@@ -259,8 +257,10 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The overarching call type.
-		type RuntimeCall: Dispatchable<RuntimeOrigin = <Self as pallet::Config>::RuntimeOrigin, PostInfo = PostDispatchInfo>
-			+ GetDispatchInfo
+		type RuntimeCall: Dispatchable<
+				RuntimeOrigin = <Self as pallet::Config>::RuntimeOrigin,
+				PostInfo = PostDispatchInfo,
+			> + GetDispatchInfo
 			+ codec::Decode
 			+ IsType<<Self as frame_system::Config>::RuntimeCall>;
 
@@ -1132,15 +1132,6 @@ pub mod pallet {
 pub enum Origin<T: Config> {
 	Root,
 	Signed(T::AccountId),
-}
-
-impl<T: Config> From<Origin<T>> for RawOrigin<T::AccountId> {
-	fn from(origin: Origin<T>) -> RawOrigin<T::AccountId> {
-		match origin {
-			Origin::Root => RawOrigin::Root,
-			Origin::Signed(account_id) => RawOrigin::Signed(account_id),
-		}
-	}
 }
 
 impl<T: Config> Origin<T> {
