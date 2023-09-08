@@ -113,6 +113,7 @@ use environmental::*;
 use frame_support::{
 	dispatch::{GetDispatchInfo, Pays, PostDispatchInfo, RawOrigin, WithPostDispatchInfo},
 	ensure,
+	pallet_prelude::EnsureOrigin,
 	error::BadOrigin,
 	traits::{
 		fungible::{Inspect, Mutate, MutateHold},
@@ -1116,6 +1117,9 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(crate) type MigrationInProgress<T: Config> =
 		StorageValue<_, migration::Cursor, OptionQuery>;
+
+	#[pallet::origin]
+	pub type Origin<T> = crate::Origin<T>;
 }
 
 /// The type of origins supported by the contracts pallet.
@@ -1123,6 +1127,20 @@ pub mod pallet {
 pub enum Origin<T: Config> {
 	Root,
 	Signed(T::AccountId),
+}
+
+impl<T> EnsureOrigin<OriginFor<T>> for Pallet<T> {
+	// type Success = T::AccountId;
+	fn try_origin(o: OriginFor<T>) -> Result<Self::Success, OriginFor<T>> {
+		match o {
+			Origin::Root => Err(o),
+			Origin::Signed(t) => Ok(t),
+		}
+	}
+	// #[cfg(feature = "runtime-benchmarks")]
+	// fn successful_origin() -> OriginFor<T> {
+	// 	Origin::Signed(Default::default())
+	// }
 }
 
 impl<T: Config> Origin<T> {
