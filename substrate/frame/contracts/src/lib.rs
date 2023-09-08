@@ -1129,18 +1129,14 @@ pub enum Origin<T: Config> {
 	Signed(T::AccountId),
 }
 
-impl<T> EnsureOrigin<OriginFor<T>> for Pallet<T> {
-	// type Success = T::AccountId;
+impl<T: Config> EnsureOrigin<OriginFor<T>> for Origin<T> {
+	type Success = T::AccountId;
 	fn try_origin(o: OriginFor<T>) -> Result<Self::Success, OriginFor<T>> {
 		match o {
-			Origin::Root => Err(o),
-			Origin::Signed(t) => Ok(t),
+			Self::Root => Err(o),
+			Self::Signed(account_id) => Ok(account_id),
 		}
 	}
-	// #[cfg(feature = "runtime-benchmarks")]
-	// fn successful_origin() -> OriginFor<T> {
-	// 	Origin::Signed(Default::default())
-	// }
 }
 
 impl<T: Config> Origin<T> {
