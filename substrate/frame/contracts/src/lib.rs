@@ -113,7 +113,6 @@ use environmental::*;
 use frame_support::{
 	dispatch::{GetDispatchInfo, Pays, PostDispatchInfo, RawOrigin, WithPostDispatchInfo},
 	ensure,
-	pallet_prelude::EnsureOrigin,
 	error::BadOrigin,
 	traits::{
 		fungible::{Inspect, Mutate, MutateHold},
@@ -1129,12 +1128,11 @@ pub enum Origin<T: Config> {
 	Signed(T::AccountId),
 }
 
-impl<T: Config> EnsureOrigin<OriginFor<T>> for Origin<T> {
-	type Success = T::AccountId;
-	fn try_origin(o: OriginFor<T>) -> Result<Self::Success, OriginFor<T>> {
-		match o {
-			Self::Root => Err(o),
-			Self::Signed(account_id) => Ok(account_id),
+impl<T: Config, OuterOrigin> Into<Result<RawOrigin<T::AccountId>, OuterOrigin>> for Origin<T> {
+	fn into(self) -> Result<RawOrigin<T::AccountId>, OuterOrigin> {
+		match self {
+			Origin::Root => Ok(RawOrigin::Root),
+			Origin::Signed(account_id) => Ok(RawOrigin::Signed(account_id)),
 		}
 	}
 }
