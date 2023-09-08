@@ -231,6 +231,9 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
+		/// The runtime origin type.
+		type RuntimeOrigin: From<Origin<Self>> + From<<Self as frame_system::Config>::RuntimeOrigin>;
+
 		/// The time implementation used to supply timestamps to contracts through `seal_now`.
 		type Time: Time;
 
@@ -253,7 +256,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The overarching call type.
-		type RuntimeCall: Dispatchable<RuntimeOrigin = Self::RuntimeOrigin, PostInfo = PostDispatchInfo>
+		type RuntimeCall: Dispatchable<RuntimeOrigin = <Self as pallet::Config>::RuntimeOrigin, PostInfo = PostDispatchInfo>
 			+ GetDispatchInfo
 			+ codec::Decode
 			+ IsType<<Self as frame_system::Config>::RuntimeCall>;
