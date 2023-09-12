@@ -28,6 +28,7 @@ mod weights;
 pub mod xcm_config;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
@@ -550,6 +551,59 @@ impl pallet_bridge_relayers::Config for Runtime {
 	type WeightInfo = weights::pallet_bridge_relayers::WeightInfo<Runtime>;
 }
 
+#[cfg(not(feature = "beacon-spec-mainnet"))]
+parameter_types! {
+	pub const ChainForkVersions: ForkVersions = ForkVersions {
+		genesis: Fork {
+			version: [0, 0, 0, 1], // 0x00000001
+			epoch: 0,
+		},
+		altair: Fork {
+			version: [1, 0, 0, 1], // 0x01000001
+			epoch: 0,
+		},
+		bellatrix: Fork {
+			version: [2, 0, 0, 1], // 0x02000001
+			epoch: 0,
+		},
+		capella: Fork {
+			version: [3, 0, 0, 1], // 0x03000001
+			epoch: 0,
+		},
+	};
+	pub const MaxExecutionHeadersToKeep:u32 = 1000;
+}
+
+#[cfg(feature = "beacon-spec-mainnet")]
+parameter_types! {
+	pub const ChainForkVersions: ForkVersions = ForkVersions {
+		genesis: Fork {
+			version: [0, 0, 16, 32], // 0x00001020
+			epoch: 0,
+		},
+		altair: Fork {
+			version: [1, 0, 16, 32], // 0x01001020
+			epoch: 36660,
+		},
+		bellatrix: Fork {
+			version: [2, 0, 16, 32], // 0x02001020
+			epoch: 112260,
+		},
+		capella: Fork {
+			version: [3, 0, 16, 32], // 0x03001020
+			epoch: 162304,
+		},
+	};
+	pub const MaxExecutionHeadersToKeep:u32 = 8192 * 2;
+}
+
+impl snowbridge_ethereum_beacon_client::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ForkVersions = ChainForkVersions;
+	type MaxExecutionHeadersToKeep = MaxExecutionHeadersToKeep;
+	type WeightInfo = weights::snowbridge_ethereum_beacon_client::WeightInfo<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -598,6 +652,8 @@ construct_runtime!(
 		BridgeRococoMessages: pallet_bridge_messages::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 45,
 
 		BridgeRelayers: pallet_bridge_relayers::{Pallet, Call, Storage, Event<T>} = 47,
+
+		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 50,
 	}
 );
 
