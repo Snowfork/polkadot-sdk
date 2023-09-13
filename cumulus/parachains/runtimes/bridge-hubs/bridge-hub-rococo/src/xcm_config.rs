@@ -374,3 +374,14 @@ impl ExportXcm for BridgeHubRococoOrBridgeHubWococoSwitchExporter {
 		}
 	}
 }
+
+/// [`Contains`] implementation that allows multiLocation from sibling chains only
+pub struct AllowSiblingsOnly;
+impl Contains<MultiLocation> for AllowSiblingsOnly {
+	fn contains(l: &MultiLocation) -> bool {
+		match l {
+			MultiLocation { parents: 1, interior: X1(Parachain(_)) } => true,
+			_ => false,
+		}
+	}
+}
