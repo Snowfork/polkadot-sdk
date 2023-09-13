@@ -45,6 +45,16 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+#[cfg(feature = "runtime-benchmarks")]
+pub use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_core::RingBufferMap;
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_inbound_queue::BenchmarkHelper;
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_beacon_primitives::CompactExecutionHeader;
+#[cfg(feature = "runtime-benchmarks")]
+use sp_core::H256;
 
 use frame_support::{
 	construct_runtime,
@@ -292,7 +302,8 @@ impl pallet_transaction_payment::Config for Runtime {
 
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
-	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+	// For beacon checkpoint to work require a bigger default
+	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
