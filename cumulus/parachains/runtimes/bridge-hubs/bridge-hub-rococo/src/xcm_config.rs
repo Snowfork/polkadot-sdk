@@ -32,6 +32,8 @@ use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
 use parachains_common::{impls::ToStakingPot, xcm_config::ConcreteNativeAssetFrom};
 use polkadot_parachain_primitives::primitives::Sibling;
+use snowbridge_outbound_queue;
+use snowbridge_router_primitives::outbound::{AgentHashedDescription, EthereumBlobExporter};
 use sp_core::Get;
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -205,7 +207,18 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				RuntimeCall::BridgeWococoGrandpa(pallet_bridge_grandpa::Call::<
 					Runtime,
 					BridgeGrandpaWococoInstance,
-				>::initialize { .. })
+				>::initialize { .. }) |
+				RuntimeCall::EthereumBeaconClient(
+					snowbridge_ethereum_beacon_client::Call::force_checkpoint { .. }
+						| snowbridge_ethereum_beacon_client::Call::set_owner { .. }
+						| snowbridge_ethereum_beacon_client::Call::set_operating_mode { .. },
+				) | RuntimeCall::EthereumInboundQueue(
+				snowbridge_inbound_queue::Call::set_owner { .. }
+					| snowbridge_inbound_queue::Call::set_operating_mode { .. },
+			) | RuntimeCall::EthereumOutboundQueue(
+				snowbridge_outbound_queue::Call::set_owner { .. } |
+					snowbridge_outbound_queue::Call::set_operating_mode { .. },
+			) | RuntimeCall::EthereumControl(..)
 		)
 	}
 }
@@ -257,7 +270,7 @@ impl xcm_executor::Config for XcmConfig {
 		MaxInstructions,
 	>;
 	type Trader =
-		UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToStakingPot<Runtime>>;
+	UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToStakingPot<Runtime>>;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetLocker = ();
@@ -331,6 +344,13 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
+pub type SnowbridgeExporter = EthereumBlobExporter<
+	UniversalLocation,
+	EthereumGatewayLocation,
+	snowbridge_outbound_queue::Pallet<Runtime>,
+	AgentHashedDescription
+>;
+
 /// Hacky switch implementation, because we have just one runtime for Rococo and Wococo BridgeHub,
 /// so it means we have just one XcmConfig
 pub struct BridgeHubRococoOrBridgeHubWococoSwitchExporter;
@@ -344,6 +364,7 @@ impl ExportXcm for BridgeHubRococoOrBridgeHubWococoSwitchExporter {
 		destination: &mut Option<InteriorMultiLocation>,
 		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
+		let relay: NetworkId = RelayNetwork::get();
 		match network {
 			Rococo => ToBridgeHubRococoHaulBlobExporter::validate(
 				network,
@@ -352,7 +373,7 @@ impl ExportXcm for BridgeHubRococoOrBridgeHubWococoSwitchExporter {
 				destination,
 				message,
 			)
-			.map(|result| ((Rococo, result.0), result.1)),
+				.map(|result| ((Rococo, result.0), result.1)),
 			Wococo => ToBridgeHubWococoHaulBlobExporter::validate(
 				network,
 				channel,
@@ -360,20 +381,35 @@ impl ExportXcm for BridgeHubRococoOrBridgeHubWococoSwitchExporter {
 				destination,
 				message,
 			)
-			.map(|result| ((Wococo, result.0), result.1)),
+				.map(|result| ((Wococo, result.0), result.1)),
+			location if location == EthereumNetwork::get() && relay == NetworkId::Rococo => {
+				SnowbridgeExporter::validate(
+					network,
+					channel,
+					universal_source,
+					destination,
+					message,
+				)
+					.map(|result| ((EthereumNetwork::get(), (result.0, XcmHash::default())), result.1))
+			},
 			_ => unimplemented!("Unsupported network: {:?}", network),
 		}
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<XcmHash, SendError> {
 		let (network, ticket) = ticket;
+		let relay: NetworkId = RelayNetwork::get();
 		match network {
 			Rococo => ToBridgeHubRococoHaulBlobExporter::deliver(ticket),
 			Wococo => ToBridgeHubWococoHaulBlobExporter::deliver(ticket),
+			location if location == EthereumNetwork::get() && relay == NetworkId::Rococo => {
+				SnowbridgeExporter::deliver(ticket.0)
+			},
 			_ => unimplemented!("Unsupported network: {:?}", network),
 		}
 	}
 }
+
 
 /// [`Contains`] implementation that allows multiLocation from sibling chains only
 pub struct AllowSiblingsOnly;
