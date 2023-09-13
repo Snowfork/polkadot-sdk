@@ -29,6 +29,7 @@ pub mod xcm_config;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
+use snowbridge_router_primitives::outbound::AgentHashedDescription;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, H160, OpaqueMetadata};
 use sp_runtime::{
@@ -37,7 +38,8 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
-use xcm_config::{EthereumGatewayAddress};
+use xcm::v3::NetworkId::{self, Rococo};
+use xcm_config::{EthereumGatewayAddress, RelayLocation, UniversalLocation};
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -56,6 +58,9 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
+
+use pallet_xcm::EnsureXcm;
+
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -79,7 +84,7 @@ use crate::{
 		BridgeRefundBridgeHubRococoMessages, OnBridgeHubWococoBlobDispatcher,
 		WithBridgeHubRococoMessageBridge,
 	},
-	xcm_config::XcmRouter,
+	xcm_config::{AllowSiblingsOnly, XcmRouter},
 };
 use bridge_runtime_common::{
 	messages::{source::TargetHeaderChainAdapter, target::SourceHeaderChainAdapter},
@@ -631,6 +636,27 @@ impl snowbridge_ethereum_beacon_client::Config for Runtime {
 	type WeightInfo = weights::snowbridge_ethereum_beacon_client::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	// TODO: placeholder value - choose a real one
+	pub const MaxUpgradeDataSize: u32 = 1024;
+	pub const RelayNetwork: NetworkId = Rococo;
+}
+
+impl snowbridge_control::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type OwnParaId = ParachainInfo;
+	//type OutboundQueue = EthereumOutboundQueue;
+	type OutboundQueue = ();
+	type MessageHasher = BlakeTwo256;
+	type WeightInfo = weights::snowbridge_control::WeightInfo<Runtime>;
+	type MaxUpgradeDataSize = MaxUpgradeDataSize;
+	type AgentHashedDescription = AgentHashedDescription;
+	type UniversalLocation = UniversalLocation;
+	type RelayLocation = RelayLocation;
+	type AgentOrigin = EnsureXcm<Everything>;
+	type ChannelOrigin = EnsureXcm<AllowSiblingsOnly>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -682,6 +708,7 @@ construct_runtime!(
 
 		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 48,
 		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 50,
+		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 51,
 	}
 );
 
@@ -726,6 +753,7 @@ mod benches {
 		// Bridge relayer pallets
 		[pallet_bridge_relayers, BridgeRelayersBench::<Runtime>]
 		[snowbridge_inbound_queue, EthereumInboundQueue]
+		[snowbridge_control, EthereumControl]
 		[snowbridge_ethereum_beacon_client, EthereumBeaconClient]
 	);
 }
