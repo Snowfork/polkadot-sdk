@@ -34,7 +34,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, H160, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -408,6 +408,25 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	/// Amount of weight that can be spent per block to service messages.
+	pub MessageQueueServiceWeight: Weight = Weight::from_parts(1_000_000_000, 1_000_000);
+	pub const MessageQueueHeapSize: u32 = 65_536;
+	pub const MessageQueueMaxStale: u32 = 16;
+}
+
+impl pallet_message_queue::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Size = u32;
+	type HeapSize = MessageQueueHeapSize;
+	type MaxStale = MessageQueueMaxStale;
+	type ServiceWeight = MessageQueueServiceWeight;
+	type MessageProcessor = EthereumOutboundQueue;
+	type QueueChangeHandler = ();
+	type QueuePausedQuery = ();
+	type WeightInfo = ();
+}
+
 // Add bridge pallets (GPA)
 
 /// Add GRANDPA bridge pallet to track Wococo relay chain on Rococo BridgeHub
@@ -583,6 +602,20 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type Helper = Runtime;
 }
 
+parameter_types! {
+	pub const MaxMessagePayloadSize: u32 = 2048;
+	pub const MaxMessagesPerBlock: u32 = 32;
+}
+
+impl snowbridge_outbound_queue::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Hashing = Keccak256;
+	type MessageQueue = MessageQueue;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerBlock = MaxMessagesPerBlock;
+	type WeightInfo = ();
+}
+
 #[cfg(not(feature = "beacon-spec-mainnet"))]
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
@@ -645,8 +678,7 @@ parameter_types! {
 impl snowbridge_control::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = ParachainInfo;
-	//type OutboundQueue = EthereumOutboundQueue;
-	type OutboundQueue = ();
+	type OutboundQueue = EthereumOutboundQueue;
 	type MessageHasher = BlakeTwo256;
 	type WeightInfo = weights::snowbridge_control::WeightInfo<Runtime>;
 	type MaxUpgradeDataSize = MaxUpgradeDataSize;
@@ -707,8 +739,13 @@ construct_runtime!(
 		BridgeRelayers: pallet_bridge_relayers::{Pallet, Call, Storage, Event<T>} = 47,
 
 		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 48,
+		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 49,
 		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 50,
 		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 51,
+
+		// Message Queue. Registered after EthereumOutboundQueue so that their `on_initialize` handlers
+		// run in the desired order.
+		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>} = 60,
 	}
 );
 
