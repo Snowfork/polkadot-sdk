@@ -30,13 +30,14 @@ pub mod xcm_config;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, H160, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
+use xcm_config::{EthereumGatewayAddress};
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -551,6 +552,32 @@ impl pallet_bridge_relayers::Config for Runtime {
 	type WeightInfo = weights::pallet_bridge_relayers::WeightInfo<Runtime>;
 }
 
+// Ethereum Bridge
+
+parameter_types! {
+	pub const Reward: u128 = 10;
+	pub const GatewayAddress: H160 = H160(EthereumGatewayAddress::get()); // TODO Update https://github.com/Snowfork/cumulus/commit/f5180878ca95afd9f8b9525d54daa5ed4a2b9505
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Runtime {
+	fn initialize_storage(block_hash: H256, header: CompactExecutionHeader) {
+		<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
+	}
+}
+
+impl snowbridge_inbound_queue::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Verifier = snowbridge_ethereum_beacon_client::Pallet<Runtime>;
+	type Token = Balances;
+	type Reward = Reward;
+	type XcmSender = XcmRouter;
+	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
+	type GatewayAddress = GatewayAddress;
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = Runtime;
+}
+
 #[cfg(not(feature = "beacon-spec-mainnet"))]
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
@@ -653,6 +680,7 @@ construct_runtime!(
 
 		BridgeRelayers: pallet_bridge_relayers::{Pallet, Call, Storage, Event<T>} = 47,
 
+		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 48,
 		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 50,
 	}
 );
@@ -697,6 +725,8 @@ mod benches {
 		[pallet_bridge_messages, BridgeMessagesBench::<Runtime, WithBridgeHubRococoMessagesInstance>]
 		// Bridge relayer pallets
 		[pallet_bridge_relayers, BridgeRelayersBench::<Runtime>]
+		[snowbridge_inbound_queue, EthereumInboundQueue]
+		[snowbridge_ethereum_beacon_client, EthereumBeaconClient]
 	);
 }
 
