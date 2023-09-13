@@ -55,6 +55,20 @@ parameter_types! {
 		X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
 	pub const MaxInstructions: u32 = 100;
 	pub const MaxAssetsIntoHolding: u32 = 64;
+
+	// Network and location for the local Ethereum testnet.
+	pub const EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
+	pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
+
+	pub const EthereumGatewayAddress: [u8; 20] = hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
+	// The Registry contract for the bridge which is also the origin for reserves and the prefix of all assets.
+	pub EthereumGatewayLocation: MultiLocation = EthereumLocation::get()
+		.pushed_with_interior(
+			AccountKey20 {
+				network: None,
+				key: EthereumGatewayAddress::get(),
+			}
+		).unwrap();
 }
 
 pub struct RelayNetwork;
