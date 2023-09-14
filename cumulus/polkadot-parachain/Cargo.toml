@@ -141,3 +141,4 @@ try-runtime = [
 	"shell-runtime/try-runtime",
 	"sp-runtime/try-runtime",
 ]
+beacon-spec-mainnet = []
