@@ -16781,9 +16781,9 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
 ]
 
 [[package]]
@@ -16802,7 +16802,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xcm",
+ "staging-xcm",
 ]
 
 [[package]]
@@ -16875,7 +16875,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm",
+ "staging-xcm",
 ]
 
 [[package]]
@@ -16898,7 +16898,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm",
+ "staging-xcm",
 ]
 
 [[package]]
@@ -16939,9 +16939,9 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
 ]
 
 [[package]]
