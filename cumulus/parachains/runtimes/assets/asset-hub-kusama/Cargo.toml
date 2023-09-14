@@ -82,6 +82,7 @@ assets-common = { path = "../common", default-features = false }
 # Bridges
 pallet-xcm-bridge-hub-router = { path = "../../../../bridges/modules/xcm-bridge-hub-router", default-features = false }
 bp-asset-hub-kusama = { path = "../../../../bridges/primitives/chain-asset-hub-kusama", default-features = false }
+snowbridge-router-primitives = { path = "../../../../../../parachain/primitives/router", default-features = false }
 
 [dev-dependencies]
 asset-test-utils = { path = "../test-utils" }
@@ -210,6 +211,7 @@ std = [
 	"polkadot-core-primitives/std",
 	"polkadot-parachain-primitives/std",
 	"polkadot-runtime-common/std",
+	"snowbridge-router-primitives/std",
 	"scale-info/std",
 	"sp-api/std",
 	"sp-block-builder/std",

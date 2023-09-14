@@ -781,6 +781,7 @@ dependencies = [
  "primitive-types",
  "scale-info",
  "smallvec",
+ "snowbridge-router-primitives",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -10171,12 +10172,15 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
+ "staging-xcm",
 ]
 
 [[package]]
