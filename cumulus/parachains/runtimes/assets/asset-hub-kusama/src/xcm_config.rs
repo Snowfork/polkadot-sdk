@@ -694,6 +694,19 @@ pub mod bridging {
 		pub AssetHubPolkadot: MultiLocation =  MultiLocation::new(2, X2(GlobalConsensus(PolkadotNetwork::get()), Parachain(1000)));
 		pub DotLocation: MultiLocation =  MultiLocation::new(2, X1(GlobalConsensus(PolkadotNetwork::get())));
 
+		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
+		pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get()))); // TODO: Maybe registry address belongs here
+
+		pub const EthereumGatewayAddress: [u8; 20] = hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
+		// The Registry contract for the bridge which is also the origin for reserves and the prefix of all assets.
+		pub EthereumGatewayLocation: MultiLocation = EthereumLocation::get()
+			.pushed_with_interior(
+				AccountKey20 {
+					network: None,
+					key: EthereumGatewayAddress::get(),
+				}
+			).unwrap();
+
 		/// Router expects payment with this `AssetId`.
 		/// (`AssetId` has to be aligned with `BridgeTable`)
 		pub XcmBridgeHubRouterFeeAssetId: AssetId = KsmLocation::get().into();
@@ -715,7 +728,15 @@ pub mod bridging {
 					XcmBridgeHubRouterFeeAssetId::get(),
 					bp_asset_hub_kusama::BridgeHubKusamaBaseFeeInDots::get(),
 				).into())
+			),
+			(
+				EthereumNetwork::get(),
+				LocationFilter::default()
+					.add_equals(EthereumLocation::get().interior.split_global().expect("invalid configuration for Ethereum").1),
+				BridgeHubKusama::get(),
+				None
 			)
+			// TODO Add Ethereum here
 		];
 
 		/// Set up trusted bridged reserve locations.
@@ -730,7 +751,21 @@ pub mod bridging {
 						.add_equals(DotLocation::get())
 						// and nothing else
 				)
-			)
+			),
+			(
+				EthereumLocation::get(),
+				AssetFilter::ByMultiLocation(
+					LocationFilter::default()
+						.add_starts_with(EthereumGatewayLocation::get())
+				)
+			),
+			(
+				EthereumGatewayLocation::get(),
+				AssetFilter::ByMultiLocation(
+					LocationFilter::default()
+						.add_starts_with(EthereumGatewayLocation::get())
+				)
+			),
 		];
 
 		/// Allowed reserve transfer assets per destination.
@@ -745,13 +780,15 @@ pub mod bridging {
 						.add_equals(KsmLocation::get())
 						// and nothing else
 				)
-			)
+			),
+
 		];
 
 		/// Universal aliases
 		pub UniversalAliases: BTreeSet<(MultiLocation, Junction)> = BTreeSet::from_iter(
 			sp_std::vec![
-				(BridgeHubKusamaWithBridgeHubPolkadotInstance::get(), GlobalConsensus(PolkadotNetwork::get()))
+				(BridgeHubKusamaWithBridgeHubPolkadotInstance::get(), GlobalConsensus(PolkadotNetwork::get())),
+				(BridgeHubKusama::get(), GlobalConsensus(EthereumNetwork::get())),
 			]
 		);
 
