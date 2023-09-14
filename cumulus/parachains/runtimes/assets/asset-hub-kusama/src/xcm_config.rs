@@ -36,6 +36,7 @@ use parachains_common::{
 	xcm_config::{AllowUnpaidTransactsFrom, AssetFeeAsExistentialDepositMultiplier},
 };
 use polkadot_parachain_primitives::primitives::Sibling;
+use snowbridge_router_primitives::inbound::GlobalConsensusEthereumAccountConvertsFor;
 use sp_runtime::traits::ConvertInto;
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -86,6 +87,9 @@ pub type LocationToAccountId = (
 	// Different global consensus parachain sovereign account.
 	// (Used for over-bridge transfers and reserve processing)
 	GlobalConsensusParachainConvertsFor<UniversalLocation, AccountId>,
+	// Ethereum contract sovereign account.
+	// (Used to get convert ethereum contract locations to sovereign account)
+	GlobalConsensusEthereumAccountConvertsFor<AccountId>,
 );
 
 /// Means for transacting the native currency on this chain.
@@ -641,6 +645,7 @@ pub type ForeignCreatorsSovereignAccountOf = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	AccountId32Aliases<RelayNetwork, AccountId>,
 	ParentIsPreset<AccountId>,
+	GlobalConsensusEthereumAccountConvertsFor<AccountId>,
 );
 
 /// Simple conversion of `u32` into an `AssetId` for use in benchmarking.
@@ -687,7 +692,7 @@ pub mod bridging {
 	use sp_std::collections::btree_set::BTreeSet;
 
 	parameter_types! {
-		pub BridgeHubKusamaParaId: u32 = 1002;
+		pub BridgeHubKusamaParaId: u32 = 1013;
 		pub BridgeHubKusama: MultiLocation = MultiLocation::new(1, X1(Parachain(BridgeHubKusamaParaId::get())));
 		pub BridgeHubKusamaWithBridgeHubPolkadotInstance: MultiLocation = MultiLocation::new(
 			1,
