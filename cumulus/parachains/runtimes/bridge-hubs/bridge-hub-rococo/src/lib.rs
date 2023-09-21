@@ -55,6 +55,8 @@ use snowbridge_inbound_queue::BenchmarkHelper;
 use snowbridge_beacon_primitives::CompactExecutionHeader;
 #[cfg(feature = "runtime-benchmarks")]
 use sp_core::H256;
+#[cfg(feature = "runtime-benchmarks")]
+use crate::xcm_config::benchmark_helper::DoNothingRouter;
 
 use frame_support::{
 	construct_runtime,
@@ -606,7 +608,10 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type Verifier = snowbridge_ethereum_beacon_client::Pallet<Runtime>;
 	type Token = Balances;
 	type Reward = Reward;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmSender = XcmRouter;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmSender = DoNothingRouter;
 	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
