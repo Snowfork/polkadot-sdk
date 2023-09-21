@@ -90,6 +90,7 @@ pallet-bridge-relayers = { path = "../../../../../bridges/modules/relayers", def
 bridge-runtime-common = { path = "../../../../../bridges/bin/runtime-common", default-features = false }
 
 # Ethereum Bridge (Snowbridge)
+snowbridge-core = { path = "../../../../../../parachain/primitives/core", default-features = false }
 snowbridge-beacon-primitives = { path = "../../../../../../parachain/primitives/beacon", default-features = false }
 snowbridge-router-primitives = { path = "../../../../../../parachain/primitives/router", default-features = false }
 snowbridge-ethereum-beacon-client = { path = "../../../../../../parachain/pallets/ethereum-beacon-client", default-features = false }
@@ -177,6 +178,7 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"snowbridge-core/std",
 	"snowbridge-router-primitives/std",
 	"snowbridge-beacon-primitives/std",
 	"snowbridge-ethereum-beacon-client/std",
@@ -213,6 +215,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
+	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-control/runtime-benchmarks",
 	"snowbridge-inbound-queue/runtime-benchmarks",
 	"snowbridge-outbound-queue/runtime-benchmarks",

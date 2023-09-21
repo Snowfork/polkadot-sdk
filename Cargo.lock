@@ -2076,6 +2076,7 @@ dependencies = [
  "smallvec",
  "snowbridge-beacon-primitives",
  "snowbridge-control",
+ "snowbridge-core",
  "snowbridge-ethereum-beacon-client",
  "snowbridge-inbound-queue",
  "snowbridge-outbound-queue",
