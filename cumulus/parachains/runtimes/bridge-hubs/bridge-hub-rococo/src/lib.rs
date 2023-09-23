@@ -96,8 +96,10 @@ use crate::{
 		BridgeRefundBridgeHubRococoMessages, OnBridgeHubWococoBlobDispatcher,
 		WithBridgeHubRococoMessageBridge,
 	},
-	xcm_config::{AllowSiblingsOnly, XcmRouter},
+	xcm_config::XcmRouter,
 };
+#[cfg(not(feature = "runtime-benchmarks"))]
+use crate::xcm_config::AllowSiblingsOnly;
 use bridge_runtime_common::{
 	messages::{source::TargetHeaderChainAdapter, target::SourceHeaderChainAdapter},
 	messages_xcm_extension::{XcmAsPlainPayload, XcmBlobMessageDispatch},
@@ -702,7 +704,10 @@ impl snowbridge_control::Config for Runtime {
 	type UniversalLocation = UniversalLocation;
 	type RelayLocation = RelayLocation;
 	type AgentOrigin = EnsureXcm<Everything>;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type ChannelOrigin = EnsureXcm<AllowSiblingsOnly>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type ChannelOrigin = EnsureXcm<Everything>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
