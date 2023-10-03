@@ -765,13 +765,11 @@ pub mod bridging {
 				EthereumLocation::get(),
 				LocationFilter::default()
 					.add_starts_with(EthereumGatewayLocation::get())
-				)
 			),
 			(
 				EthereumGatewayLocation::get(),
 				LocationFilter::default()
 					.add_starts_with(EthereumGatewayLocation::get())
-				)
 			),
 		];
 
