@@ -2010,6 +2010,7 @@ dependencies = [
  "polkadot-parachain-primitives",
  "polkadot-runtime",
  "polkadot-runtime-parachains",
+ "snowbridge-control",
  "staging-xcm",
  "xcm-emulator",
 ]

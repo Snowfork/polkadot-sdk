@@ -31,3 +31,6 @@ bp-messages = { path = "../../../../../../bridges/primitives/messages", default-
 # Local
 xcm-emulator = { path = "../../../../../xcm/xcm-emulator", default-features = false}
 integration-tests-common = { path = "../../common", default-features = false}
+
+# Snowbridge
+snowbridge-control = { path = "../../../../../../../parachain/pallets/control" }
