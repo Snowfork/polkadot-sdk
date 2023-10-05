@@ -102,6 +102,7 @@ mod bridge_hub_rococo_tests {
 		BridgeGrandpaWococoInstance, BridgeParachainWococoInstance,
 		WithBridgeHubWococoMessagesInstance,
 	};
+	use bridge_hub_rococo_runtime::bridge_hub_wococo_config::DEFAULT_XCM_LANE_TO_BRIDGE_HUB_ROCOCO;
 
 	bridge_hub_test_utils::test_cases::include_teleports_for_native_asset_works!(
 		Runtime,
@@ -271,6 +272,18 @@ mod bridge_hub_rococo_tests {
 			executive_init_block,
 			construct_and_apply_extrinsic,
 		);
+	}
+
+	#[test]
+	pub fn transfer_token_works() {
+			bridge_hub_test_utils::test_cases::handle_transfer_token_message::<
+				Runtime,
+				XcmConfig,
+			>(
+				collator_session_keys(),
+				bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+				SIBLING_PARACHAIN_ID,
+		)
 	}
 }
 
