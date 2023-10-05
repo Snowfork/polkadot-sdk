@@ -44,7 +44,7 @@ use parachains_runtimes_test_utils::{
 	mock_open_hrmp_channel, AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf,
 	XcmReceivedFrom,
 };
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring::*;
 use sp_runtime::{
 	traits::{Header as HeaderT, Zero},
@@ -944,8 +944,10 @@ pub fn handle_transfer_token_message<
 >(
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
-	sibling_parachain_id: u32,
-	lane_id: u32
+	bridghub_parachain_id: u32,
+	gateway_proxy_address: H160,
+	weth_contract_address: H160,
+	destination_contract: H160,
 ) where
 	Runtime: frame_system::Config
 	+ pallet_balances::Config
@@ -959,8 +961,7 @@ pub fn handle_transfer_token_message<
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
-	assert_ne!(runtime_para_id, sibling_parachain_id);
-	let _sibling_parachain_location = MultiLocation::new(1, Parachain(sibling_parachain_id));
+	let bridgehub_parachain_location = MultiLocation::new(1, Parachain(bridghub_parachain_id));
 
 	ExtBuilder::<Runtime>::default()
 		.with_collators(collator_session_key.collators())
@@ -969,46 +970,35 @@ pub fn handle_transfer_token_message<
 		.with_tracing()
 		.build()
 		.execute_with(|| {
-			// prepare `ExportMessage`
-			let xcm = if let Some(fee) = maybe_paid_export_message {
-				// deposit ED to origin (if needed)
-				if let Some(ed) = existential_deposit {
-					XcmConfig::AssetTransactor::deposit_asset(
-						&ed,
-						&sibling_parachain_location,
-						&XcmContext::with_message_id([0; 32]),
-					)
-						.expect("deposited ed");
-				}
-				// deposit fee to origin
-				XcmConfig::AssetTransactor::deposit_asset(
-					&fee,
-					&sibling_parachain_location,
-					&XcmContext::with_message_id([0; 32]),
-				)
-					.expect("deposited fee");
-
-				Xcm(vec![
-					WithdrawAsset(MultiAssets::from(vec![fee.clone()])),
-					BuyExecution { fees: fee, weight_limit: Unlimited },
-					export_message_instruction(),
-				])
-			} else {
-				Xcm(vec![
-					UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-					export_message_instruction(),
-				])
-			};
+			let assets = vec![MultiAsset {
+				id: Concrete(MultiLocation {
+					parents: 0,
+					interior: X2(AccountKey20{ network: None, key: gateway_proxy_address.into()}, AccountKey20{ network: None, key: weth_contract_address.into() }),
+				}),
+				fun: Fungible(1000000000),
+			}];
+			// prepare transfer token message
+			let xcm = Xcm(vec![
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				WithdrawAsset(MultiAssets::from(assets.clone())),
+				DepositAsset {
+					assets: MultiAssetFilter::from(assets),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(AccountKey20{ network: None, key: destination_contract.into()}),
+					}
+				},
+			]);
 
 			// execute XCM
-			//let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
-			//assert_ok!(XcmExecutor::<XcmConfig>::execute_xcm(
-			//	sibling_parachain_location,
-			//	xcm,
-			//	hash,
-			//	RuntimeHelper::<Runtime>::xcm_max_weight(XcmReceivedFrom::Sibling),
-			//)
-			//.ensure_complete());
+			let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+			assert_ok!(XcmExecutor::<XcmConfig>::execute_xcm(
+				bridgehub_parachain_location,
+				xcm,
+				hash,
+				RuntimeHelper::<Runtime>::xcm_max_weight(XcmReceivedFrom::Sibling),
+			)
+			.ensure_complete());
 //
 			//// check queue after
 			//assert_eq!(

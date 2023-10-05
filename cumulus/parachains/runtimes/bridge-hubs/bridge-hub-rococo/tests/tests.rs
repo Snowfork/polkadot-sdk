@@ -94,6 +94,7 @@ fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime
 }
 
 mod bridge_hub_rococo_tests {
+	use hex_literal::hex;
 	use super::*;
 	use bridge_hub_rococo_config::{
 		WithBridgeHubWococoMessageBridge, DEFAULT_XCM_LANE_TO_BRIDGE_HUB_WOCOCO,
@@ -276,13 +277,19 @@ mod bridge_hub_rococo_tests {
 
 	#[test]
 	pub fn transfer_token_works() {
+		let gateway_proxy_address = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
+		let weth_contract_address = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
+		let destination_contract = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 			bridge_hub_test_utils::test_cases::handle_transfer_token_message::<
 				Runtime,
 				XcmConfig,
 			>(
 				collator_session_keys(),
 				bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
-				SIBLING_PARACHAIN_ID,
+				bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+				gateway_proxy_address.into(),
+				weth_contract_address.into(),
+				destination_contract.into()
 		)
 	}
 }
