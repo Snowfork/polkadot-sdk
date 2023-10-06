@@ -1013,20 +1013,8 @@ pub fn handle_transfer_token_message<
 				RuntimeHelper::<Runtime>::xcm_max_weight(XcmReceivedFrom::Sibling),
 			)
 			.ensure_complete());
-//
-			//// check queue after
-			//assert_eq!(
-			//	pallet_bridge_messages::OutboundLanes::<Runtime, MessagesPalletInstance>::try_get(
-			//		expected_lane_id
-			//	),
-			//	Ok(OutboundLaneData {
-			//		oldest_unpruned_nonce: 1,
-			//		latest_received_nonce: 0,
-			//		latest_generated_nonce: 1,
-			//	})
-			//);
-//
-			//// check events
+
+			// check events
 			let mut events = <frame_system::Pallet<Runtime>>::events()
 				.into_iter()
 				.filter_map(|e| snowbridge_outbound_queue(e.event.encode()));
