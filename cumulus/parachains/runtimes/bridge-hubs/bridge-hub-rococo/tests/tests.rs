@@ -276,7 +276,7 @@ mod bridge_hub_rococo_tests {
 	}
 
 	#[test]
-	pub fn transfer_token_to_ethereum() {
+	pub fn transfer_token_to_ethereum_works() {
 		bridge_hub_test_utils::test_cases::handle_transfer_token_message::<
 			Runtime,
 			XcmConfig,
