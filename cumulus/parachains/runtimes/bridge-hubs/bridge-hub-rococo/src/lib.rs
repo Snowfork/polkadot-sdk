@@ -595,7 +595,7 @@ impl pallet_bridge_relayers::Config for Runtime {
 
 parameter_types! {
 	pub const Reward: u128 = 10;
-	pub const GatewayAddress: H160 = H160(EthereumGatewayAddress::get()); // TODO Update https://github.com/Snowfork/cumulus/commit/f5180878ca95afd9f8b9525d54daa5ed4a2b9505
+	pub const GatewayAddress: H160 = H160(EthereumGatewayAddress::get());
 }
 
 #[cfg(feature = "runtime-benchmarks")]

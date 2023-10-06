@@ -103,6 +103,7 @@ mod bridge_hub_rococo_tests {
 		BridgeGrandpaWococoInstance, BridgeParachainWococoInstance,
 		WithBridgeHubWococoMessagesInstance,
 	};
+	use sp_core::H160;
 
 	bridge_hub_test_utils::test_cases::include_teleports_for_native_asset_works!(
 		Runtime,
@@ -275,26 +276,23 @@ mod bridge_hub_rococo_tests {
 	}
 
 	#[test]
-	pub fn transfer_token_works() {
-		let gateway_proxy_address = hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
-		let weth_contract_address = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
-		let destination_contract = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
-			bridge_hub_test_utils::test_cases::handle_transfer_token_message::<
-				Runtime,
-				XcmConfig,
-			>(
-				collator_session_keys(),
-				bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
-				bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
-				gateway_proxy_address.into(),
-				weth_contract_address.into(),
-				destination_contract.into(),
-				Box::new(|runtime_event_encoded: Vec<u8>| {
-					match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
-						Ok(RuntimeEvent::EthereumOutboundQueue(event)) => Some(event),
-						_ => None,
-					}
-				})
+	pub fn transfer_token_to_ethereum() {
+		bridge_hub_test_utils::test_cases::handle_transfer_token_message::<
+			Runtime,
+			XcmConfig,
+		>(
+			collator_session_keys(),
+			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+			bridge_hub_rococo_runtime::GatewayAddress::get(),
+			H160::random(),
+			H160::random(),
+			Box::new(|runtime_event_encoded: Vec<u8>| {
+				match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+					Ok(RuntimeEvent::EthereumOutboundQueue(event)) => Some(event),
+					_ => None,
+				}
+			})
 		)
 	}
 }
