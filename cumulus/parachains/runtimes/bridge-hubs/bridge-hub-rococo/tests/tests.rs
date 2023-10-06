@@ -22,7 +22,7 @@ use bridge_hub_rococo_runtime::{
 	xcm_config::{RelayNetwork, XcmConfig},
 	AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages, DeliveryRewardInBalance,
 	Executive, ExistentialDeposit, ParachainSystem, PolkadotXcm, RequiredStakeForStakeAndSlash,
-	Runtime, RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra, UncheckedExtrinsic,
+	Runtime, RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra, UncheckedExtrinsic
 };
 use codec::{Decode, Encode};
 use frame_support::parameter_types;
@@ -103,7 +103,6 @@ mod bridge_hub_rococo_tests {
 		BridgeGrandpaWococoInstance, BridgeParachainWococoInstance,
 		WithBridgeHubWococoMessagesInstance,
 	};
-	use bridge_hub_rococo_runtime::bridge_hub_wococo_config::DEFAULT_XCM_LANE_TO_BRIDGE_HUB_ROCOCO;
 
 	bridge_hub_test_utils::test_cases::include_teleports_for_native_asset_works!(
 		Runtime,
@@ -289,7 +288,13 @@ mod bridge_hub_rococo_tests {
 				bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
 				gateway_proxy_address.into(),
 				weth_contract_address.into(),
-				destination_contract.into()
+				destination_contract.into(),
+				Box::new(|runtime_event_encoded: Vec<u8>| {
+					match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+						Ok(RuntimeEvent::EthereumOutboundQueue(event)) => Some(event),
+						_ => None,
+					}
+				})
 		)
 	}
 }

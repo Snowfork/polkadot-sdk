@@ -948,6 +948,9 @@ pub fn handle_transfer_token_message<
 	gateway_proxy_address: H160,
 	weth_contract_address: H160,
 	destination_contract: H160,
+	snowbridge_outbound_queue: Box<
+		dyn Fn(Vec<u8>) -> Option<snowbridge_outbound_queue::Event<Runtime>>,
+	>,
 ) where
 	Runtime: frame_system::Config
 	+ pallet_balances::Config
@@ -977,8 +980,8 @@ pub fn handle_transfer_token_message<
 				}),
 				fun: Fungible(1000000000),
 			}];
-			// prepare transfer token message
-			let xcm = Xcm(vec![
+
+			let inner_xcm = Xcm(vec![
 				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 				WithdrawAsset(MultiAssets::from(assets.clone())),
 				DepositAsset {
@@ -988,6 +991,17 @@ pub fn handle_transfer_token_message<
 						interior: X1(AccountKey20{ network: None, key: destination_contract.into()}),
 					}
 				},
+				SetTopic([0; 32])
+			]);
+
+			// prepare transfer token message
+			let xcm = Xcm(vec![
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				ExportMessage {
+					network: Ethereum { chain_id: 15 },
+					destination: Here,
+					xcm: inner_xcm
+				}
 			]);
 
 			// execute XCM
@@ -1013,12 +1027,12 @@ pub fn handle_transfer_token_message<
 			//);
 //
 			//// check events
-			//let mut events = <frame_system::Pallet<Runtime>>::events()
-			//	.into_iter()
-			//	.filter_map(|e| unwrap_pallet_bridge_messages_event(e.event.encode()));
-			//assert!(
-			//	events.any(|e| matches!(e, pallet_bridge_messages::Event::MessageAccepted { .. }))
-			//);
+			let mut events = <frame_system::Pallet<Runtime>>::events()
+				.into_iter()
+				.filter_map(|e| snowbridge_outbound_queue(e.event.encode()));
+			assert!(
+				events.any(|e| matches!(e, snowbridge_outbound_queue::Event::MessageQueued { .. }))
+			);
 		});
 }
 
