@@ -94,7 +94,6 @@ fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime
 }
 
 mod bridge_hub_rococo_tests {
-	use hex_literal::hex;
 	use super::*;
 	use bridge_hub_rococo_config::{
 		WithBridgeHubWococoMessageBridge, DEFAULT_XCM_LANE_TO_BRIDGE_HUB_WOCOCO,
@@ -290,6 +289,38 @@ mod bridge_hub_rococo_tests {
 			Box::new(|runtime_event_encoded: Vec<u8>| {
 				match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
 					Ok(RuntimeEvent::EthereumOutboundQueue(event)) => Some(event),
+					_ => None,
+				}
+			})
+		)
+	}
+
+	#[test]
+	pub fn transfer_token_to_ethereum_to_incorrect_gateway_address_fails() {
+		bridge_hub_test_utils::test_cases::transfer_token_message_fails::<
+			Runtime,
+			XcmConfig,
+		>(
+			collator_session_keys(),
+			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+			H160::random(), // use a random contract address, not the configured gateway address
+			H160::random(),
+			H160::random(),
+		)
+	}
+
+	#[test]
+	fn setting_ethereum_operating_mode_via_goverance_works() {
+		bridge_hub_test_utils::test_cases::set_bridge_operating_mode_works::<
+			Runtime,
+		>(
+			collator_session_keys(),
+			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+			Box::new(|call| RuntimeCall::EthereumControl(call).encode()),
+			Box::new(|runtime_event_encoded: Vec<u8>| {
+				match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+					Ok(RuntimeEvent::EthereumControl(event)) => Some(event),
 					_ => None,
 				}
 			})

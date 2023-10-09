@@ -33,10 +33,7 @@ use bridge_runtime_common::{
 	messages_xcm_extension::{XcmAsPlainPayload, XcmBlobMessageDispatchResult},
 };
 use codec::Encode;
-use frame_support::{
-	assert_ok,
-	traits::{Get, OnFinalize, OnInitialize, OriginTrait, PalletInfoAccess},
-};
+use frame_support::{assert_err, assert_ok, traits::{Get, OnFinalize, OnInitialize, OriginTrait, PalletInfoAccess}};
 use frame_system::pallet_prelude::{BlockNumberFor, HeaderFor};
 use pallet_bridge_grandpa::BridgedHeader;
 use parachains_common::AccountId;
@@ -56,6 +53,7 @@ use xcm_executor::{
 	traits::{TransactAsset, WeightBounds},
 	XcmExecutor,
 };
+use snowbridge_core::outbound::OperatingMode;
 
 // Re-export test_case from assets
 pub use asset_test_utils::include_teleports_for_native_asset_works;
@@ -65,6 +63,7 @@ type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 
 // Re-export test_case from `parachains-runtimes-test-utils`
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
+use xcm::v3::SendError::Unroutable;
 
 /// Test-case makes sure that `Runtime` can process bridging initialize via governance-like call
 pub fn initialize_bridge_by_governance_works<Runtime, GrandpaPalletInstance>(
@@ -1022,6 +1021,134 @@ pub fn handle_transfer_token_message<
 				events.any(|e| matches!(e, snowbridge_outbound_queue::Event::MessageQueued { .. }))
 			);
 		});
+}
+
+pub fn transfer_token_message_fails<
+	Runtime,
+	XcmConfig,
+>(
+	collator_session_key: CollatorSessionKeys<Runtime>,
+	runtime_para_id: u32,
+	bridghub_parachain_id: u32,
+	gateway_proxy_address: H160,
+	weth_contract_address: H160,
+	destination_contract: H160,
+) where
+	Runtime: frame_system::Config
+	+ pallet_balances::Config
+	+ pallet_session::Config
+	+ pallet_xcm::Config
+	+ parachain_info::Config
+	+ pallet_collator_selection::Config
+	+ cumulus_pallet_dmp_queue::Config
+	+ cumulus_pallet_parachain_system::Config
+	+ snowbridge_outbound_queue::Config,
+	XcmConfig: xcm_executor::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+{
+	let bridgehub_parachain_location = MultiLocation::new(1, Parachain(bridghub_parachain_id));
+
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(runtime_para_id.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			let assets = vec![MultiAsset {
+				id: Concrete(MultiLocation {
+					parents: 0,
+					interior: X2(AccountKey20{ network: None, key: gateway_proxy_address.into()}, AccountKey20{ network: None, key: weth_contract_address.into() }),
+				}),
+				fun: Fungible(1000000000),
+			}];
+
+			let inner_xcm = Xcm(vec![
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				WithdrawAsset(MultiAssets::from(assets.clone())),
+				DepositAsset {
+					assets: MultiAssetFilter::from(assets),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(AccountKey20{ network: None, key: destination_contract.into()}),
+					}
+				},
+				SetTopic([0; 32])
+			]);
+
+			// prepare transfer token message
+			let xcm = Xcm(vec![
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				ExportMessage {
+					network: Ethereum { chain_id: 15 },
+					destination: Here,
+					xcm: inner_xcm
+				}
+			]);
+
+			// execute XCM
+			let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+			assert_err!(XcmExecutor::<XcmConfig>::execute_xcm(
+				bridgehub_parachain_location,
+				xcm,
+				hash,
+				RuntimeHelper::<Runtime>::xcm_max_weight(XcmReceivedFrom::Sibling),
+			).ensure_complete(), Unroutable);
+		});
+}
+
+pub fn set_bridge_operating_mode_works<Runtime>(
+	collator_session_key: CollatorSessionKeys<Runtime>,
+	runtime_para_id: u32,
+	runtime_call_encode: Box<
+		dyn Fn(snowbridge_control::Call<Runtime>) -> Vec<u8>,
+	>,
+	snowbridge_control_events: Box<
+		dyn Fn(Vec<u8>) -> Option<snowbridge_control::Event<Runtime>>,
+	>,
+) where
+	Runtime: frame_system::Config
+	+ pallet_balances::Config
+	+ pallet_session::Config
+	+ pallet_xcm::Config
+	+ parachain_info::Config
+	+ pallet_collator_selection::Config
+	+ cumulus_pallet_dmp_queue::Config
+	+ cumulus_pallet_parachain_system::Config
+	+ snowbridge_control::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+{
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(runtime_para_id.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			// encode `set_operating_mode` call
+			let set_operating_mode_call = runtime_call_encode(snowbridge_control::Call::<
+				Runtime,
+			>::set_operating_mode {
+				mode: OperatingMode::RejectingOutboundMessages,
+			});
+
+			let require_weight_at_most =
+				Weight::from_parts(429000000, 3517);
+
+			assert_ok!(RuntimeHelper::<Runtime>::execute_as_governance(
+				set_operating_mode_call,
+				require_weight_at_most
+			)
+			.ensure_complete());
+
+			// check events
+			let mut events = <frame_system::Pallet<Runtime>>::events()
+				.into_iter()
+				.filter_map(|e| snowbridge_control_events(e.event.encode()));
+			assert!(
+				events.any(|e| matches!(e, snowbridge_control::Event::SetOperatingMode { mode: OperatingMode::RejectingOutboundMessages }))
+			);
+		})
 }
 
 pub mod test_data {

@@ -2141,6 +2141,8 @@ dependencies = [
  "parachains-common",
  "parachains-runtimes-test-utils",
  "parity-scale-codec",
+ "snowbridge-control",
+ "snowbridge-core",
  "snowbridge-outbound-queue",
  "sp-core",
  "sp-io",
