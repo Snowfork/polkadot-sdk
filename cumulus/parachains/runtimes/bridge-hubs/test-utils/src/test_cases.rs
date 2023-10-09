@@ -1195,7 +1195,9 @@ pub fn set_bridge_operating_mode_as_normal_user_doesnt_work<Runtime>(
 			)
 			.ensure_complete());
 
-			// check that the SetOperatingMode mode was not emitted - user does not have permission
+			// check that the SetOperatingMode mode was not emitted - user does not have permission.
+			// It looks like Transact doesn't return the snowbridge control pallet extrinsic dispatch error
+			// so the only way to test that it didn't succeed to see thar an event has NOT been emitted
 			let mut events = <frame_system::Pallet<Runtime>>::events()
 				.into_iter()
 				.filter_map(|e| snowbridge_control_events(e.event.encode()));
