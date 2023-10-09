@@ -1151,6 +1151,61 @@ pub fn set_bridge_operating_mode_works<Runtime>(
 		})
 }
 
+pub fn set_bridge_operating_mode_as_normal_user_doesnt_work<Runtime>(
+	collator_session_key: CollatorSessionKeys<Runtime>,
+	runtime_para_id: u32,
+	runtime_call_encode: Box<
+		dyn Fn(snowbridge_control::Call<Runtime>) -> Vec<u8>,
+	>,
+	snowbridge_control_events: Box<
+		dyn Fn(Vec<u8>) -> Option<snowbridge_control::Event<Runtime>>,
+	>,
+) where
+	Runtime: frame_system::Config
+	+ pallet_balances::Config
+	+ pallet_session::Config
+	+ pallet_xcm::Config
+	+ parachain_info::Config
+	+ pallet_collator_selection::Config
+	+ cumulus_pallet_dmp_queue::Config
+	+ cumulus_pallet_parachain_system::Config
+	+ snowbridge_control::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+{
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(runtime_para_id.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			// encode `set_operating_mode` call
+			let set_operating_mode_call = runtime_call_encode(snowbridge_control::Call::<
+				Runtime,
+			>::set_operating_mode {
+				mode: OperatingMode::RejectingOutboundMessages,
+			});
+
+			let require_weight_at_most =
+				Weight::from_parts(500_000_000, 4000);
+
+			assert_ok!(RuntimeHelper::<Runtime>::execute_as_xcm(
+				set_operating_mode_call,
+				require_weight_at_most
+			)
+			.ensure_complete());
+
+			// check that the SetOperatingMode mode was not emitted - user does not have permission
+			let mut events = <frame_system::Pallet<Runtime>>::events()
+				.into_iter()
+				.filter_map(|e| snowbridge_control_events(e.event.encode()));
+			assert!(
+				!events.any(|e| matches!(e, snowbridge_control::Event::SetOperatingMode { mode: OperatingMode::RejectingOutboundMessages }))
+			);
+		})
+}
+
+
 pub mod test_data {
 	use super::*;
 	use bp_header_chain::justification::GrandpaJustification;

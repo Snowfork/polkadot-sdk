@@ -385,6 +385,26 @@ impl<
 			Self::xcm_max_weight(XcmReceivedFrom::Parent),
 		)
 	}
+
+	pub fn execute_as_xcm(call: Vec<u8>, require_weight_at_most: Weight) -> Outcome {
+		let xcm = Xcm(vec![
+			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+			Transact {
+				origin_kind: OriginKind::Xcm,
+				require_weight_at_most,
+				call: call.into(),
+			},
+		]);
+
+		// execute xcm as parent origin
+		let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+		<<Runtime as cumulus_pallet_dmp_queue::Config>::XcmExecutor>::execute_xcm(
+			Parachain(1000),
+			xcm,
+			hash,
+			Self::xcm_max_weight(XcmReceivedFrom::Parent),
+		)
+	}
 }
 
 pub enum XcmReceivedFrom {
