@@ -66,6 +66,7 @@ members = [
 	"cumulus/parachains/integration-tests/emulated/assets/asset-hub-westend",
 	"cumulus/parachains/integration-tests/emulated/bridges/bridge-hub-rococo",
 	"cumulus/parachains/integration-tests/emulated/common",
+	"cumulus/parachains/integration-tests/simulated",
 	"cumulus/parachains/pallets/collective-content",
 	"cumulus/parachains/pallets/parachain-info",
 	"cumulus/parachains/pallets/ping",
@@ -454,7 +455,7 @@ members = [
 	"substrate/utils/prometheus",
 	"substrate/utils/wasm-builder",
 ]
-default-members = [ "polkadot" ]
+default-members = ["polkadot"]
 
 [profile.release]
 # Polkadot runtime requires unwinding.

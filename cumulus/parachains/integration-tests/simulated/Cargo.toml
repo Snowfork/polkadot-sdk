@@ -1,0 +1,55 @@
+[package]
+name = "simulated-tests"
+version = "1.0.0"
+authors.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+description = "Asset Hub Rococo runtime integration tests with xcm-simulator"
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.4.0" }
+assert_matches = "1.5.0"
+env_logger = "0.10.0"
+# Substrate
+sp-runtime = { path = "../../../../substrate/primitives/runtime" }
+sp-io = { path = "../../../../substrate/primitives/io" }
+frame-support = { path = "../../../../substrate/frame/support" }
+frame-system = { path = "../../../../substrate/frame/system" }
+pallet-balances = { path = "../../../../substrate/frame/balances" }
+pallet-assets = { path = "../../../../substrate/frame/assets" }
+pallet-asset-conversion = { path = "../../../../substrate/frame/asset-conversion" }
+pallet-message-queue = { path = "../../../../substrate/frame/message-queue"}
+
+# Polkadot
+polkadot-core-primitives = { path = "../../../../polkadot/core-primitives" }
+polkadot-parachain-primitives = { path = "../../../../polkadot/parachain" }
+polkadot-primitives = { path = "../../../../polkadot/primitives" }
+polkadot-runtime-parachains = { path = "../../../../polkadot/runtime/parachains" }
+xcm = { package = "staging-xcm", path = "../../../../polkadot/xcm" }
+pallet-xcm = { path = "../../../../polkadot/xcm/pallet-xcm" }
+xcm-executor = { package = "staging-xcm-executor",  path = "../../../../polkadot/xcm/xcm-executor" }
+rococo-runtime = { path = "../../../../polkadot/runtime/rococo" }
+
+# Cumulus
+asset-test-utils = { path = "../../runtimes/assets/test-utils" }
+parachains-common = { path = "../../common" }
+parachain-info = { path = "../../../parachains/pallets/parachain-info" }
+cumulus-primitives-core = { path = "../../../primitives/core" }
+asset-hub-rococo-runtime = { path = "../../runtimes/assets/asset-hub-rococo" }
+bridge-hub-rococo-runtime = { path = "../../runtimes/bridge-hubs/bridge-hub-rococo" }
+parachain-template-runtime = { path = "../../../parachain-template/runtime" }
+
+# simulator
+xcm-emulator = { path = "../../../xcm/xcm-emulator" }
+xcm-simulator = { path = "../../../../polkadot/xcm/xcm-simulator" }
+
+# Local
+snowbridge-inbound-queue = { path = "../../../../../parachain/pallets/inbound-queue" }
+snowbridge-core = { path = "../../../../../parachain/primitives/core" }
+snowbridge-router-primitives = { path = "../../../../../parachain/primitives/router" }
+
+

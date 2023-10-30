@@ -16560,6 +16560,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "simulated-tests"
+version = "1.0.0"
+dependencies = [
+ "assert_matches",
+ "asset-hub-rococo-runtime",
+ "asset-test-utils",
+ "bridge-hub-rococo-runtime",
+ "cumulus-primitives-core",
+ "env_logger 0.10.0",
+ "frame-support",
+ "frame-system",
+ "pallet-asset-conversion",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-message-queue",
+ "pallet-xcm",
+ "parachain-info",
+ "parachain-template-runtime",
+ "parachains-common",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "polkadot-parachain-primitives",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "rococo-runtime",
+ "snowbridge-core",
+ "snowbridge-inbound-queue",
+ "snowbridge-router-primitives",
+ "sp-io",
+ "sp-runtime",
+ "staging-xcm",
+ "staging-xcm-executor",
+ "xcm-emulator",
+ "xcm-simulator",
+]
+
+[[package]]
 name = "siphasher"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
