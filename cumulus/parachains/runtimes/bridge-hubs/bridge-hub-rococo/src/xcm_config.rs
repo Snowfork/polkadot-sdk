@@ -418,6 +418,7 @@ impl ExportXcm for BridgeHubRococoOrBridgeHubWococoSwitchExporter {
 		destination: &mut Option<InteriorMultiLocation>,
 		message: &mut Option<Xcm<()>>,
 	) -> SendResult<Self::Ticket> {
+		let relay: NetworkId = RelayNetwork::get();
 		match network {
 			Rococo => ToBridgeHubRococoHaulBlobExporter::validate(
 				network,
@@ -435,7 +436,7 @@ impl ExportXcm for BridgeHubRococoOrBridgeHubWococoSwitchExporter {
 				message,
 			)
 			.map(|result| ((Wococo, result.0), result.1)),
-			location if location == EthereumNetwork::get() && network == Rococo => {
+			location if location == EthereumNetwork::get() && relay == Rococo => {
 				SnowbridgeExporter::validate(
 					network,
 					channel,
@@ -451,10 +452,11 @@ impl ExportXcm for BridgeHubRococoOrBridgeHubWococoSwitchExporter {
 
 	fn deliver(ticket: Self::Ticket) -> Result<XcmHash, SendError> {
 		let (network, ticket) = ticket;
+		let relay: NetworkId = RelayNetwork::get();
 		match network {
 			Rococo => ToBridgeHubRococoHaulBlobExporter::deliver(ticket),
 			Wococo => ToBridgeHubWococoHaulBlobExporter::deliver(ticket),
-			location if location == EthereumNetwork::get() && network == Rococo =>
+			location if location == EthereumNetwork::get() && relay == Rococo =>
 				SnowbridgeExporter::deliver(ticket),
 			_ => unimplemented!("Unsupported network: {:?}", network),
 		}
