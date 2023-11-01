@@ -12,17 +12,22 @@ doctest = false
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.4.0" }
+scale-info = { version = "2.10.0", features = ["derive"] }
 assert_matches = "1.5.0"
 env_logger = "0.10.0"
+
 # Substrate
 sp-runtime = { path = "../../../../substrate/primitives/runtime" }
 sp-io = { path = "../../../../substrate/primitives/io" }
+sp-core = { path = "../../../../substrate/primitives/core" }
+sp-std = { path = "../../../../substrate/primitives/std" }
 frame-support = { path = "../../../../substrate/frame/support" }
 frame-system = { path = "../../../../substrate/frame/system" }
 pallet-balances = { path = "../../../../substrate/frame/balances" }
 pallet-assets = { path = "../../../../substrate/frame/assets" }
 pallet-asset-conversion = { path = "../../../../substrate/frame/asset-conversion" }
 pallet-message-queue = { path = "../../../../substrate/frame/message-queue"}
+pallet-uniques = { path = "../../../../substrate/frame/uniques" }
 
 # Polkadot
 polkadot-core-primitives = { path = "../../../../polkadot/core-primitives" }
@@ -32,6 +37,7 @@ polkadot-runtime-parachains = { path = "../../../../polkadot/runtime/parachains"
 xcm = { package = "staging-xcm", path = "../../../../polkadot/xcm" }
 pallet-xcm = { path = "../../../../polkadot/xcm/pallet-xcm" }
 xcm-executor = { package = "staging-xcm-executor",  path = "../../../../polkadot/xcm/xcm-executor" }
+xcm-builder = { package = "staging-xcm-builder", path = "../../../../polkadot/xcm/xcm-builder" }
 rococo-runtime = { path = "../../../../polkadot/runtime/rococo" }
 
 # Cumulus
