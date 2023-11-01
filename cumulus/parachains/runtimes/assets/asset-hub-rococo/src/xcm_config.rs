@@ -928,8 +928,8 @@ pub mod bridging {
 					SiblingBridgeHub::get(),
 					Some((
 						XcmBridgeHubRouterFeeAssetId::get(),
-						bp_asset_hub_rococo::BridgeHubRococoBaseFeeInRocs::get(),
-					).into()) // TODO calculate fee factor
+						bp_asset_hub_rococo::TransferERC20TokenBaseFeeInRocs::get(),
+					).into())
 				),
 			];
 
