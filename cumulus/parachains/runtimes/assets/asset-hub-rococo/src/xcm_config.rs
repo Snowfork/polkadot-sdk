@@ -762,6 +762,7 @@ pub mod bridging {
 			sp_std::vec::Vec::new().into_iter()
 			.chain(to_wococo::BridgeTable::get())
 			.chain(to_rococo::BridgeTable::get())
+			.chain(to_ethereum::BridgeTable::get())
 			.collect();
 	}
 
@@ -955,6 +956,74 @@ pub mod bridging {
 				matches!(
 					call,
 					RuntimeCall::ToRococoXcmRouter(
+						pallet_xcm_bridge_hub_router::Call::report_bridge_status { .. }
+					)
+				)
+			}
+		}
+	}
+
+	pub mod to_ethereum {
+		use super::*;
+		use assets_common::matching::FromNetwork;
+
+		parameter_types! {
+			pub SiblingBridgeHubWithBridgeHubRococoInstance: MultiLocation = MultiLocation::new(
+				1,
+				X2(
+					Parachain(SiblingBridgeHubParaId::get()),
+					PalletInstance(bp_bridge_hub_wococo::WITH_BRIDGE_WOCOCO_TO_ROCOCO_MESSAGES_PALLET_INDEX)
+				)
+			);
+
+			pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
+			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get()))); // TODO: Maybe registry address belongs here
+			pub const EthereumGatewayAddress: [u8; 20] = hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
+			// The Registry contract for the bridge which is also the origin for reserves and the prefix of all assets.
+			pub EthereumGatewayLocation: MultiLocation = EthereumLocation::get()
+				.pushed_with_interior(
+					AccountKey20 {
+						network: None,
+						key: EthereumGatewayAddress::get(),
+					}
+				).unwrap();
+
+			/// Set up exporters configuration.
+			/// `Option<MultiAsset>` represents static "base fee" which is used for total delivery fee calculation.
+			pub BridgeTable: sp_std::vec::Vec<NetworkExportTableItem> = sp_std::vec![
+				NetworkExportTableItem::new(
+					EthereumNetwork::get(),
+					None, // TODO add Ethereum network / gateway contract
+					SiblingBridgeHub::get(),
+					Some((
+						XcmBridgeHubRouterFeeAssetId::get(),
+						BridgeHubEthereumBaseFeeInRocs::get(),
+					).into())
+				),
+			];
+
+			/// Universal aliases
+			pub UniversalAliases: BTreeSet<(MultiLocation, Junction)> = BTreeSet::from_iter(
+				sp_std::vec![
+					(SiblingBridgeHub::get(), GlobalConsensus(EthereumNetwork::get())),
+				]
+			);
+		}
+
+		impl Contains<(MultiLocation, Junction)> for UniversalAliases {
+			fn contains(alias: &(MultiLocation, Junction)) -> bool {
+				UniversalAliases::get().contains(alias)
+			}
+		}
+
+		pub type IsTrustedBridgedReserveLocationForForeignAsset =
+			IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
+
+		impl Contains<RuntimeCall> for ToRococoXcmRouter {
+			fn contains(call: &RuntimeCall) -> bool {
+				matches!(
+					call,
+					RuntimeCall::ToEthereumXcmRouter(
 						pallet_xcm_bridge_hub_router::Call::report_bridge_status { .. }
 					)
 				)
