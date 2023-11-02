@@ -32,6 +32,7 @@ use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
 use parachains_common::{
 	impls::ToStakingPot,
+	snowbridge_config::BridgeHubEthereumBaseFeeInRocs,
 	xcm_config::{
 		AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem,
 		RelayOrOtherSystemParachains,
@@ -928,7 +929,7 @@ pub mod bridging {
 					SiblingBridgeHub::get(),
 					Some((
 						XcmBridgeHubRouterFeeAssetId::get(),
-						bp_asset_hub_rococo::TransferERC20TokenBaseFeeInRocs::get(),
+						BridgeHubEthereumBaseFeeInRocs::get(),
 					).into())
 				),
 			];
