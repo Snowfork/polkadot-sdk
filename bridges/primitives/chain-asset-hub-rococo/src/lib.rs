@@ -46,10 +46,6 @@ frame_support::parameter_types! {
 	/// Base delivery fee to `BridgeHubRococo`.
 	/// (initially was calculated by test `BridgeHubRococo::can_calculate_weight_for_paid_export_message_with_reserve_transfer`)
 	pub const BridgeHubRococoBaseFeeInRocs: u128 = 1214739988;
-
-	/// User fee for ERC20 token transfer back to Ethereum.
-	/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/411 and fee_per_gas 15 GWEI = 18679250000 + *25%)
-	pub const TransferERC20TokenBaseFeeInRocs: u128 = 23349062500;
 }
 
 /// Identifier of AssetHubRococo in the Rococo relay chain.

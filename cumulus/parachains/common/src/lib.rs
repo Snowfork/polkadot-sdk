@@ -22,6 +22,7 @@ pub mod rococo;
 pub mod westend;
 pub mod wococo;
 pub mod xcm_config;
+pub mod snowbridge_config;
 pub use constants::*;
 pub use opaque::*;
 pub use types::*;
