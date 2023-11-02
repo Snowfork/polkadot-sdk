@@ -17,8 +17,8 @@ use super::{
 	AccountId, AllPalletsWithSystem, Assets, Authorship, Balance, Balances, BaseDeliveryFee,
 	FeeAssetId, ForeignAssets, ForeignAssetsInstance, ParachainInfo, ParachainSystem, PolkadotXcm,
 	PoolAssets, Runtime, RuntimeCall, RuntimeEvent, RuntimeFlavor, RuntimeOrigin,
-	ToRococoXcmRouter, ToWococoXcmRouter, TransactionByteFee, TrustBackedAssetsInstance,
-	WeightToFee, XcmpQueue,
+	ToEthereumXcmRouter, ToRococoXcmRouter, ToWococoXcmRouter, TransactionByteFee,
+	TrustBackedAssetsInstance, WeightToFee, XcmpQueue,
 };
 use assets_common::{
 	local_and_foreign_assets::MatchesLocalAndForeignAssetsMultiLocation,
@@ -563,8 +563,8 @@ impl xcm_executor::Config for XcmConfig {
 	// Users must use teleport where allowed (e.g. ROC with the Relay Chain).
 	type IsReserve = (
 		bridging::to_wococo::IsTrustedBridgedReserveLocationForConcreteAsset,
-		bridging::to_wococo::IsTrustedBridgedReserveLocationForForeignAsset,
 		bridging::to_rococo::IsTrustedBridgedReserveLocationForConcreteAsset,
+		bridging::to_ethereum::IsTrustedBridgedReserveLocationForForeignAsset,
 	);
 	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
@@ -648,6 +648,9 @@ pub type XcmRouter = WithUniqueTopic<(
 	// Router which wraps and sends xcm to BridgeHub to be delivered to the Rococo
 	// GlobalConsensus
 	ToRococoXcmRouter,
+	// Router which wraps and sends xcm to BridgeHub to be delivered to the Ethereum
+	// GlobalConsensus
+	ToEthereumXcmRouter,
 )>;
 
 impl pallet_xcm::Config for Runtime {
@@ -783,8 +786,6 @@ pub mod bridging {
 			pub const WococoNetwork: NetworkId = NetworkId::Wococo;
 			pub AssetHubWococo: MultiLocation = MultiLocation::new(2, X2(GlobalConsensus(WococoNetwork::get()), Parachain(bp_asset_hub_wococo::ASSET_HUB_WOCOCO_PARACHAIN_ID)));
 			pub WocLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(WococoNetwork::get())));
-			pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
-			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 
 			pub WocFromAssetHubWococo: (MultiAssetFilter, MultiLocation) = (
 				Wild(AllOf { fun: WildFungible, id: Concrete(WocLocation::get()) }),
@@ -805,18 +806,7 @@ pub mod bridging {
 						XcmBridgeHubRouterFeeAssetId::get(),
 						bp_asset_hub_rococo::BridgeHubRococoBaseFeeInRocs::get(),
 					).into())
-				),
-				NetworkExportTableItem::new(
-					EthereumNetwork::get(),
-					Some(sp_std::vec![
-						EthereumLocation::get().interior.split_global().expect("invalid configuration for Ethereum").1,
-					]),
-					SiblingBridgeHub::get(),
-					Some((
-						XcmBridgeHubRouterFeeAssetId::get(),
-						BridgeHubEthereumBaseFeeInRocs::get(),
-					).into())
-				),
+				)
 			];
 
 			/// Allowed assets for reserve transfer to `AssetHubWococo`.
@@ -829,14 +819,10 @@ pub mod bridging {
 			/// Universal aliases
 			pub UniversalAliases: BTreeSet<(MultiLocation, Junction)> = BTreeSet::from_iter(
 				sp_std::vec![
-					(SiblingBridgeHubWithBridgeHubWococoInstance::get(), GlobalConsensus(WococoNetwork::get())),
-					(SiblingBridgeHub::get(), GlobalConsensus(EthereumNetwork::get())),
+					(SiblingBridgeHubWithBridgeHubWococoInstance::get(), GlobalConsensus(WococoNetwork::get()))
 				]
 			);
 		}
-
-		pub type IsTrustedBridgedReserveLocationForForeignAsset =
-			matching::IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
 
 		impl Contains<(MultiLocation, Junction)> for UniversalAliases {
 			fn contains(alias: &(MultiLocation, Junction)) -> bool {
@@ -977,23 +963,16 @@ pub mod bridging {
 			);
 
 			pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
-			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get()))); // TODO: Maybe registry address belongs here
-			pub const EthereumGatewayAddress: [u8; 20] = hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
-			// The Registry contract for the bridge which is also the origin for reserves and the prefix of all assets.
-			pub EthereumGatewayLocation: MultiLocation = EthereumLocation::get()
-				.pushed_with_interior(
-					AccountKey20 {
-						network: None,
-						key: EthereumGatewayAddress::get(),
-					}
-				).unwrap();
+			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 
 			/// Set up exporters configuration.
 			/// `Option<MultiAsset>` represents static "base fee" which is used for total delivery fee calculation.
 			pub BridgeTable: sp_std::vec::Vec<NetworkExportTableItem> = sp_std::vec![
 				NetworkExportTableItem::new(
 					EthereumNetwork::get(),
-					None, // TODO add Ethereum network / gateway contract
+					Some(sp_std::vec![
+						EthereumLocation::get().interior.split_global().expect("invalid configuration for Ethereum").1,
+					]),
 					SiblingBridgeHub::get(),
 					Some((
 						XcmBridgeHubRouterFeeAssetId::get(),
@@ -1017,9 +996,9 @@ pub mod bridging {
 		}
 
 		pub type IsTrustedBridgedReserveLocationForForeignAsset =
-			IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
+		matching::IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
 
-		impl Contains<RuntimeCall> for ToRococoXcmRouter {
+		impl Contains<RuntimeCall> for ToEthereumXcmRouter {
 			fn contains(call: &RuntimeCall) -> bool {
 				matches!(
 					call,
