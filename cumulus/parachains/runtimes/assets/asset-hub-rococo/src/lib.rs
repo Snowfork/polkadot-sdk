@@ -898,7 +898,7 @@ impl pallet_xcm_bridge_hub_router::Config<ToRococoXcmRouterInstance> for Runtime
 
 pub type ToEthereumXcmRouterInstance = pallet_assets::Instance3;
 impl pallet_xcm_bridge_hub_router::Config<ToEthereumXcmRouterInstance> for Runtime {
-	type WeightInfo = weights::pallet_xcm_bridge_hub_router_to_rococo::WeightInfo<Runtime>; // TODO do for ethereum
+	type WeightInfo = weights::pallet_xcm_bridge_hub_router_to_ethereum::WeightInfo<Runtime>;
 
 	type UniversalLocation = xcm_config::UniversalLocation;
 	type BridgedNetworkId = xcm_config::bridging::to_ethereum::EthereumNetwork;
