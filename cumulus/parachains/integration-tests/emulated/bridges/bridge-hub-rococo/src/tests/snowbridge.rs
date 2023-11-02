@@ -19,11 +19,19 @@ use snowbridge_control;
 
 #[test]
 fn create_agent() {
+	BridgeHubRococo::fund_accounts(vec![(
+		BridgeHubRococo::sovereign_account_id_of(MultiLocation {
+			parents: 1,
+			interior: X1(Parachain(1000)),
+		}),
+		5_000_000 * ROCOCO_ED,
+	)]);
+
 	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
 	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
 	let remote_xcm = VersionedXcm::from(Xcm(vec![
-		UnpaidExecution { weight_limit: WeightLimit::Unlimited, check_origin: None },
+		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(1000))),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
@@ -71,30 +79,50 @@ fn create_agent() {
 
 #[test]
 fn create_channel() {
-	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
-	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
+	let source_location = MultiLocation { parents: 1, interior: X1(Parachain(1000)) };
 
-	let remote_xcm = VersionedXcm::from(Xcm(vec![
+	BridgeHubRococo::fund_accounts(vec![(
+		BridgeHubRococo::sovereign_account_id_of(source_location),
+		5_000_000 * ROCOCO_ED,
+	)]);
+
+	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
+	let destination: VersionedMultiLocation =
+		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
+
+	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: WeightLimit::Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(1000))),
 		Transact {
-			require_weight_at_most: 8000000000.into(),
+			require_weight_at_most: 3000000000.into(),
+			origin_kind: OriginKind::Xcm,
+			call: vec![51, 1].into(),
+		},
+	]));
+
+	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
+		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+		DescendOrigin(X1(Parachain(1000))),
+		Transact {
+			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
 			call: vec![51, 2].into(),
 		},
 	]));
 
-	//BridgeHubRococo::execute_with(|| { // TODO Create agent in storage
-	//	<BridgeHubRococo as BridgeHubRococoPallet>::EthereumControl::create_agent(sudo_origin);
-	//});
-
 	//Rococo Global Consensus
 	// Send XCM message from Relay Chain to Bridge Hub source Parachain
 	Rococo::execute_with(|| {
 		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
+			sudo_origin.clone(),
+			bx!(destination.clone()),
+			bx!(create_agent_xcm),
+		));
+
+		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
 			sudo_origin,
 			bx!(destination),
-			bx!(remote_xcm),
+			bx!(create_channel_xcm),
 		));
 
 		type RuntimeEvent = <Rococo as Chain>::RuntimeEvent;
