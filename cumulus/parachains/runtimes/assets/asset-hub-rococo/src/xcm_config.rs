@@ -616,8 +616,11 @@ impl xcm_executor::Config for XcmConfig {
 		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 	>;
 	type MessageExporter = ();
-	type UniversalAliases =
-		(bridging::to_wococo::UniversalAliases, bridging::to_rococo::UniversalAliases);
+	type UniversalAliases = (
+		bridging::to_wococo::UniversalAliases,
+		bridging::to_rococo::UniversalAliases,
+		bridging::to_ethereum::UniversalAliases,
+	);
 	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
 	type SafeCallFilter = SafeCallFilter;
 	type Aliasers = Nothing;
