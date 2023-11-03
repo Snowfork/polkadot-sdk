@@ -201,6 +201,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 						frame_system::Call::set_code_without_checks { .. } |
 						frame_system::Call::kill_prefix { .. },
 				) | RuntimeCall::ParachainSystem(..) |
+				RuntimeCall::Utility(..) |
 				RuntimeCall::Timestamp(..) |
 				RuntimeCall::Balances(..) |
 				RuntimeCall::CollatorSelection(
@@ -226,9 +227,9 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 					snowbridge_ethereum_beacon_client::Call::force_checkpoint { .. } |
 						snowbridge_ethereum_beacon_client::Call::set_operating_mode { .. },
 				) | RuntimeCall::EthereumInboundQueue(
-					snowbridge_inbound_queue::Call::set_operating_mode { .. },
+				snowbridge_inbound_queue::Call::set_operating_mode { .. },
 			) | RuntimeCall::EthereumOutboundQueue(
-					snowbridge_outbound_queue::Call::set_operating_mode { .. },
+				snowbridge_outbound_queue::Call::set_operating_mode { .. },
 			) | RuntimeCall::EthereumControl(..)
 		)
 	}
