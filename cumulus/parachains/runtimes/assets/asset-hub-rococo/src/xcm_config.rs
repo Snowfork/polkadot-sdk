@@ -22,7 +22,7 @@ use super::{
 };
 use assets_common::{
 	local_and_foreign_assets::MatchesLocalAndForeignAssetsMultiLocation,
-	matching::{FromSiblingParachain, IsForeignConcreteAsset},
+	matching::{FromNetwork, FromSiblingParachain, IsForeignConcreteAsset},
 };
 use frame_support::{
 	match_types, parameter_types,
@@ -32,6 +32,7 @@ use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
 use parachains_common::{
 	impls::ToStakingPot,
+	snowbridge_config::BridgeHubEthereumBaseFeeInRocs,
 	xcm_config::{
 		AssetFeeAsExistentialDepositMultiplier, ConcreteAssetFromSystem,
 		RelayOrOtherSystemParachains,
@@ -41,7 +42,7 @@ use parachains_common::{
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use rococo_runtime_constants::system_parachain::SystemParachains;
-use snowbridge_router_primitives::inbound::GlobalConsensusEthereumAccountConvertsFor;
+use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -54,7 +55,7 @@ use xcm_builder::{
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, StartsWith, StartsWithExplicitGlobalConsensus, TakeWeightCredit,
 	TrailingSetTopicAsId, UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
-	XcmFeesToAccount,
+	XcmFeeManagerFromComponents, XcmFeeToAccount,
 };
 use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
 
@@ -76,7 +77,8 @@ parameter_types! {
 		PalletInstance(<PoolAssets as PalletInfoAccess>::index() as u8).into();
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
 	pub const GovernanceLocation: MultiLocation = MultiLocation::parent();
-	pub TreasuryAccount: Option<AccountId> = Some(TREASURY_PALLET_ID.into_account_truncating());
+	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
+	pub RelayTreasuryLocation: MultiLocation = (Parent, PalletInstance(rococo_runtime_constants::TREASURY_PALLET_ID)).into();
 }
 
 /// Adapter for resolving `NetworkId` based on `pub storage Flavor: RuntimeFlavor`.
@@ -112,7 +114,7 @@ pub type LocationToAccountId = (
 	GlobalConsensusParachainConvertsFor<UniversalLocation, AccountId>,
 	// Ethereum contract sovereign account.
 	// (Used to get convert ethereum contract locations to sovereign account)
-	GlobalConsensusEthereumAccountConvertsFor<AccountId>,
+	GlobalConsensusEthereumConvertsFor<AccountId>,
 );
 
 /// Means for transacting the native currency on this chain.
@@ -501,10 +503,11 @@ pub type Barrier = TrailingSetTopicAsId<
 					// If the message is one that immediately attempts to pay for execution, then
 					// allow it.
 					AllowTopLevelPaidExecutionFrom<Everything>,
-					// Parent, its pluralities (i.e. governance bodies) and BridgeHub get free
-					// execution.
+					// Parent, its pluralities (i.e. governance bodies), relay treasury pallet and
+					// BridgeHub get free execution.
 					AllowExplicitUnpaidExecutionFrom<(
 						ParentOrParentsPlurality,
+						Equals<RelayTreasuryLocation>,
 						Equals<bridging::SiblingBridgeHub>,
 					)>,
 					// Subscriptions for version tracking are OK.
@@ -534,22 +537,11 @@ pub type ForeignAssetFeeAsExistentialDepositMultiplierFeeCharger =
 		ForeignAssetsInstance,
 	>;
 
-parameter_types! {
-	pub RelayTreasuryLocation: MultiLocation = (Parent, PalletInstance(rococo_runtime_constants::TREASURY_PALLET_ID)).into();
-}
-
-pub struct RelayTreasury;
-impl Contains<MultiLocation> for RelayTreasury {
-	fn contains(location: &MultiLocation) -> bool {
-		let relay_treasury_location = RelayTreasuryLocation::get();
-		*location == relay_treasury_location
-	}
-}
-
 /// Locations that will not be charged fees in the executor,
 /// either execution or delivery.
 /// We only waive fees for system functions, which these locations represent.
-pub type WaivedLocations = (RelayOrOtherSystemParachains<SystemParachains, Runtime>, RelayTreasury);
+pub type WaivedLocations =
+	(RelayOrOtherSystemParachains<SystemParachains, Runtime>, Equals<RelayTreasuryLocation>);
 
 /// Cases where a remote origin is accepted as trusted Teleporter for a given asset:
 ///
@@ -571,8 +563,8 @@ impl xcm_executor::Config for XcmConfig {
 	// Users must use teleport where allowed (e.g. ROC with the Relay Chain).
 	type IsReserve = (
 		bridging::to_wococo::IsTrustedBridgedReserveLocationForConcreteAsset,
+		bridging::to_wococo::IsTrustedBridgedReserveLocationForForeignAsset,
 		bridging::to_rococo::IsTrustedBridgedReserveLocationForConcreteAsset,
-		bridging::to_rococo::IsTrustedBridgedReserveLocationForForeignAsset,
 	);
 	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
@@ -619,7 +611,10 @@ impl xcm_executor::Config for XcmConfig {
 	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
 	type AssetLocker = ();
 	type AssetExchanger = ();
-	type FeeManager = XcmFeesToAccount<Self, WaivedLocations, AccountId, TreasuryAccount>;
+	type FeeManager = XcmFeeManagerFromComponents<
+		WaivedLocations,
+		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
+	>;
 	type MessageExporter = ();
 	type UniversalAliases =
 		(bridging::to_wococo::UniversalAliases, bridging::to_rococo::UniversalAliases);
@@ -655,11 +650,6 @@ pub type XcmRouter = WithUniqueTopic<(
 	ToRococoXcmRouter,
 )>;
 
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-}
-
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	// We want to disallow users sending (arbitrary) XCMs from this chain.
@@ -677,7 +667,6 @@ impl pallet_xcm::Config for Runtime {
 	type XcmReserveTransferFilter = (
 		LocationWithAssetFilters<WithParentsZeroOrOne, AllAssets>,
 		bridging::to_rococo::AllowedReserveTransferAssets,
-		//bridging::to_rococo::AllowedReserveTransferAssetsEthereum,
 		bridging::to_wococo::AllowedReserveTransferAssets,
 	);
 
@@ -697,8 +686,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = LocationToAccountId;
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = crate::weights::pallet_xcm::WeightInfo<Runtime>;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -713,7 +700,7 @@ pub type ForeignCreatorsSovereignAccountOf = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	AccountId32Aliases<RelayNetwork, AccountId>,
 	ParentIsPreset<AccountId>,
-	GlobalConsensusEthereumAccountConvertsFor<AccountId>,
+	GlobalConsensusEthereumConvertsFor<AccountId>,
 );
 
 /// Simple conversion of `u32` into an `AssetId` for use in benchmarking.
@@ -795,6 +782,8 @@ pub mod bridging {
 			pub const WococoNetwork: NetworkId = NetworkId::Wococo;
 			pub AssetHubWococo: MultiLocation = MultiLocation::new(2, X2(GlobalConsensus(WococoNetwork::get()), Parachain(bp_asset_hub_wococo::ASSET_HUB_WOCOCO_PARACHAIN_ID)));
 			pub WocLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(WococoNetwork::get())));
+			pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
+			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 
 			pub WocFromAssetHubWococo: (MultiAssetFilter, MultiLocation) = (
 				Wild(AllOf { fun: WildFungible, id: Concrete(WocLocation::get()) }),
@@ -815,7 +804,18 @@ pub mod bridging {
 						XcmBridgeHubRouterFeeAssetId::get(),
 						bp_asset_hub_rococo::BridgeHubRococoBaseFeeInRocs::get(),
 					).into())
-				)
+				),
+				NetworkExportTableItem::new(
+					EthereumNetwork::get(),
+					Some(sp_std::vec![
+						EthereumLocation::get().interior.split_global().expect("invalid configuration for Ethereum").1,
+					]),
+					SiblingBridgeHub::get(),
+					Some((
+						XcmBridgeHubRouterFeeAssetId::get(),
+						BridgeHubEthereumBaseFeeInRocs::get(),
+					).into())
+				),
 			];
 
 			/// Allowed assets for reserve transfer to `AssetHubWococo`.
@@ -828,10 +828,14 @@ pub mod bridging {
 			/// Universal aliases
 			pub UniversalAliases: BTreeSet<(MultiLocation, Junction)> = BTreeSet::from_iter(
 				sp_std::vec![
-					(SiblingBridgeHubWithBridgeHubWococoInstance::get(), GlobalConsensus(WococoNetwork::get()))
+					(SiblingBridgeHubWithBridgeHubWococoInstance::get(), GlobalConsensus(WococoNetwork::get())),
+					(SiblingBridgeHub::get(), GlobalConsensus(EthereumNetwork::get())),
 				]
 			);
 		}
+
+		pub type IsTrustedBridgedReserveLocationForForeignAsset =
+			matching::IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
 
 		impl Contains<(MultiLocation, Junction)> for UniversalAliases {
 			fn contains(alias: &(MultiLocation, Junction)) -> bool {
@@ -871,7 +875,6 @@ pub mod bridging {
 
 	pub mod to_rococo {
 		use super::*;
-		use assets_common::matching::FromNetwork;
 
 		parameter_types! {
 			pub SiblingBridgeHubWithBridgeHubRococoInstance: MultiLocation = MultiLocation::new(
@@ -885,28 +888,11 @@ pub mod bridging {
 			pub const RococoNetwork: NetworkId = NetworkId::Rococo;
 			pub AssetHubRococo: MultiLocation = MultiLocation::new(2, X2(GlobalConsensus(RococoNetwork::get()), Parachain(bp_asset_hub_rococo::ASSET_HUB_ROCOCO_PARACHAIN_ID)));
 			pub RocLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(RococoNetwork::get())));
-			pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
-			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get()))); // TODO: Maybe registry address belongs here
-
-			pub const EthereumGatewayAddress: [u8; 20] = hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39");
-			// The Registry contract for the bridge which is also the origin for reserves and the prefix of all assets.
-			pub EthereumGatewayLocation: MultiLocation = EthereumLocation::get()
-				.pushed_with_interior(
-					AccountKey20 {
-						network: None,
-						key: EthereumGatewayAddress::get(),
-					}
-				).unwrap();
 
 			pub RocFromAssetHubRococo: (MultiAssetFilter, MultiLocation) = (
 				Wild(AllOf { fun: WildFungible, id: Concrete(RocLocation::get()) }),
 				AssetHubRococo::get()
 			);
-
-			/*pub EtherFromEthereum: (MultiAssetFilter, MultiLocation) = (
-				EthereumGatewayLocation::get().into(),
-				EthereumGatewayLocation::get()
-			);*/
 
 			/// Set up exporters configuration.
 			/// `Option<MultiAsset>` represents static "base fee" which is used for total delivery fee calculation.
@@ -923,14 +909,6 @@ pub mod bridging {
 						bp_asset_hub_wococo::BridgeHubWococoBaseFeeInWocs::get(),
 					).into())
 				),
-				NetworkExportTableItem::new(
-					EthereumNetwork::get(),
-					Some(sp_std::vec![
-						EthereumLocation::get().interior.split_global().expect("invalid configuration for AssetHubRococo").1,
-					]),
-					SiblingBridgeHub::get(), // TODO check
-					None // TODO check
-				),
 			];
 
 			/// Allowed assets for reserve transfer to `AssetHubWococo`.
@@ -940,15 +918,10 @@ pub mod bridging {
 				// and nothing else
 			];
 
-			pub AllowedReserveTransferAssetsToEthereum: sp_std::vec::Vec<MultiAssetFilter> = sp_std::vec![
-				Wild(AllOf { fun: WildFungible, id: Concrete(EthereumGatewayLocation::get()) }),
-			];
-
 			/// Universal aliases
 			pub UniversalAliases: BTreeSet<(MultiLocation, Junction)> = BTreeSet::from_iter(
 				sp_std::vec![
 					(SiblingBridgeHubWithBridgeHubRococoInstance::get(), GlobalConsensus(RococoNetwork::get())),
-					(SiblingBridgeHub::get(), GlobalConsensus(EthereumNetwork::get())),
 				]
 			);
 		}
@@ -971,20 +944,11 @@ pub mod bridging {
 				),
 			>;
 
-		pub type IsTrustedBridgedReserveLocationForForeignAsset =
-			matching::IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
-
 		/// Allows to reserve transfer assets to `AssetHubRococo`.
 		pub type AllowedReserveTransferAssets = LocationWithAssetFilters<
 			Equals<AssetHubRococo>,
 			AllowedReserveTransferAssetsToAssetHubRococo,
 		>;
-
-		/*
-		pub type AllowedReserveTransferAssetsEthereum = LocationWithAssetFilters<
-			StartsWithExplicitGlobalConsensus<EthereumNetwork>, // TODO check
-			AllowedReserveTransferAssetsToEthereum,
-		>;*/
 
 		impl Contains<RuntimeCall> for ToRococoXcmRouter {
 			fn contains(call: &RuntimeCall) -> bool {
