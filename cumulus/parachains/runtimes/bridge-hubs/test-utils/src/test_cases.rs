@@ -44,7 +44,7 @@ use parachains_runtimes_test_utils::{
 	mock_open_hrmp_channel, AccountIdOf, BalanceOf, CollatorSessionKeys, ExtBuilder, ValidatorIdOf,
 	XcmReceivedFrom,
 };
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_keyring::AccountKeyring::*;
 use sp_runtime::{
 	traits::{Header as HeaderT, Zero},
@@ -948,6 +948,92 @@ where
 	);
 
 	estimated_fee.into()
+}
+
+pub fn handle_transfer_token_message<
+	Runtime,
+	XcmConfig,
+>(
+	collator_session_key: CollatorSessionKeys<Runtime>,
+	runtime_para_id: u32,
+	bridghub_parachain_id: u32,
+	gateway_proxy_address: H160,
+	weth_contract_address: H160,
+	destination_contract: H160,
+	snowbridge_outbound_queue: Box<
+		dyn Fn(Vec<u8>) -> Option<snowbridge_outbound_queue::Event<Runtime>>,
+	>,
+) where
+	Runtime: frame_system::Config
+	+ pallet_balances::Config
+	+ pallet_session::Config
+	+ pallet_xcm::Config
+	+ parachain_info::Config
+	+ pallet_collator_selection::Config
+	+ cumulus_pallet_dmp_queue::Config
+	+ cumulus_pallet_parachain_system::Config
+	+ snowbridge_outbound_queue::Config,
+	XcmConfig: xcm_executor::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+{
+	let bridgehub_parachain_location = MultiLocation::new(1, Parachain(bridghub_parachain_id));
+
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(runtime_para_id.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			let assets = vec![MultiAsset {
+				id: Concrete(MultiLocation {
+					parents: 0,
+					interior: X2(AccountKey20{ network: None, key: gateway_proxy_address.into()}, AccountKey20{ network: None, key: weth_contract_address.into() }),
+				}),
+				fun: Fungible(1000000000),
+			}];
+
+			let inner_xcm = Xcm(vec![
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				WithdrawAsset(MultiAssets::from(assets.clone())),
+				DepositAsset {
+					assets: MultiAssetFilter::from(assets),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(AccountKey20{ network: None, key: destination_contract.into()}),
+					}
+				},
+				SetTopic([0; 32])
+			]);
+
+			// prepare transfer token message
+			let xcm = Xcm(vec![
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				ExportMessage {
+					network: Ethereum { chain_id: 15 },
+					destination: Here,
+					xcm: inner_xcm
+				}
+			]);
+
+			// execute XCM
+			let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+			assert_ok!(XcmExecutor::<XcmConfig>::execute_xcm(
+				bridgehub_parachain_location,
+				xcm,
+				hash,
+				RuntimeHelper::<Runtime>::xcm_max_weight(XcmReceivedFrom::Sibling),
+			)
+			.ensure_complete());
+
+			// check events
+			let mut events = <frame_system::Pallet<Runtime>>::events()
+				.into_iter()
+				.filter_map(|e| snowbridge_outbound_queue(e.event.encode()));
+			assert!(
+				events.any(|e| matches!(e, snowbridge_outbound_queue::Event::MessageQueued { .. }))
+			);
+		});
 }
 
 pub mod test_data {

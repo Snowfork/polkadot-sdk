@@ -56,6 +56,11 @@ pallet-bridge-messages = { path = "../../../../../bridges/modules/messages", def
 pallet-bridge-relayers = { path = "../../../../../bridges/modules/relayers", default-features = false }
 bridge-runtime-common = { path = "../../../../../bridges/bin/runtime-common", default-features = false }
 
+# Ethereum Bridge (Snowbridge)
+snowbridge-core = { path = "../../../../../../parachain/primitives/core", default-features = false }
+snowbridge-outbound-queue = { path = "../../../../../../parachain/pallets/outbound-queue", default-features = false }
+snowbridge-control = { path = "../../../../../../parachain/pallets/control", default-features = false }
+
 [features]
 default = [ "std" ]
 std = [
@@ -98,4 +103,7 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"snowbridge-core/std",
+	"snowbridge-outbound-queue/std",
+	"snowbridge-control/std",
 ]

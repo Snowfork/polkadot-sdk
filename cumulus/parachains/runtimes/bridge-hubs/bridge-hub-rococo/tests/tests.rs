@@ -103,6 +103,7 @@ mod bridge_hub_rococo_tests {
 		WithBridgeHubWococoMessageBridge, WithBridgeHubWococoMessagesInstance,
 		DEFAULT_XCM_LANE_TO_BRIDGE_HUB_WOCOCO,
 	};
+	use sp_core::H160;
 
 	bridge_hub_test_utils::test_cases::include_teleports_for_native_asset_works!(
 		Runtime,
@@ -295,6 +296,27 @@ mod bridge_hub_rococo_tests {
 			estimated,
 			max_expected
 		);
+	}
+
+	#[test]
+	pub fn transfer_token_to_ethereum_works() {
+		bridge_hub_test_utils::test_cases::handle_transfer_token_message::<
+			Runtime,
+			XcmConfig,
+		>(
+			collator_session_keys(),
+			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+			bridge_hub_rococo_runtime::GatewayAddress::get(),
+			H160::random(),
+			H160::random(),
+			Box::new(|runtime_event_encoded: Vec<u8>| {
+				match RuntimeEvent::decode(&mut &runtime_event_encoded[..]) {
+					Ok(RuntimeEvent::EthereumOutboundQueue(event)) => Some(event),
+					_ => None,
+				}
+			})
+		)
 	}
 }
 
