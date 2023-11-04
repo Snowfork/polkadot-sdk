@@ -900,7 +900,7 @@ impl pallet_xcm_bridge_hub_router::Config<ToRococoXcmRouterInstance> for Runtime
 /// consensus with dynamic fees and back-pressure.
 pub type ToEthereumXcmRouterInstance = pallet_assets::Instance3;
 impl pallet_xcm_bridge_hub_router::Config<ToEthereumXcmRouterInstance> for Runtime {
-	type WeightInfo = weights::pallet_xcm_bridge_hub_router_to_rococo::WeightInfo<Runtime>;
+	type WeightInfo = weights::pallet_xcm_bridge_hub_router_to_ethereum::WeightInfo<Runtime>;
 
 	type UniversalLocation = xcm_config::UniversalLocation;
 	type BridgedNetworkId = xcm_config::bridging::to_ethereum::EthereumNetwork;
@@ -918,10 +918,10 @@ impl pallet_xcm_bridge_hub_router::Config<ToEthereumXcmRouterInstance> for Runti
 
 	type ToBridgeHubSender = XcmpQueue;
 	type WithBridgeHubChannel =
-	cumulus_pallet_xcmp_queue::bridging::InAndOutXcmpChannelStatusProvider<
-		xcm_config::bridging::SiblingBridgeHubParaId,
-		Runtime,
-	>;
+		cumulus_pallet_xcmp_queue::bridging::InAndOutXcmpChannelStatusProvider<
+			xcm_config::bridging::SiblingBridgeHubParaId,
+			Runtime,
+		>;
 
 	type ByteFee = xcm_config::bridging::XcmBridgeHubRouterByteFee;
 	type FeeAsset = xcm_config::bridging::XcmBridgeHubRouterFeeAssetId;

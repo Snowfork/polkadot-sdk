@@ -17,8 +17,8 @@ use super::{
 	AccountId, AllPalletsWithSystem, Assets, Authorship, Balance, Balances, BaseDeliveryFee,
 	FeeAssetId, ForeignAssets, ForeignAssetsInstance, ParachainInfo, ParachainSystem, PolkadotXcm,
 	PoolAssets, Runtime, RuntimeCall, RuntimeEvent, RuntimeFlavor, RuntimeOrigin,
-	ToRococoXcmRouter, ToWococoXcmRouter, ToEthereumXcmRouter, TransactionByteFee, TrustBackedAssetsInstance,
-	WeightToFee, XcmpQueue,
+	ToEthereumXcmRouter, ToRococoXcmRouter, ToWococoXcmRouter, TransactionByteFee,
+	TrustBackedAssetsInstance, WeightToFee, XcmpQueue,
 };
 use assets_common::{
 	local_and_foreign_assets::MatchesLocalAndForeignAssetsMultiLocation,
@@ -59,9 +59,9 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
 
+use crate::ToEthereumXcmRouterInstance;
 #[cfg(feature = "runtime-benchmarks")]
 use cumulus_primitives_core::ParaId;
-use crate::ToEthereumXcmRouterInstance;
 
 parameter_types! {
 	pub storage Flavor: RuntimeFlavor = RuntimeFlavor::default();
@@ -617,8 +617,11 @@ impl xcm_executor::Config for XcmConfig {
 		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 	>;
 	type MessageExporter = ();
-	type UniversalAliases =
-		(bridging::to_wococo::UniversalAliases, bridging::to_rococo::UniversalAliases, bridging::to_ethereum::UniversalAliases);
+	type UniversalAliases = (
+		bridging::to_wococo::UniversalAliases,
+		bridging::to_rococo::UniversalAliases,
+		bridging::to_ethereum::UniversalAliases,
+	);
 	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
 	type SafeCallFilter = SafeCallFilter;
 	type Aliasers = Nothing;
@@ -982,7 +985,7 @@ pub mod bridging {
 		}
 
 		pub type IsTrustedBridgedReserveLocationForForeignAsset =
-		matching::IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
+			matching::IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
 
 		impl Contains<(MultiLocation, Junction)> for UniversalAliases {
 			fn contains(alias: &(MultiLocation, Junction)) -> bool {
