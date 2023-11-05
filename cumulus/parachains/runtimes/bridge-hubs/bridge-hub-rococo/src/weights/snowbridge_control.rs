@@ -210,7 +210,7 @@ impl<T: frame_system::Config> snowbridge_control::WeightInfo for WeightInfo<T> {
 	/// Proof: MessageQueue ServiceHead (max_values: Some(1), max_size: Some(5), added: 500, mode: MaxEncodedLen)
 	/// Storage: MessageQueue Pages (r:0 w:1)
 	/// Proof: MessageQueue Pages (max_values: None, max_size: Some(65585), added: 68060, mode: MaxEncodedLen)
-	fn update_fees() -> Weight {
+	fn set_token_transfer_fees() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `80`
 		//  Estimated: `3517`
