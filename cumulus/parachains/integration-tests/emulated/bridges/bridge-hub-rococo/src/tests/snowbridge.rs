@@ -165,7 +165,7 @@ fn register_token() {
 		5_000_000 * ROCOCO_ED,
 	)]);
 
-	// Fund gateway sovereign in asset hub
+	// Fund ethereum sovereign in asset hub
 	AssetHubRococo::fund_accounts(vec![(
 		hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5").into(),
 		5_000_000_000_000 * ROCOCO_ED,
