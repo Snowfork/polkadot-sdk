@@ -300,7 +300,7 @@ mod bridge_hub_rococo_tests {
 
 	#[test]
 	pub fn transfer_token_to_ethereum_works() {
-		bridge_hub_test_utils::test_cases::handle_transfer_token_message::<
+		bridge_hub_test_utils::test_cases::send_transfer_token_message::<
 			Runtime,
 			XcmConfig,
 		>(
@@ -315,6 +315,20 @@ mod bridge_hub_rococo_tests {
 					_ => None,
 				}
 			})
+		)
+	}
+
+	#[test]
+	pub fn unpaid_transfer_token_to_ethereum_fails_with_barrier() {
+		bridge_hub_test_utils::test_cases::send_unpaid_transfer_token_message::<
+			Runtime,
+			XcmConfig,
+		>(
+			collator_session_keys(),
+			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
+			bp_asset_hub_rococo::ASSET_HUB_ROCOCO_PARACHAIN_ID,
+			H160::random(),
+			H160::random(),
 		)
 	}
 }

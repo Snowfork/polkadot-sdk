@@ -33,10 +33,7 @@ use bridge_runtime_common::{
 	messages_xcm_extension::{XcmAsPlainPayload, XcmBlobMessageDispatchResult},
 };
 use codec::Encode;
-use frame_support::{
-	assert_ok,
-	traits::{Get, OnFinalize, OnInitialize, OriginTrait, PalletInfoAccess, fungible::Mutate},
-};
+use frame_support::{assert_err, assert_ok, traits::{Get, OnFinalize, OnInitialize, OriginTrait, PalletInfoAccess, fungible::Mutate}};
 use frame_system::pallet_prelude::{BlockNumberFor, HeaderFor};
 use pallet_bridge_grandpa::BridgedHeader;
 use parachains_common::AccountId;
@@ -65,6 +62,7 @@ type RuntimeHelper<Runtime, AllPalletsWithoutSystem = ()> =
 
 // Re-export test_case from `parachains-runtimes-test-utils`
 pub use parachains_runtimes_test_utils::test_cases::change_storage_constant_by_governance_works;
+use xcm::v3::Error::Barrier;
 
 /// Test-case makes sure that `Runtime` can process bridging initialize via governance-like call
 pub fn initialize_bridge_by_governance_works<Runtime, GrandpaPalletInstance>(
@@ -950,7 +948,7 @@ where
 	estimated_fee.into()
 }
 
-pub fn handle_transfer_token_message<
+pub fn send_transfer_token_message<
 	Runtime,
 	XcmConfig,
 >(
@@ -962,6 +960,120 @@ pub fn handle_transfer_token_message<
 	snowbridge_outbound_queue: Box<
 		dyn Fn(Vec<u8>) -> Option<snowbridge_outbound_queue::Event<Runtime>>,
 	>,
+) where
+	Runtime: frame_system::Config
+	+ pallet_balances::Config
+	+ pallet_session::Config
+	+ pallet_xcm::Config
+	+ parachain_info::Config
+	+ pallet_collator_selection::Config
+	+ cumulus_pallet_dmp_queue::Config
+	+ cumulus_pallet_parachain_system::Config
+	+ snowbridge_outbound_queue::Config,
+	XcmConfig: xcm_executor::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+{
+	let assethub_parachain_location = MultiLocation::new(1, Parachain(assethub_parachain_id));
+
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(runtime_para_id.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			// fund asset hub sovereign account so it can pay fees
+			let asset_hub_sovereign_account = snowbridge_core::sibling_sovereign_account::<Runtime>(assethub_parachain_id.into());
+			<pallet_balances::Pallet<Runtime>>::mint_into(
+				&asset_hub_sovereign_account,
+				4000000000u32.into(),
+			).unwrap();
+
+			let asset = MultiAsset {
+				id: Concrete(MultiLocation {
+					parents: 0,
+					interior: X1(AccountKey20{ network: None, key: weth_contract_address.into() }),
+				}),
+				fun: Fungible(1000000000),
+			};
+			let assets = vec![asset.clone()];
+
+			let inner_xcm = Xcm(vec![
+				WithdrawAsset(MultiAssets::from(assets.clone())),
+				ClearOrigin,
+				BuyExecution{
+					fees: asset,
+					weight_limit: Unlimited,
+				},
+				DepositAsset {
+					assets: Wild(AllCounted(1)),
+					beneficiary: MultiLocation {
+						parents: 0,
+						interior: X1(AccountKey20{ network: None, key: destination_contract.into()}),
+					}
+				},
+				RefundSurplus,
+				DepositAsset{
+					assets: Wild(All),
+					beneficiary: MultiLocation {
+						parents: 1,
+						interior: X1(Parachain(1000)),
+					}
+				},
+				SetTopic([0; 32])
+			]);
+
+			let fee = MultiAsset {
+				id: Concrete(MultiLocation {
+					parents: 1,
+					interior: Here,
+				}),
+				fun: Fungible(2837673329),
+			};
+
+			// prepare transfer token message
+			let xcm = Xcm(vec![
+				WithdrawAsset(MultiAssets::from(vec![fee.clone()])),
+				BuyExecution{
+					fees: fee,
+					weight_limit: Unlimited
+				},
+				ExportMessage {
+					network: Ethereum { chain_id: 15 },
+					destination: Here,
+					xcm: inner_xcm
+				}
+			]);
+
+			// execute XCM
+			let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+			assert_ok!(XcmExecutor::<XcmConfig>::execute_xcm(
+				assethub_parachain_location,
+				xcm,
+				hash,
+				RuntimeHelper::<Runtime>::xcm_max_weight(XcmReceivedFrom::Sibling),
+			)
+			.ensure_complete());
+
+			// check events
+			let mut events = <frame_system::Pallet<Runtime>>::events()
+				.into_iter()
+				.filter_map(|e| snowbridge_outbound_queue(e.event.encode()));
+			assert!(
+				events.any(|e| matches!(e, snowbridge_outbound_queue::Event::MessageQueued { .. }))
+			);
+		});
+}
+
+pub fn send_unpaid_transfer_token_message<
+	Runtime,
+	XcmConfig,
+>(
+	collator_session_key: CollatorSessionKeys<Runtime>,
+	runtime_para_id: u32,
+	assethub_parachain_id: u32,
+	weth_contract_address: H160,
+	destination_contract: H160,
 ) where
 	Runtime: frame_system::Config
 	+ pallet_balances::Config
@@ -1005,7 +1117,7 @@ pub fn handle_transfer_token_message<
 				ClearOrigin,
 				BuyExecution{
 					fees: asset,
-					weight_limit: WeightLimit::Unlimited,
+					weight_limit: Unlimited,
 				},
 				DepositAsset {
 					assets: Wild(AllCounted(1)),
@@ -1025,21 +1137,9 @@ pub fn handle_transfer_token_message<
 				SetTopic([0; 32])
 			]);
 
-			let fee = MultiAsset {
-				id: Concrete(MultiLocation {
-					parents: 1,
-					interior: Here,
-				}),
-				fun: Fungible(2837673329),
-			};
-
 			// prepare transfer token message
 			let xcm = Xcm(vec![
-				WithdrawAsset(MultiAssets::from(vec![fee.clone()])),
-				BuyExecution{
-					fees: fee,
-					weight_limit: WeightLimit::Unlimited
-				},
+				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 				ExportMessage {
 					network: Ethereum { chain_id: 15 },
 					destination: Here,
@@ -1049,21 +1149,14 @@ pub fn handle_transfer_token_message<
 
 			// execute XCM
 			let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
-			assert_ok!(XcmExecutor::<XcmConfig>::execute_xcm(
+			let outcome = XcmExecutor::<XcmConfig>::execute_xcm(
 				assethub_parachain_location,
 				xcm,
 				hash,
 				RuntimeHelper::<Runtime>::xcm_max_weight(XcmReceivedFrom::Sibling),
-			)
-			.ensure_complete());
-
-			// check events
-			let mut events = <frame_system::Pallet<Runtime>>::events()
-				.into_iter()
-				.filter_map(|e| snowbridge_outbound_queue(e.event.encode()));
-			assert!(
-				events.any(|e| matches!(e, snowbridge_outbound_queue::Event::MessageQueued { .. }))
 			);
+			// check error is barrier
+			assert_err!(outcome.ensure_complete(), Barrier);
 		});
 }
 
