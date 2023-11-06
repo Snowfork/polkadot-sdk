@@ -35,7 +35,7 @@ use bridge_runtime_common::{
 use codec::Encode;
 use frame_support::{
 	assert_ok,
-	traits::{Get, OnFinalize, OnInitialize, OriginTrait, PalletInfoAccess},
+	traits::{Get, OnFinalize, OnInitialize, OriginTrait, PalletInfoAccess, fungible::Mutate},
 };
 use frame_system::pallet_prelude::{BlockNumberFor, HeaderFor};
 use pallet_bridge_grandpa::BridgedHeader;
@@ -956,7 +956,7 @@ pub fn handle_transfer_token_message<
 >(
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
-	bridghub_parachain_id: u32,
+	assethub_parachain_id: u32,
 	weth_contract_address: H160,
 	destination_contract: H160,
 	snowbridge_outbound_queue: Box<
@@ -975,7 +975,7 @@ pub fn handle_transfer_token_message<
 	XcmConfig: xcm_executor::Config,
 	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
 {
-	let bridgehub_parachain_location = MultiLocation::new(1, Parachain(bridghub_parachain_id));
+	let assethub_parachain_location = MultiLocation::new(1, Parachain(assethub_parachain_id));
 
 	ExtBuilder::<Runtime>::default()
 		.with_collators(collator_session_key.collators())
@@ -984,6 +984,13 @@ pub fn handle_transfer_token_message<
 		.with_tracing()
 		.build()
 		.execute_with(|| {
+			let asset_hub_sovereign_account = snowbridge_core::sibling_sovereign_account::<Runtime>(assethub_parachain_id.into());
+
+			<pallet_balances::Pallet<Runtime>>::mint_into(
+				&asset_hub_sovereign_account,
+				4000000000u32.into(),
+			).unwrap();
+
 			let asset = MultiAsset {
 				id: Concrete(MultiLocation {
 					parents: 0,
@@ -1023,7 +1030,7 @@ pub fn handle_transfer_token_message<
 					parents: 1,
 					interior: Here,
 				}),
-				fun: Fungible(28376733291),
+				fun: Fungible(2837673329),
 			};
 
 			// prepare transfer token message
@@ -1043,7 +1050,7 @@ pub fn handle_transfer_token_message<
 			// execute XCM
 			let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
 			assert_ok!(XcmExecutor::<XcmConfig>::execute_xcm(
-				bridgehub_parachain_location,
+				assethub_parachain_location,
 				xcm,
 				hash,
 				RuntimeHelper::<Runtime>::xcm_max_weight(XcmReceivedFrom::Sibling),
