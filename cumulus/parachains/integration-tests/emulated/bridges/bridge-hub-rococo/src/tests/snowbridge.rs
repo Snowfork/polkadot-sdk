@@ -167,7 +167,7 @@ fn register_token() {
 
 	// Fund gateway sovereign in asset hub
 	AssetHubRococo::fund_accounts(vec![(
-		hex!("c9794dd8013efb2ad83f668845c62b373c16ad33971745731408058e4d0c6ff5").into(),
+		hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5").into(),
 		5_000_000_000_000 * ROCOCO_ED,
 	)]);
 
@@ -178,7 +178,6 @@ fn register_token() {
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: 15,
 			command: Command::RegisterToken {
-				gateway: hex!("EDa338E4dC46038493b885327842fD3E301CaB39").into(),
 				token: hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d").into(),
 			},
 		});
