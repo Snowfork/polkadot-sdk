@@ -307,7 +307,6 @@ mod bridge_hub_rococo_tests {
 			collator_session_keys(),
 			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
 			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
-			bridge_hub_rococo_runtime::GatewayAddress::get(),
 			H160::random(),
 			H160::random(),
 			Box::new(|runtime_event_encoded: Vec<u8>| {

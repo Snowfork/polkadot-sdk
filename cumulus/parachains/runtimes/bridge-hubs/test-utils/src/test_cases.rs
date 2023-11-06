@@ -957,7 +957,6 @@ pub fn handle_transfer_token_message<
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
 	bridghub_parachain_id: u32,
-	gateway_proxy_address: H160,
 	weth_contract_address: H160,
 	destination_contract: H160,
 	snowbridge_outbound_queue: Box<
@@ -985,30 +984,55 @@ pub fn handle_transfer_token_message<
 		.with_tracing()
 		.build()
 		.execute_with(|| {
-			let assets = vec![MultiAsset {
+			let asset = MultiAsset {
 				id: Concrete(MultiLocation {
 					parents: 0,
-					interior: X2(AccountKey20{ network: None, key: gateway_proxy_address.into()}, AccountKey20{ network: None, key: weth_contract_address.into() }),
+					interior: X1(AccountKey20{ network: None, key: weth_contract_address.into() }),
 				}),
 				fun: Fungible(1000000000),
-			}];
+			};
+			let assets = vec![asset.clone()];
 
 			let inner_xcm = Xcm(vec![
-				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 				WithdrawAsset(MultiAssets::from(assets.clone())),
+				ClearOrigin,
+				BuyExecution{
+					fees: asset,
+					weight_limit: WeightLimit::Unlimited,
+				},
 				DepositAsset {
-					assets: MultiAssetFilter::from(assets),
+					assets: Wild(AllCounted(1)),
 					beneficiary: MultiLocation {
 						parents: 0,
 						interior: X1(AccountKey20{ network: None, key: destination_contract.into()}),
 					}
 				},
+				RefundSurplus,
+				DepositAsset{
+					assets: Wild(All),
+					beneficiary: MultiLocation {
+						parents: 1,
+						interior: X1(Parachain(1000)),
+					}
+				},
 				SetTopic([0; 32])
 			]);
 
+			let fee = MultiAsset {
+				id: Concrete(MultiLocation {
+					parents: 1,
+					interior: Here,
+				}),
+				fun: Fungible(28376733291),
+			};
+
 			// prepare transfer token message
 			let xcm = Xcm(vec![
-				UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+				WithdrawAsset(MultiAssets::from(vec![fee.clone()])),
+				BuyExecution{
+					fees: fee,
+					weight_limit: WeightLimit::Unlimited
+				},
 				ExportMessage {
 					network: Ethereum { chain_id: 15 },
 					destination: Here,
