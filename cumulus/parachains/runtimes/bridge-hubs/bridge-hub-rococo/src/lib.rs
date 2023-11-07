@@ -405,23 +405,6 @@ impl pallet_message_queue::Config for Runtime {
 	type ServiceWeight = MessageQueueServiceWeight;
 }
 
-parameter_types! {
-	/// Amount of weight that can be spent per block to service messages.
-	pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
-}
-
-impl pallet_message_queue::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Size = u32;
-	type HeapSize = ConstU32<{ 64 * 1024 }>;
-	type MaxStale = ConstU32<8>;
-	type ServiceWeight = MessageQueueServiceWeight;
-	type MessageProcessor = EthereumOutboundQueue;
-	type QueueChangeHandler = ();
-	type QueuePausedQuery = EthereumOutboundQueue;
-	type WeightInfo = ();
-}
-
 impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
@@ -569,6 +552,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type WeightToFee = WeightToFee;
 }
 
+/*
 impl snowbridge_outbound_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
@@ -581,7 +565,7 @@ impl snowbridge_outbound_queue::Config for Runtime {
 	type Balance = Balance;
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_outbound_queue::WeightInfo<Runtime>;
-}
+}*/
 
 #[cfg(not(feature = "beacon-spec-mainnet"))]
 parameter_types! {
@@ -735,10 +719,10 @@ construct_runtime!(
 
 		BridgeRelayers: pallet_bridge_relayers::{Pallet, Call, Storage, Event<T>} = 47,
 
-		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 48,
-		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 49,
-		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 50,
-		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 51,
+		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 55,
+		//EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 56,
+		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 57,
+		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 58,
 
 		// Message Queue. Registered after EthereumOutboundQueue so that their `on_initialize` handlers
 		// run in the desired order.
@@ -788,7 +772,7 @@ mod benches {
 		[pallet_bridge_relayers, BridgeRelayersBench::<Runtime>]
 		// Ethereum Bridge
 		[snowbridge_inbound_queue, EthereumInboundQueue]
-		[snowbridge_outbound_queue, EthereumOutboundQueue]
+		//[snowbridge_outbound_queue, EthereumOutboundQueue]
 		[snowbridge_control, EthereumControl]
 		[snowbridge_ethereum_beacon_client, EthereumBeaconClient]
 	);
@@ -1085,6 +1069,7 @@ impl_runtime_apis! {
 		}
 	}
 
+	/*
 	impl snowbridge_outbound_queue_runtime_api::OutboundQueueApi<Block, Balance> for Runtime {
 		fn prove_message(leaf_index: u64) -> Option<snowbridge_outbound_queue::MerkleProof> {
 			snowbridge_outbound_queue::api::prove_message::<Runtime>(leaf_index)
@@ -1093,7 +1078,7 @@ impl_runtime_apis! {
 		fn calculate_fee(message: Message) -> Option<Balance> {
 			snowbridge_outbound_queue::api::calculate_fee::<Runtime>(message)
 		}
-	}
+	}*/
 
 	impl snowbridge_control_runtime_api::ControlApi<Block> for Runtime {
 		fn agent_id(location: VersionedMultiLocation) -> Option<AgentId> {

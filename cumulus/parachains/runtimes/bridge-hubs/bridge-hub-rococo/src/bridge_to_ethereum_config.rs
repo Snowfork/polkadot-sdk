@@ -9,6 +9,9 @@ use crate::bridge_common_config::DeliveryRewardInBalance;
 use crate::bridge_to_rococo_config::{ActiveOutboundLanesToBridgeHubRococo, AssetHubWococoParaId, BridgeHubRococoChainId, CongestedMessage, MaxUnconfirmedMessagesAtInboundLane, MaxUnrewardedRelayerEntriesAtInboundLane, RococoGlobalConsensusNetwork, ToBridgeHubRococoMaximalOutboundPayloadSize, ToBridgeHubRococoMessageVerifier, UncongestedMessage, WithBridgeHubRococoMessageBridge};
 use crate::weights;
 use crate::xcm_config::XcmRouter;
+use xcm::{
+	prelude::{NetworkId},
+};
 
 parameter_types! {
 	pub EthereumGlobalConsensusNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
