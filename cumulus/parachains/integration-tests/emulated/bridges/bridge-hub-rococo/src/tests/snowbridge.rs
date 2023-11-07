@@ -22,7 +22,7 @@ use snowbridge_router_primitives::inbound::{Command, Destination, MessageV1, Ver
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 const CHAIN_ID: u64 = 15;
 const DEST_PARA_ID: u32 = 1000;
-const ETHEREUM_SOVEREIGN: [u8; 32] =
+const SNOWBRIDGE_SOVEREIGN: [u8; 32] =
 	hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5");
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ASSETHUB_SOVEREIGN: [u8; 32] =
@@ -176,7 +176,7 @@ fn register_token() {
 	)]);
 
 	// Fund ethereum sovereign in asset hub
-	AssetHubRococo::fund_accounts(vec![(ETHEREUM_SOVEREIGN.into(), 5_000_000_000_000 * ROCOCO_ED)]);
+	AssetHubRococo::fund_accounts(vec![(SNOWBRIDGE_SOVEREIGN.into(), 5_000_000_000_000 * ROCOCO_ED)]);
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
@@ -222,7 +222,7 @@ fn send_token() {
 
 	// Fund ethereum sovereign in asset hub
 	AssetHubRococo::fund_accounts(vec![
-		(ETHEREUM_SOVEREIGN.into(), INITIAL_FUND),
+		(SNOWBRIDGE_SOVEREIGN.into(), INITIAL_FUND),
 		(ASSETHUB_SOVEREIGN.into(), INITIAL_FUND),
 		(AssetHubRococoReceiver::get(), INITIAL_FUND),
 	]);
@@ -281,7 +281,7 @@ fn reserve_transfer_token() {
 
 	// Fund ethereum sovereign in asset hub
 	AssetHubRococo::fund_accounts(vec![
-		(ETHEREUM_SOVEREIGN.into(), INITIAL_FUND),
+		(SNOWBRIDGE_SOVEREIGN.into(), INITIAL_FUND),
 		(ASSETHUB_SOVEREIGN.into(), INITIAL_FUND),
 		(AssetHubRococoReceiver::get(), INITIAL_FUND),
 	]);
@@ -328,12 +328,7 @@ fn reserve_transfer_token() {
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { .. }) => {},
 			]
 		);
-		let fee_asset = MultiAsset {
-			id: Concrete(MultiLocation { parents: 1, interior: Here }),
-			fun: Fungible(1_000_000_000_000), //1 ROC
-		};
 		let assets = vec![
-			fee_asset,
 			MultiAsset {
 				id: Concrete(MultiLocation {
 					parents: 2,
