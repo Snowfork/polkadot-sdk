@@ -83,7 +83,6 @@ parameter_types! {
 
 	// Network and location for the local Ethereum testnet.
 	pub const EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
-	pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 }
 
 /// Adapter for resolving `NetworkId` based on `pub storage Flavor: RuntimeFlavor`.
@@ -417,7 +416,7 @@ pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>
 
 pub type SnowbridgeExporter = EthereumBlobExporter<
 	UniversalLocation,
-	EthereumLocation,
+	EthereumNetwork,
 	snowbridge_outbound_queue::Pallet<Runtime>,
 	AgentIdOf,
 >;
