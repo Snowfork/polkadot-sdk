@@ -317,6 +317,11 @@ impl xcm_executor::Config for XcmConfig {
 				BridgeHubRococoChainId,
 				BridgeHubRococoMessagesLane,
 			>,
+			XcmExportFeeToSnowbridge<
+			 	EthereumNetwork,
+				TreasuryAccount,
+				Self::AssetTransactor,
+			>,
 			XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 		),
 	>;
@@ -570,5 +575,44 @@ impl<
 		}
 
 		fee
+	}
+}
+
+/// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
+/// to Snowbridge and holds it in a receiver account. Burns the fees in case of a failure.
+pub struct XcmExportFeeToSnowbridge<EthereumNetwork, ReceiverAccount, AssetTransactor>(
+	PhantomData<(EthereumNetwork, ReceiverAccount, AssetTransactor)>,
+);
+
+impl<
+		EthereumNetwork: Get<NetworkId>,
+		ReceiverAccount: Get<AccountId>,
+		AssetTransactor: TransactAsset,
+	> HandleFee for XcmExportFeeToSnowbridge<EthereumNetwork, ReceiverAccount, AssetTransactor>
+{
+	fn handle_fee(
+		fees: MultiAssets,
+		context: Option<&XcmContext>,
+		reason: FeeReason,
+	) -> MultiAssets {
+		if matches!(reason, FeeReason::Export { network: bridged_network, destination }
+				if bridged_network == EthereumNetwork::get() && destination == Here)
+		{
+			log::info!(
+				target: "xcm::fees",
+				"XcmExportFeeToSnowbridge fees: {fees:?}, context: {context:?}, reason: {reason:?}",
+			);
+
+			let receiver = ReceiverAccount::get();
+			deposit_or_burn_fee::<AssetTransactor, _>(
+				fees,
+				context,
+				receiver,
+			);
+
+			return MultiAssets::new()
+		}
+
+		fees
 	}
 }
