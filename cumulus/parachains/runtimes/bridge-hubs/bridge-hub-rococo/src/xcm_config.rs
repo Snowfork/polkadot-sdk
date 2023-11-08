@@ -50,7 +50,10 @@ use parachains_common::{
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use rococo_runtime_constants::system_parachain::SystemParachains;
-use snowbridge_router_primitives::outbound::EthereumBlobExporter;
+use snowbridge_router_primitives::{
+	inbound::GlobalConsensusEthereumConvertsFor,
+	outbound::EthereumBlobExporter,
+};
 use sp_core::{Get, H256};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::marker::PhantomData;
@@ -82,7 +85,9 @@ parameter_types! {
 	pub RelayTreasuryLocation: MultiLocation = (Parent, PalletInstance(rococo_runtime_constants::TREASURY_PALLET_ID)).into();
 
 	// Network and location for the local Ethereum testnet.
-	pub const EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
+	pub const EthereumChainId: u64 = 15;
+	pub const EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: EthereumChainId::get() };
+	pub SnowbridgeTreasuryAccount: AccountId = GlobalConsensusEthereumConvertsFor::<AccountId>::from_chain_id(&EthereumChainId::get()).into();
 }
 
 /// Adapter for resolving `NetworkId` based on `pub storage Flavor: RuntimeFlavor`.
@@ -319,7 +324,7 @@ impl xcm_executor::Config for XcmConfig {
 			>,
 			XcmExportFeeToSnowbridge<
 			 	EthereumNetwork,
-				TreasuryAccount,
+				SnowbridgeTreasuryAccount,
 				Self::AssetTransactor,
 			>,
 			XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,

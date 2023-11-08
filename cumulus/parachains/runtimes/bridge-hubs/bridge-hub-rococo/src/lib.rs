@@ -86,7 +86,7 @@ use pallet_xcm::EnsureXcm;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm::VersionedMultiLocation;
-use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
+use xcm_config::{SnowbridgeTreasuryAccount, XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 use bp_runtime::HeaderId;
 
@@ -622,7 +622,7 @@ impl snowbridge_control::Config for Runtime {
 	type MessageHasher = BlakeTwo256;
 	type SiblingOrigin = EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = xcm_config::AgentIdOf;
-	type TreasuryAccount = TreasuryAccount;
+	type TreasuryAccount = SnowbridgeTreasuryAccount;
 	type Token = Balances;
 	type WeightInfo = weights::snowbridge_control::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
