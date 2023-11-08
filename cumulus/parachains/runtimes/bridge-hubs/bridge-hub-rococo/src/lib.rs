@@ -604,10 +604,6 @@ parameter_types! {
 	pub const RelayNetwork: NetworkId = Rococo;
 }
 
-parameter_types! {
-	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
-}
-
 #[cfg(feature = "runtime-benchmarks")]
 impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 	fn make_xcm_origin(location: xcm::latest::MultiLocation) -> RuntimeOrigin {
