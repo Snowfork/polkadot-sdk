@@ -2124,6 +2124,7 @@ dependencies = [
  "snowbridge-control",
  "snowbridge-core",
  "snowbridge-inbound-queue",
+ "snowbridge-outbound-queue",
  "snowbridge-router-primitives",
  "staging-xcm",
  "staging-xcm-executor",
