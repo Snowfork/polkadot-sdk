@@ -325,7 +325,7 @@ impl xcm_executor::Config for XcmConfig {
 		crate::bridge_to_westend_config::ToBridgeHubWestendHaulBlobExporter,
 		crate::bridge_to_wococo_config::ToBridgeHubWococoHaulBlobExporter,
 		crate::bridge_to_rococo_config::ToBridgeHubRococoHaulBlobExporter,
-		crate::bridge_to_ethereum_config::ToBridgeHubEthereumHaulBlobExporter,
+		crate::bridge_to_ethereum_config::ToBridgeHubEthereumBlobExporter,
 	);
 	type UniversalAliases = Nothing;
 	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
@@ -418,6 +418,8 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
+
+pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 
 /// A `HandleFee` implementation that simply deposits the fees for `ExportMessage` XCM instructions
 /// into the accounts that are used for paying the relayer rewards.

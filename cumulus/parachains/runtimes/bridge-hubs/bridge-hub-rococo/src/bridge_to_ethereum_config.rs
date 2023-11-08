@@ -10,8 +10,12 @@ use crate::bridge_to_rococo_config::{ActiveOutboundLanesToBridgeHubRococo, Asset
 use crate::weights;
 use crate::xcm_config::XcmRouter;
 use xcm::{
+	latest::prelude::*,
 	prelude::{NetworkId},
 };
+use bridge_runtime_common::messages_xcm_extension::SenderAndLane;
+use crate::bridge_to_rococo_config::AssetHubRococoParaId;
+use crate::{Runtime, RuntimeEvent, AccountId};
 
 parameter_types! {
 	pub EthereumGlobalConsensusNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
@@ -31,7 +35,7 @@ pub type ToBridgeHubEthereumBlobExporter = HaulBlobExporter<
 pub struct ToBridgeHubEthereumXcmBlobHauler;
 impl XcmBlobHauler for ToBridgeHubEthereumXcmBlobHauler {
 	type Runtime = Runtime;
-	type MessagesInstance = WithBridgeHubRococoMessagesInstance;
+	type MessagesInstance = ();
 	type SenderAndLane = FromAssetHubRococoToBridgehubRococoRoute;
 
 	type ToSourceChainSender = XcmRouter;
@@ -39,38 +43,3 @@ impl XcmBlobHauler for ToBridgeHubEthereumXcmBlobHauler {
 	type UncongestedMessage = UncongestedMessage;
 }
 
-pub type WithBridgeHubRococoMessagesInstance = pallet_bridge_messages::Instance4;
-impl pallet_bridge_messages::Config<WithBridgeHubRococoMessagesInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = weights::pallet_bridge_messages_wococo_to_rococo::WeightInfo<Runtime>;
-	type BridgedChainId = BridgeHubRococoChainId;
-	type ActiveOutboundLanes = ActiveOutboundLanesToBridgeHubRococo;
-	type MaxUnrewardedRelayerEntriesAtInboundLane = MaxUnrewardedRelayerEntriesAtInboundLane;
-	type MaxUnconfirmedMessagesAtInboundLane = MaxUnconfirmedMessagesAtInboundLane;
-
-	type MaximalOutboundPayloadSize = ToBridgeHubRococoMaximalOutboundPayloadSize;
-	type OutboundPayload = XcmAsPlainPayload;
-
-	type InboundPayload = XcmAsPlainPayload;
-	type InboundRelayer = AccountId;
-	type DeliveryPayments = ();
-
-	type TargetHeaderChain = TargetHeaderChainAdapter<WithBridgeHubRococoMessageBridge>;
-	type LaneMessageVerifier = ToBridgeHubRococoMessageVerifier;
-	type DeliveryConfirmationPayments = pallet_bridge_relayers::DeliveryConfirmationPaymentsAdapter<
-		Runtime,
-		WithBridgeHubRococoMessagesInstance,
-		DeliveryRewardInBalance,
-	>;
-
-	type SourceHeaderChain = SourceHeaderChainAdapter<WithBridgeHubRococoMessageBridge>;
-	type MessageDispatch = XcmBlobMessageDispatch<
-		FromRococoMessageBlobDispatcher,
-		Self::WeightInfo,
-		cumulus_pallet_xcmp_queue::bridging::OutXcmpChannelStatusProvider<
-			AssetHubWococoParaId,
-			Runtime,
-		>,
-	>;
-	type OnMessagesDelivered = OnMessagesDelivered;
-}

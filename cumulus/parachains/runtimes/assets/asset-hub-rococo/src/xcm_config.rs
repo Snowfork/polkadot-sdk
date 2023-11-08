@@ -59,7 +59,6 @@ use xcm_builder::{
 };
 use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
 
-use crate::ToEthereumXcmRouterInstance;
 #[cfg(feature = "runtime-benchmarks")]
 use cumulus_primitives_core::ParaId;
 

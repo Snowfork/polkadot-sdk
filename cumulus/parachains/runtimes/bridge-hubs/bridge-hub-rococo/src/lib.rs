@@ -640,7 +640,8 @@ impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 impl snowbridge_control::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = ParachainInfo;
-	type OutboundQueue = EthereumOutboundQueue;
+	//type OutboundQueue = EthereumOutboundQueue;
+	type OutboundQueue = MessageQueue;
 	type MessageHasher = BlakeTwo256;
 	type SiblingOrigin = EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = xcm_config::AgentIdOf;
