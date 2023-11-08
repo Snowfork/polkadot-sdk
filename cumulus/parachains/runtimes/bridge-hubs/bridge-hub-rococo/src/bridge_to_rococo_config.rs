@@ -46,6 +46,10 @@ use xcm::{
 	prelude::{InteriorMultiLocation, NetworkId},
 };
 use xcm_builder::{BridgeBlobDispatcher, HaulBlobExporter};
+use snowbridge_router_primitives::outbound::EthereumBlobExporter;
+use crate::xcm_config::EthereumNetwork;
+use crate::xcm_config::AgentIdOf;
+use crate::xcm_config::UniversalLocation;
 
 parameter_types! {
 	pub const MaxUnrewardedRelayerEntriesAtInboundLane: bp_messages::MessageNonce =
@@ -114,6 +118,15 @@ pub type ToBridgeHubRococoHaulBlobExporter = HaulBlobExporter<
 	RococoGlobalConsensusNetwork,
 	(),
 >;
+
+pub type SnowbridgeExporter = EthereumBlobExporter<
+	UniversalLocation,
+	EthereumNetwork,
+	snowbridge_outbound_queue::Pallet<Runtime>,
+	AgentIdOf,
+>;
+
+
 pub struct ToBridgeHubRococoXcmBlobHauler;
 impl XcmBlobHauler for ToBridgeHubRococoXcmBlobHauler {
 	type Runtime = Runtime;
