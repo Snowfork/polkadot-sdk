@@ -45,7 +45,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
