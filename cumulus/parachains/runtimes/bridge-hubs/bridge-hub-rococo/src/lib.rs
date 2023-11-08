@@ -630,6 +630,7 @@ parameter_types! {
 	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 }
 
+/*
 #[cfg(feature = "runtime-benchmarks")]
 impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 	fn make_xcm_origin(location: xcm::latest::MultiLocation) -> RuntimeOrigin {
@@ -640,8 +641,7 @@ impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 impl snowbridge_control::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OwnParaId = ParachainInfo;
-	//type OutboundQueue = EthereumOutboundQueue;
-	type OutboundQueue = MessageQueue;
+	type OutboundQueue = EthereumOutboundQueue;
 	type MessageHasher = BlakeTwo256;
 	type SiblingOrigin = EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = xcm_config::AgentIdOf;
@@ -650,7 +650,7 @@ impl snowbridge_control::Config for Runtime {
 	type WeightInfo = weights::snowbridge_control::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
-}
+}*/
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -723,7 +723,7 @@ construct_runtime!(
 		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 55,
 		//EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 56,
 		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 57,
-		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 58,
+		//EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 58,
 
 		// Message Queue. Registered after EthereumOutboundQueue so that their `on_initialize` handlers
 		// run in the desired order.
@@ -774,7 +774,7 @@ mod benches {
 		// Ethereum Bridge
 		[snowbridge_inbound_queue, EthereumInboundQueue]
 		//[snowbridge_outbound_queue, EthereumOutboundQueue]
-		[snowbridge_control, EthereumControl]
+		//[snowbridge_control, EthereumControl]
 		[snowbridge_ethereum_beacon_client, EthereumBeaconClient]
 	);
 }
@@ -1079,13 +1079,13 @@ impl_runtime_apis! {
 		fn calculate_fee(message: Message) -> Option<Balance> {
 			snowbridge_outbound_queue::api::calculate_fee::<Runtime>(message)
 		}
-	}*/
+	}
 
 	impl snowbridge_control_runtime_api::ControlApi<Block> for Runtime {
 		fn agent_id(location: VersionedMultiLocation) -> Option<AgentId> {
 			snowbridge_control::api::agent_id::<Runtime>(location)
 		}
-	}
+	}*/
 
 
 	#[cfg(feature = "try-runtime")]
