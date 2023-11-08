@@ -107,7 +107,7 @@ use parachains_common::{
 	impls::DealWithFees,
 	rococo::{consensus::*, currency::*, fee::WeightToFee},
 	AccountId, Balance, BlockNumber, Hash, Header, Nonce, Signature, AVERAGE_ON_INITIALIZE_RATIO,
-	HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION,
+	HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, TREASURY_PALLET_ID
 };
 use xcm_executor::XcmExecutor;
 
@@ -605,7 +605,7 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
+	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
