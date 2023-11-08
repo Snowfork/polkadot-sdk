@@ -107,7 +107,7 @@ use parachains_common::{
 	impls::DealWithFees,
 	rococo::{consensus::*, currency::*, fee::WeightToFee},
 	AccountId, Balance, BlockNumber, Hash, Header, Nonce, Signature, AVERAGE_ON_INITIALIZE_RATIO,
-	HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION, TREASURY_PALLET_ID
+	HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION,
 };
 use xcm_executor::XcmExecutor;
 
