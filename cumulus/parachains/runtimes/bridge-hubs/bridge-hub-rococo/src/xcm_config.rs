@@ -616,7 +616,7 @@ impl<
 			if let Some(XcmContext{ origin: Some(origin), ..}) = context {
 				// There is an origin so split fee into parts.
 				let local_fee = OutboundQueue::calculate_local_fee();
-				
+
 			} else {
 				// There is no context so send the full fee to the receiver
 				deposit_or_burn_fee::<AssetTransactor, _>(
@@ -626,7 +626,7 @@ impl<
 				);
 			}
 
-			return fees;
+			return MultiAssets::new();
 		}
 
 		fees
