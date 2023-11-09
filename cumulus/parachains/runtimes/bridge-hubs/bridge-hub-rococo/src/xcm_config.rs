@@ -54,6 +54,7 @@ use snowbridge_router_primitives::{
 	inbound::GlobalConsensusEthereumConvertsFor,
 	outbound::EthereumBlobExporter,
 };
+use snowbridge_core::outbound::OutboundQueueLocalFee;
 use sp_core::{Get, H256};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::marker::PhantomData;
@@ -326,6 +327,7 @@ impl xcm_executor::Config for XcmConfig {
 			 	EthereumNetwork,
 				SnowbridgeTreasuryAccount,
 				Self::AssetTransactor,
+				crate::EthereumOutboundQueue,
 			>,
 			XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 		),
@@ -585,15 +587,16 @@ impl<
 
 /// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
 /// to Snowbridge and holds it in a receiver account. Burns the fees in case of a failure.
-pub struct XcmExportFeeToSnowbridge<EthereumNetwork, ReceiverAccount, AssetTransactor>(
-	PhantomData<(EthereumNetwork, ReceiverAccount, AssetTransactor)>,
+pub struct XcmExportFeeToSnowbridge<EthereumNetwork, ReceiverAccount, AssetTransactor, OutboundQueue>(
+	PhantomData<(EthereumNetwork, ReceiverAccount, AssetTransactor, OutboundQueue)>,
 );
 
 impl<
 		EthereumNetwork: Get<NetworkId>,
 		ReceiverAccount: Get<AccountId>,
 		AssetTransactor: TransactAsset,
-	> HandleFee for XcmExportFeeToSnowbridge<EthereumNetwork, ReceiverAccount, AssetTransactor>
+		OutboundQueue: OutboundQueueLocalFee<Balance = bp_rococo::Balance>,
+	> HandleFee for XcmExportFeeToSnowbridge<EthereumNetwork, ReceiverAccount, AssetTransactor, OutboundQueue>
 {
 	fn handle_fee(
 		fees: MultiAssets,
@@ -609,13 +612,21 @@ impl<
 			);
 
 			let receiver = ReceiverAccount::get();
-			deposit_or_burn_fee::<AssetTransactor, _>(
-				fees,
-				context,
-				receiver,
-			);
 
-			return MultiAssets::new()
+			if let Some(XcmContext{ origin: Some(origin), ..}) = context {
+				// There is an origin so split fee into parts.
+				let local_fee = OutboundQueue::calculate_local_fee();
+				
+			} else {
+				// There is no context so send the full fee to the receiver
+				deposit_or_burn_fee::<AssetTransactor, _>(
+					fees,
+					context,
+					receiver,
+				);
+			}
+
+			return fees;
 		}
 
 		fees
