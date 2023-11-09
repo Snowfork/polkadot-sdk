@@ -50,3 +50,4 @@ snowbridge-core = { path = "../../../../../../../parachain/primitives/core", def
 snowbridge-router-primitives = { path = "../../../../../../../parachain/primitives/router", default-features = false }
 snowbridge-control = { path = "../../../../../../../parachain/pallets/control", default-features = false }
 snowbridge-inbound-queue = { path = "../../../../../../../parachain/pallets/inbound-queue", default-features = false }
+snowbridge-outbound-queue = { path = "../../../../../../../parachain/pallets/outbound-queue", default-features = false }

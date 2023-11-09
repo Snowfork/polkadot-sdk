@@ -73,7 +73,6 @@ parameter_types! {
 
 	// Network and location for the local Ethereum testnet.
 	pub const EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
-	pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 }
 
 /// Adapter for resolving `NetworkId` based on `pub storage Flavor: RuntimeFlavor`.
@@ -191,6 +190,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 						frame_system::Call::set_code_without_checks { .. } |
 						frame_system::Call::kill_prefix { .. },
 				) | RuntimeCall::ParachainSystem(..) |
+				RuntimeCall::Utility(..) |
 				RuntimeCall::Timestamp(..) |
 				RuntimeCall::Balances(..) |
 				RuntimeCall::CollatorSelection(
