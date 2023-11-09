@@ -322,7 +322,6 @@ impl xcm_executor::Config for XcmConfig {
 			XcmExportFeeToSnowbridge<
 				TokenLocation,
 			 	EthereumNetwork,
-				TreasuryAccount,
 				Self::AssetTransactor,
 				crate::EthereumOutboundQueue,
 			>,
