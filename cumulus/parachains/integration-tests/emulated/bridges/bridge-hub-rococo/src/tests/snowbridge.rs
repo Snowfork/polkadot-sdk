@@ -385,5 +385,24 @@ fn reserve_transfer_token() {
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { .. }) => {},
 			]
 		);
+		let events = BridgeHubRococo::events();
+		assert!(
+			events.iter().find(|&event| matches!(
+				event, 
+				RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
+					if *who == SNOWBRIDGE_SOVEREIGN.into() && *amount == 16903333
+			))
+			.is_some(),
+			"Snowbridge sovereign takes local fee."
+		);
+		assert!(
+			events.iter().find(|&event| matches!(
+				event, 
+				RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
+					if *who == ASSETHUB_SOVEREIGN.into() && *amount == 2200000000000
+			))
+			.is_some(),
+			"Assethub sovereign takes remote fee."
+		);
 	});
 }
