@@ -200,6 +200,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 						frame_system::Call::set_code_without_checks { .. } |
 						frame_system::Call::kill_prefix { .. },
 				) | RuntimeCall::ParachainSystem(..) |
+				RuntimeCall::Utility(..) |
 				RuntimeCall::Timestamp(..) |
 				RuntimeCall::Balances(..) |
 				RuntimeCall::CollatorSelection(
