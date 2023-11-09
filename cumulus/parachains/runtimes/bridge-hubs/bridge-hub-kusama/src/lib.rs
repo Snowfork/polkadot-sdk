@@ -41,7 +41,8 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
+use cumulus_primitives_core::ParaId;
+use bridge_hub_common::{AggregateMessageOrigin, BridgeHubMessageRouter, message_queue::{NarrowOriginToSibling, ParaIdToSibling}};
 use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
@@ -72,7 +73,6 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use parachains_common::{
 	impls::DealWithFees,
 	kusama::{consensus::*, currency::*, fee::WeightToFee},
-	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
 	AccountId, Balance, BlockNumber, Hash, Header, Nonce, Signature, AVERAGE_ON_INITIALIZE_RATIO,
 	HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION,
 };

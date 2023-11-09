@@ -19,6 +19,8 @@ use frame_support::{weights::WeightMeter, traits::{ProcessMessage, ProcessMessag
 use scale_info::TypeInfo;
 use cumulus_primitives_core::ParaId;
 use xcm::v3::{MultiLocation, Junction};
+use frame_support::traits::{QueueFootprint, QueuePausedQuery};
+use pallet_message_queue::OnQueueChanged;
 
 /// The aggregate origin of an inbound message.
 /// This is specialized for BridgeHub, as the snowbridge-outbound-queue pallet is also using
@@ -103,5 +105,35 @@ where
 			Here | Parent | Sibling(_) => XcmpProcessor::process_message(message, origin, meter, id),
 			Snowbridge(_) => SnowbridgeProcessor::process_message(message, origin, meter, id)
 		}
+	}
+}
+
+pub struct NarrowOriginToSibling<Inner>(PhantomData<Inner>);
+impl<Inner: QueuePausedQuery<ParaId>> QueuePausedQuery<AggregateMessageOrigin>
+for NarrowOriginToSibling<Inner>
+{
+	fn is_paused(origin: &AggregateMessageOrigin) -> bool {
+		match origin {
+			AggregateMessageOrigin::Sibling(id) => Inner::is_paused(id),
+			_ => false,
+		}
+	}
+}
+
+impl<Inner: OnQueueChanged<ParaId>> OnQueueChanged<AggregateMessageOrigin>
+for NarrowOriginToSibling<Inner>
+{
+	fn on_queue_changed(origin: AggregateMessageOrigin, fp: QueueFootprint) {
+		if let AggregateMessageOrigin::Sibling(id) = origin {
+			Inner::on_queue_changed(id, fp)
+		}
+	}
+}
+
+/// Convert a sibling `ParaId` to an `AggregateMessageOrigin`.
+pub struct ParaIdToSibling;
+impl sp_runtime::traits::Convert<ParaId, AggregateMessageOrigin> for ParaIdToSibling {
+	fn convert(para_id: ParaId) -> AggregateMessageOrigin {
+		AggregateMessageOrigin::Sibling(para_id)
 	}
 }

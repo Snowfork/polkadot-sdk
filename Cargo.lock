@@ -2027,6 +2027,7 @@ version = "0.1.0"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
+ "pallet-message-queue",
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
@@ -2038,6 +2039,7 @@ dependencies = [
 name = "bridge-hub-kusama-runtime"
 version = "0.1.0"
 dependencies = [
+ "bridge-hub-common",
  "bridge-hub-test-utils",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -2102,6 +2104,7 @@ dependencies = [
 name = "bridge-hub-polkadot-runtime"
 version = "0.1.0"
 dependencies = [
+ "bridge-hub-common",
  "bridge-hub-test-utils",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -2384,6 +2387,7 @@ dependencies = [
  "bp-rococo",
  "bp-runtime",
  "bp-westend",
+ "bridge-hub-common",
  "bridge-hub-test-utils",
  "bridge-runtime-common",
  "cumulus-pallet-aura-ext",
@@ -17165,6 +17169,7 @@ dependencies = [
 name = "snowbridge-outbound-queue"
 version = "0.1.1"
 dependencies = [
+ "bridge-hub-common",
  "ethabi-decode",
  "frame-benchmarking",
  "frame-support",

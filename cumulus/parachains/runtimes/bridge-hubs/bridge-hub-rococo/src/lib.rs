@@ -77,14 +77,13 @@ use frame_system::{
 
 use pallet_xcm::EnsureXcm;
 
-use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm::VersionedMultiLocation;
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter};
 
 use bp_runtime::HeaderId;
-use bridge_hub_common::{AggregateMessageOrigin, BridgeHubMessageRouter};
+use bridge_hub_common::{AggregateMessageOrigin, BridgeHubMessageRouter, message_queue::{NarrowOriginToSibling, ParaIdToSibling}};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;

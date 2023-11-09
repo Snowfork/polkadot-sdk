@@ -14,7 +14,7 @@ sp-std = { path = "../../../../../substrate/primitives/std", default-features = 
 sp-runtime = { path = "../../../../../substrate/primitives/runtime", default-features = false }
 cumulus-primitives-core = { path = "../../../../primitives/core", default-features = false }
 xcm = { package = "staging-xcm", path = "../../../../../polkadot/xcm", default-features = false}
-
+pallet-message-queue = { path = "../../../../../substrate/frame/message-queue", default-features = false}
 
 [features]
 default = [ "std" ]
@@ -25,11 +25,13 @@ std = [
 	"sp-std/std",
 	"sp-runtime/std",
 	"cumulus-primitives-core/std",
-	"xcm/std"
+	"xcm/std",
+	"pallet-message-queue/std"
 ]
 
 runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"cumulus-primitives-core/runtime-benchmarks",
-	"sp-runtime/runtime-benchmarks"
+	"sp-runtime/runtime-benchmarks",
+	"pallet-message-queue/runtime-benchmarks"
 ]
