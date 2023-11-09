@@ -50,11 +50,11 @@ use parachains_common::{
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use rococo_runtime_constants::system_parachain::SystemParachains;
+use snowbridge_core::outbound::SendMessageFee;
 use snowbridge_router_primitives::{
 	inbound::GlobalConsensusEthereumConvertsFor,
 	outbound::EthereumBlobExporter,
 };
-use snowbridge_core::outbound::OutboundQueueLocalFee;
 use sp_core::{Get, H256};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::marker::PhantomData;
@@ -613,7 +613,7 @@ impl<
 		ReceiverAccount: Get<AccountId>,
 		SovereignAccountOf: ConvertLocation<AccountId>,
 		AssetTransactor: TransactAsset,
-		OutboundQueue: OutboundQueueLocalFee<Balance = bp_rococo::Balance>,
+		OutboundQueue: SendMessageFee<Balance = bp_rococo::Balance>,
 	> HandleFee
 	for XcmExportFeeToSnowbridge<
 		TokenLocation,
@@ -658,7 +658,7 @@ impl<
 			// There is an origin so split fee into parts.
 			if let Some(XcmContext { origin: Some(origin), .. }) = context {
 				if let Some(origin) = SovereignAccountOf::convert_location(origin) {
-					let local_fee = OutboundQueue::calculate_local_fee();
+					let local_fee = OutboundQueue::local_fee();
 					if let Fungible(amount) = fee_item.fun {
 						let remote_fee = amount.checked_sub(local_fee).unwrap_or(0);
 
