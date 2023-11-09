@@ -12,7 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 use crate::*;
 use hex_literal::hex;
 use integration_tests_common::{AssetHubRococoPallet, BridgeHubRococoPallet};
@@ -25,6 +24,8 @@ const CHAIN_ID: u64 = 15;
 const DEST_PARA_ID: u32 = 1000;
 const SNOWBRIDGE_SOVEREIGN: [u8; 32] =
 	hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5");
+const TREASURY_ACCOUNT: [u8; 32] =
+	hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ASSETHUB_SOVEREIGN: [u8; 32] =
 	hex!("7369626ce8030000000000000000000000000000000000000000000000000000");
@@ -390,7 +391,7 @@ fn reserve_transfer_token() {
 			events.iter().find(|&event| matches!(
 				event, 
 				RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
-					if *who == SNOWBRIDGE_SOVEREIGN.into() && *amount == 16903333
+					if *who == TREASURY_ACCOUNT.into() && *amount == 16903333
 			))
 			.is_some(),
 			"Snowbridge sovereign takes local fee."
