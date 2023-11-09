@@ -23,7 +23,7 @@ use xcm::v3::{MultiLocation, Junction};
 /// The aggregate origin of an inbound message.
 /// This is specialized for BridgeHub, as the snowbridge-outbound-queue pallet is also using
 /// the shared MessageQueue pallet.
-#[derive(Encode, Decode, MaxEncodedLen, Clone, Eq, PartialEq, TypeInfo, Debug)]
+#[derive(Encode, Decode, Copy, MaxEncodedLen, Clone, Eq, PartialEq, TypeInfo, Debug)]
 pub enum AggregateMessageOrigin {
 	/// The message came from the para-chain itself.
 	Here,
@@ -39,7 +39,7 @@ pub enum AggregateMessageOrigin {
 }
 
 /// The origin of an inbound message for Snowbridge.
-#[derive(Encode, Decode, MaxEncodedLen, Clone, Eq, PartialEq, TypeInfo, Debug)]
+#[derive(Encode, Decode, Copy, MaxEncodedLen, Clone, Eq, PartialEq, TypeInfo, Debug)]
 pub enum SnowbridgeMessageOrigin {
 	/// The message came from the para-chain itself.
 	Here,
