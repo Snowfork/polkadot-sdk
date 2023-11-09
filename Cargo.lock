@@ -2362,6 +2362,7 @@ dependencies = [
  "snowbridge-outbound-queue",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
+ "snowbridge-runtime-common",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -17280,6 +17281,19 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-runtime-common"
+version = "0.1.1"
+dependencies = [
+ "bp-rococo",
+ "frame-support",
+ "log",
+ "snowbridge-core",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
