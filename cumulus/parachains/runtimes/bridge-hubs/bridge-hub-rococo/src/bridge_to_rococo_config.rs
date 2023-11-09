@@ -126,7 +126,6 @@ pub type SnowbridgeExporter = EthereumBlobExporter<
 	AgentIdOf,
 >;
 
-
 pub struct ToBridgeHubRococoXcmBlobHauler;
 impl XcmBlobHauler for ToBridgeHubRococoXcmBlobHauler {
 	type Runtime = Runtime;
