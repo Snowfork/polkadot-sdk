@@ -70,7 +70,7 @@ use xcm_builder::{
 	XcmFeeManagerFromComponents, XcmFeeToAccount,
 };
 use xcm_executor::{
-	traits::{ExportXcm, FeeReason, TransactAsset, WithOriginFilter},
+	traits::{ConvertLocation, ExportXcm, FeeReason, TransactAsset, WithOriginFilter},
 	XcmExecutor,
 };
 
@@ -324,8 +324,10 @@ impl xcm_executor::Config for XcmConfig {
 				BridgeHubRococoMessagesLane,
 			>,
 			XcmExportFeeToSnowbridge<
+				TokenLocation,
 			 	EthereumNetwork,
 				SnowbridgeTreasuryAccount,
+				LocationToAccountId,
 				Self::AssetTransactor,
 				crate::EthereumOutboundQueue,
 			>,
@@ -587,22 +589,49 @@ impl<
 
 /// A `HandleFee` implementation that takes fees from `ExportMessage` XCM instructions
 /// to Snowbridge and holds it in a receiver account. Burns the fees in case of a failure.
-pub struct XcmExportFeeToSnowbridge<EthereumNetwork, ReceiverAccount, AssetTransactor, OutboundQueue>(
-	PhantomData<(EthereumNetwork, ReceiverAccount, AssetTransactor, OutboundQueue)>,
+pub struct XcmExportFeeToSnowbridge<
+	TokenLocation,
+	EthereumNetwork,
+	ReceiverAccount,
+	SovereignAccountOf,
+	AssetTransactor,
+	OutboundQueue,
+>(
+	PhantomData<(
+		TokenLocation,
+		EthereumNetwork,
+		ReceiverAccount,
+		SovereignAccountOf,
+		AssetTransactor,
+		OutboundQueue,
+	)>,
 );
 
 impl<
+		TokenLocation: Get<MultiLocation>,
 		EthereumNetwork: Get<NetworkId>,
 		ReceiverAccount: Get<AccountId>,
+		SovereignAccountOf: ConvertLocation<AccountId>,
 		AssetTransactor: TransactAsset,
 		OutboundQueue: OutboundQueueLocalFee<Balance = bp_rococo::Balance>,
-	> HandleFee for XcmExportFeeToSnowbridge<EthereumNetwork, ReceiverAccount, AssetTransactor, OutboundQueue>
+	> HandleFee
+	for XcmExportFeeToSnowbridge<
+		TokenLocation,
+		EthereumNetwork,
+		ReceiverAccount,
+		SovereignAccountOf,
+		AssetTransactor,
+		OutboundQueue,
+	>
 {
 	fn handle_fee(
 		fees: MultiAssets,
 		context: Option<&XcmContext>,
 		reason: FeeReason,
 	) -> MultiAssets {
+		let token_location = TokenLocation::get();
+		let mut fees = fees.into_inner();
+
 		if matches!(reason, FeeReason::Export { network: bridged_network, destination }
 				if bridged_network == EthereumNetwork::get() && destination == Here)
 		{
@@ -611,24 +640,60 @@ impl<
 				"XcmExportFeeToSnowbridge fees: {fees:?}, context: {context:?}, reason: {reason:?}",
 			);
 
-			let receiver = ReceiverAccount::get();
-
-			if let Some(XcmContext{ origin: Some(origin), ..}) = context {
-				// There is an origin so split fee into parts.
-				let local_fee = OutboundQueue::calculate_local_fee();
-
+			let fee_item_index = fees.iter().position(|asset| {
+				matches!(
+					asset,
+					MultiAsset { id: Concrete(location), fun: Fungible(..)}
+						if *location == token_location,
+				)
+			});
+			// Find the fee asset.
+			let fee_item = if let Some(element) = fee_item_index {
+				fees.remove(element)
 			} else {
-				// There is no context so send the full fee to the receiver
-				deposit_or_burn_fee::<AssetTransactor, _>(
-					fees,
-					context,
-					receiver,
-				);
-			}
+				return fees.into()
+			};
 
-			return MultiAssets::new();
+			let receiver = ReceiverAccount::get();
+			// There is an origin so split fee into parts.
+			if let Some(XcmContext { origin: Some(origin), .. }) = context {
+				if let Some(origin) = SovereignAccountOf::convert_location(origin) {
+					let local_fee = OutboundQueue::calculate_local_fee();
+					if let Fungible(amount) = fee_item.fun {
+						let remote_fee = amount.checked_sub(local_fee).unwrap_or(0);
+
+						// Send local fee to receiver
+						deposit_or_burn_fee::<AssetTransactor, _>(
+							MultiAsset {
+								id: Concrete(token_location),
+								fun: Fungible(amount - remote_fee),
+							}
+							.into(),
+							context,
+							receiver,
+						);
+						// Send remote fee to origin
+						deposit_or_burn_fee::<AssetTransactor, _>(
+							MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee) }
+								.into(),
+							context,
+							origin,
+						);
+					} else {
+						// Push the fee item back and bail out to let other handlers run.
+						fees.push(fee_item);
+						return fees.into()
+					}
+				} else {
+					// Origin conversion failed so send the full fee to the receiver.
+					deposit_or_burn_fee::<AssetTransactor, _>(fee_item.into(), context, receiver);
+				}
+			} else {
+				// There is no context so send the full fee to the receiver.
+				deposit_or_burn_fee::<AssetTransactor, _>(fee_item.into(), context, receiver);
+			}
 		}
 
-		fees
+		fees.into()
 	}
 }
