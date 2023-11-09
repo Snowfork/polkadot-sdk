@@ -18,6 +18,7 @@ use hex_literal::hex;
 use integration_tests_common::{AssetHubRococoPallet, BridgeHubRococoPallet};
 use snowbridge_control;
 use snowbridge_router_primitives::inbound::{Command, Destination, MessageV1, VersionedMessage};
+use sp_core::H256;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 const CHAIN_ID: u64 = 15;
@@ -176,7 +177,12 @@ fn register_token() {
 	)]);
 
 	// Fund ethereum sovereign in asset hub
-	AssetHubRococo::fund_accounts(vec![(SNOWBRIDGE_SOVEREIGN.into(), 5_000_000_000_000 * ROCOCO_ED)]);
+	AssetHubRococo::fund_accounts(vec![(
+		SNOWBRIDGE_SOVEREIGN.into(),
+		5_000_000_000_000 * ROCOCO_ED,
+	)]);
+
+	let message_id_: H256 = [1; 32].into();
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
@@ -186,7 +192,7 @@ fn register_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message).unwrap();
+		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
@@ -204,7 +210,9 @@ fn register_token() {
 			AssetHubRococo,
 			vec![
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Created { .. }) => {},
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { .. }) => {},
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { message_id, .. }) => {
+					message_id: H256::from(*message_id) == message_id_,
+				},
 			]
 		);
 	});
@@ -227,6 +235,8 @@ fn send_token() {
 		(AssetHubRococoReceiver::get(), INITIAL_FUND),
 	]);
 
+	let message_id_: H256 = [1; 32].into();
+
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 		type EthereumInboundQueue =
@@ -235,7 +245,7 @@ fn send_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message).unwrap();
+		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
@@ -245,7 +255,7 @@ fn send_token() {
 				amount: 1_000_000_000,
 			},
 		});
-		let xcm = EthereumInboundQueue::do_convert(message).unwrap();
+		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
@@ -263,7 +273,9 @@ fn send_token() {
 			AssetHubRococo,
 			vec![
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { .. }) => {},
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { message_id, .. }) => {
+					message_id: H256::from(*message_id) == message_id_,
+				},
 			]
 		);
 	});
@@ -287,6 +299,7 @@ fn reserve_transfer_token() {
 	]);
 
 	const WETH_AMOUNT: u128 = 1_000_000_000;
+	let message_id_: H256 = [1; 32].into();
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
@@ -296,7 +309,7 @@ fn reserve_transfer_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message).unwrap();
+		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
@@ -306,7 +319,7 @@ fn reserve_transfer_token() {
 				amount: WETH_AMOUNT,
 			},
 		});
-		let xcm = EthereumInboundQueue::do_convert(message).unwrap();
+		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
@@ -325,21 +338,21 @@ fn reserve_transfer_token() {
 			AssetHubRococo,
 			vec![
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { .. }) => {},
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { message_id, .. }) => {
+					message_id: H256::from(*message_id) == message_id_,
+				},
 			]
 		);
-		let assets = vec![
-			MultiAsset {
-				id: Concrete(MultiLocation {
-					parents: 2,
-					interior: X2(
-						GlobalConsensus(Ethereum { chain_id: CHAIN_ID }),
-						AccountKey20 { network: None, key: WETH },
-					),
-				}),
-				fun: Fungible(WETH_AMOUNT),
-			},
-		];
+		let assets = vec![MultiAsset {
+			id: Concrete(MultiLocation {
+				parents: 2,
+				interior: X2(
+					GlobalConsensus(Ethereum { chain_id: CHAIN_ID }),
+					AccountKey20 { network: None, key: WETH },
+				),
+			}),
+			fun: Fungible(WETH_AMOUNT),
+		}];
 		let multi_assets = VersionedMultiAssets::V3(MultiAssets::from(assets));
 
 		let destination = VersionedMultiLocation::V3(MultiLocation {
