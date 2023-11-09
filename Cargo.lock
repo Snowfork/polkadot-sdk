@@ -17294,6 +17294,7 @@ dependencies = [
  "frame-support",
  "log",
  "snowbridge-core",
+ "sp-io",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
