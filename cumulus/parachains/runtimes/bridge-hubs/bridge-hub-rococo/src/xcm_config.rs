@@ -50,7 +50,10 @@ use parachains_common::{
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use rococo_runtime_constants::system_parachain::SystemParachains;
-use snowbridge_core::outbound::SendMessageFee;
+use snowbridge_core::{
+	outbound::SendMessageFee,
+	sibling_sovereign_account_raw
+};
 use snowbridge_router_primitives::{
 	inbound::GlobalConsensusEthereumConvertsFor,
 	outbound::EthereumBlobExporter,
@@ -70,7 +73,7 @@ use xcm_builder::{
 	XcmFeeManagerFromComponents, XcmFeeToAccount,
 };
 use xcm_executor::{
-	traits::{ConvertLocation, ExportXcm, FeeReason, TransactAsset, WithOriginFilter},
+	traits::{ExportXcm, FeeReason, TransactAsset, WithOriginFilter},
 	XcmExecutor,
 };
 
@@ -327,7 +330,6 @@ impl xcm_executor::Config for XcmConfig {
 				TokenLocation,
 			 	EthereumNetwork,
 				SnowbridgeTreasuryAccount,
-				LocationToAccountId,
 				Self::AssetTransactor,
 				crate::EthereumOutboundQueue,
 			>,
@@ -593,7 +595,6 @@ pub struct XcmExportFeeToSnowbridge<
 	TokenLocation,
 	EthereumNetwork,
 	ReceiverAccount,
-	SovereignAccountOf,
 	AssetTransactor,
 	OutboundQueue,
 >(
@@ -601,7 +602,6 @@ pub struct XcmExportFeeToSnowbridge<
 		TokenLocation,
 		EthereumNetwork,
 		ReceiverAccount,
-		SovereignAccountOf,
 		AssetTransactor,
 		OutboundQueue,
 	)>,
@@ -611,7 +611,6 @@ impl<
 		TokenLocation: Get<MultiLocation>,
 		EthereumNetwork: Get<NetworkId>,
 		ReceiverAccount: Get<AccountId>,
-		SovereignAccountOf: ConvertLocation<AccountId>,
 		AssetTransactor: TransactAsset,
 		OutboundQueue: SendMessageFee<Balance = bp_rococo::Balance>,
 	> HandleFee
@@ -619,7 +618,6 @@ impl<
 		TokenLocation,
 		EthereumNetwork,
 		ReceiverAccount,
-		SovereignAccountOf,
 		AssetTransactor,
 		OutboundQueue,
 	>
@@ -656,8 +654,9 @@ impl<
 
 			let receiver = ReceiverAccount::get();
 			// There is an origin so split fee into parts.
-			if let Some(XcmContext { origin: Some(origin), .. }) = context {
-				if let Some(origin) = SovereignAccountOf::convert_location(origin) {
+			if let Some(XcmContext { origin: Some(MultiLocation { parents: 1, interior }), .. }) = context {
+				if let Some(Parachain(sibling_para_id)) = interior.first() {
+					let account: AccountId = sibling_sovereign_account_raw((*sibling_para_id).into()).into();
 					let local_fee = OutboundQueue::local_fee();
 					if let Fungible(amount) = fee_item.fun {
 						let remote_fee = amount.checked_sub(local_fee).unwrap_or(0);
@@ -677,7 +676,7 @@ impl<
 							MultiAsset { id: Concrete(token_location), fun: Fungible(remote_fee) }
 								.into(),
 							context,
-							origin,
+							account,
 						);
 					} else {
 						// Push the fee item back and bail out to let other handlers run.
