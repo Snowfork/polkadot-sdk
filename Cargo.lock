@@ -17290,10 +17290,11 @@ dependencies = [
 name = "snowbridge-runtime-common"
 version = "0.1.1"
 dependencies = [
- "bp-rococo",
  "frame-support",
+ "frame-system",
  "log",
  "snowbridge-core",
+ "sp-arithmetic",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
