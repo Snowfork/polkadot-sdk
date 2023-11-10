@@ -80,10 +80,13 @@ use pallet_xcm::EnsureXcm;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm::VersionedMultiLocation;
-use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter};
+use xcm_config::{XcmOriginToTransactDispatchOrigin, XcmRouter};
 
 use bp_runtime::HeaderId;
-use bridge_hub_common::{AggregateMessageOrigin, BridgeHubMessageRouter, message_queue::{NarrowOriginToSibling, ParaIdToSibling}};
+use bridge_hub_common::{
+	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
+	AggregateMessageOrigin, BridgeHubMessageRouter,
+};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -99,7 +102,6 @@ use parachains_common::{
 	AccountId, Balance, BlockNumber, Hash, Header, Nonce, Signature, AVERAGE_ON_INITIALIZE_RATIO,
 	HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION,
 };
-use xcm_executor::XcmExecutor;
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::xcm_config::benchmark_helper::DoNothingRouter;
@@ -388,9 +390,8 @@ impl pallet_message_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::pallet_message_queue::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
-	type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<
-		AggregateMessageOrigin,
-	>;
+	type MessageProcessor =
+		pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type MessageProcessor = BridgeHubMessageRouter<
 		xcm_builder::ProcessXcmMessage<

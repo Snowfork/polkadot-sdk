@@ -18,7 +18,9 @@
 
 use crate::{
 	bridge_common_config::{BridgeParachainRococoInstance, DeliveryRewardInBalance},
-	weights, AccountId, BridgeRococoMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
+	weights,
+	xcm_config::{AgentIdOf, EthereumNetwork, UniversalLocation},
+	AccountId, BridgeRococoMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
 	XcmRouter,
 };
 use bp_messages::LaneId;
@@ -40,16 +42,13 @@ use bridge_runtime_common::{
 };
 use codec::Encode;
 use frame_support::{parameter_types, traits::PalletInfoAccess};
+use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 use sp_runtime::RuntimeDebug;
 use xcm::{
 	latest::prelude::*,
 	prelude::{InteriorMultiLocation, NetworkId},
 };
 use xcm_builder::{BridgeBlobDispatcher, HaulBlobExporter};
-use snowbridge_router_primitives::outbound::EthereumBlobExporter;
-use crate::xcm_config::EthereumNetwork;
-use crate::xcm_config::AgentIdOf;
-use crate::xcm_config::UniversalLocation;
 
 parameter_types! {
 	pub const MaxUnrewardedRelayerEntriesAtInboundLane: bp_messages::MessageNonce =

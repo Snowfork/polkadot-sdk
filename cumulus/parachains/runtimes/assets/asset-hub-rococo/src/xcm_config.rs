@@ -17,8 +17,8 @@ use super::{
 	AccountId, AllPalletsWithSystem, Assets, Authorship, Balance, Balances, BaseDeliveryFee,
 	FeeAssetId, ForeignAssets, ForeignAssetsInstance, ParachainInfo, ParachainSystem, PolkadotXcm,
 	PoolAssets, Runtime, RuntimeCall, RuntimeEvent, RuntimeFlavor, RuntimeOrigin,
-	ToRococoXcmRouter, ToWestendXcmRouter, ToWococoXcmRouter, TransactionByteFee,
-	TrustBackedAssetsInstance, WeightToFee, XcmpQueue, ToEthereumXcmRouter,
+	ToEthereumXcmRouter, ToRococoXcmRouter, ToWestendXcmRouter, ToWococoXcmRouter,
+	TransactionByteFee, TrustBackedAssetsInstance, WeightToFee, XcmpQueue,
 };
 use assets_common::{
 	local_and_foreign_assets::MatchesLocalAndForeignAssetsMultiLocation,

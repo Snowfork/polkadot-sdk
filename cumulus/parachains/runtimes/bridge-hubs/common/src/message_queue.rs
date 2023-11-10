@@ -13,14 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //! Runtime configuration for MessageQueue pallet
-use sp_std::{prelude::*, marker::PhantomData};
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{weights::WeightMeter, traits::{ProcessMessage, ProcessMessageError}};
-use scale_info::TypeInfo;
 use cumulus_primitives_core::ParaId;
-use xcm::v3::{MultiLocation, Junction};
-use frame_support::traits::{QueueFootprint, QueuePausedQuery};
+use frame_support::{
+	traits::{ProcessMessage, ProcessMessageError, QueueFootprint, QueuePausedQuery},
+	weights::WeightMeter,
+};
 use pallet_message_queue::OnQueueChanged;
+use scale_info::TypeInfo;
+use sp_std::{marker::PhantomData, prelude::*};
+use xcm::v3::{Junction, MultiLocation};
 
 /// The aggregate origin of an inbound message.
 /// This is specialized for BridgeHub, as the snowbridge-outbound-queue pallet is also using
@@ -55,8 +57,7 @@ impl From<AggregateMessageOrigin> for MultiLocation {
 		match origin {
 			Here => MultiLocation::here(),
 			Parent => MultiLocation::parent(),
-			Sibling(id) =>
-				MultiLocation::new(1, Junction::Parachain(id.into())),
+			Sibling(id) => MultiLocation::new(1, Junction::Parachain(id.into())),
 			// NOTE: We don't need this conversion for Snowbridge. However we have to
 			// implement it anyway as xcm_builder::ProcessXcmMessage requires it.
 			Snowbridge(_) => MultiLocation::default(),
@@ -76,21 +77,18 @@ impl From<u32> for AggregateMessageOrigin {
 }
 
 /// Routes messages to either the XCMP or Snowbridge processor.
-pub struct BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>(PhantomData<(XcmpProcessor, SnowbridgeProcessor)>)
+pub struct BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>(
+	PhantomData<(XcmpProcessor, SnowbridgeProcessor)>,
+)
 where
 	XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
 	SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>;
 
-impl<
-	XcmpProcessor,
-	SnowbridgeProcessor
-> ProcessMessage for BridgeHubMessageRouter<
-	XcmpProcessor,
-	SnowbridgeProcessor
->
+impl<XcmpProcessor, SnowbridgeProcessor> ProcessMessage
+	for BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>
 where
 	XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
-	SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>
+	SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
 {
 	type Origin = AggregateMessageOrigin;
 
@@ -102,15 +100,16 @@ where
 	) -> Result<bool, ProcessMessageError> {
 		use AggregateMessageOrigin::*;
 		match origin {
-			Here | Parent | Sibling(_) => XcmpProcessor::process_message(message, origin, meter, id),
-			Snowbridge(_) => SnowbridgeProcessor::process_message(message, origin, meter, id)
+			Here | Parent | Sibling(_) =>
+				XcmpProcessor::process_message(message, origin, meter, id),
+			Snowbridge(_) => SnowbridgeProcessor::process_message(message, origin, meter, id),
 		}
 	}
 }
 
 pub struct NarrowOriginToSibling<Inner>(PhantomData<Inner>);
 impl<Inner: QueuePausedQuery<ParaId>> QueuePausedQuery<AggregateMessageOrigin>
-for NarrowOriginToSibling<Inner>
+	for NarrowOriginToSibling<Inner>
 {
 	fn is_paused(origin: &AggregateMessageOrigin) -> bool {
 		match origin {
@@ -121,7 +120,7 @@ for NarrowOriginToSibling<Inner>
 }
 
 impl<Inner: OnQueueChanged<ParaId>> OnQueueChanged<AggregateMessageOrigin>
-for NarrowOriginToSibling<Inner>
+	for NarrowOriginToSibling<Inner>
 {
 	fn on_queue_changed(origin: AggregateMessageOrigin, fp: QueueFootprint) {
 		if let AggregateMessageOrigin::Sibling(id) = origin {

@@ -41,8 +41,11 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use bridge_hub_common::{
+	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
+	AggregateMessageOrigin,
+};
 use cumulus_primitives_core::ParaId;
-use bridge_hub_common::{AggregateMessageOrigin, message_queue::{NarrowOriginToSibling, ParaIdToSibling}};
 use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
