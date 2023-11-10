@@ -45,7 +45,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -86,7 +86,7 @@ use pallet_xcm::EnsureXcm;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm::VersionedMultiLocation;
-use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
+use xcm_config::{TreasuryAccount, XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 use bp_runtime::HeaderId;
 
@@ -602,10 +602,6 @@ parameter_types! {
 	// TODO: placeholder value - choose a real one
 	pub const MaxUpgradeDataSize: u32 = 1024;
 	pub const RelayNetwork: NetworkId = Rococo;
-}
-
-parameter_types! {
-	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
