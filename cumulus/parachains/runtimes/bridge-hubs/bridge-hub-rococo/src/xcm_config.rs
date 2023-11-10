@@ -83,8 +83,7 @@ parameter_types! {
 	pub RelayTreasuryLocation: MultiLocation = (Parent, PalletInstance(rococo_runtime_constants::TREASURY_PALLET_ID)).into();
 
 	// Network and location for the local Ethereum testnet.
-	pub const EthereumChainId: u64 = 15;
-	pub const EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: EthereumChainId::get() };
+	pub const EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
 }
 
 /// Adapter for resolving `NetworkId` based on `pub storage Flavor: RuntimeFlavor`.
