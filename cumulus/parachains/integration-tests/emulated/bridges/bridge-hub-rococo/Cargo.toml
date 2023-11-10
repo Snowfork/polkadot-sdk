@@ -19,6 +19,7 @@ hex-literal = "0.4.1"
 sp-core = { path = "../../../../../../substrate/primitives/core", default-features = false}
 frame-support = { path = "../../../../../../substrate/frame/support", default-features = false }
 pallet-assets = { path = "../../../../../../substrate/frame/assets", default-features = false }
+pallet-balances = { path = "../../../../../../substrate/frame/balances", default-features = false }
 
 # Polkadot
 polkadot-core-primitives = { path = "../../../../../../polkadot/core-primitives", default-features = false }

@@ -2273,6 +2273,7 @@ dependencies = [
  "hex-literal",
  "integration-tests-common",
  "pallet-assets",
+ "pallet-balances",
  "pallet-bridge-messages",
  "pallet-xcm",
  "parachains-common",
@@ -2361,6 +2362,7 @@ dependencies = [
  "snowbridge-outbound-queue",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
+ "snowbridge-runtime-common",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
@@ -17279,6 +17281,20 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-runtime-common"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "snowbridge-core",
+ "sp-arithmetic",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
