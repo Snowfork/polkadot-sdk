@@ -527,8 +527,15 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
-	type MessageConverter =
-		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExecutionFee, Balance>;
+	type MessageConverter = MessageToXcm<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee, 
+		TreasuryAccount,
+		AccountId,
+		Balance
+	>;
 	type WeightToFee = WeightToFee;
 }
 
