@@ -185,7 +185,7 @@ fn register_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
@@ -237,7 +237,7 @@ fn send_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
@@ -247,7 +247,7 @@ fn send_token() {
 				amount: 1_000_000_000,
 			},
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
@@ -300,7 +300,7 @@ fn reserve_transfer_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
@@ -310,7 +310,7 @@ fn reserve_transfer_token() {
 				amount: WETH_AMOUNT,
 			},
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(

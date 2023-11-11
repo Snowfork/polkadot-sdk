@@ -528,7 +528,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
 	type MessageConverter =
-		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExecutionFee>;
+		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, CreateAssetDeposit, SendTokenExecutionFee, Balance>;
 	type WeightToFee = WeightToFee;
 }
 
