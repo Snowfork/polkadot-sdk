@@ -502,7 +502,8 @@ parameter_types! {
 	pub const GatewayAddress: H160 = H160(hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39"));
 	pub const CreateAssetCall: [u8;2] = [53, 0];
 	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
-	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
+	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
+	pub const SendTokenExecutionFee: u128 = 2_000_000_000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -525,8 +526,14 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
-	type MessageConverter =
-		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>;
+	type MessageConverter = MessageToXcm<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee,
+		AccountId,
+		Balance,
+	>;
 	type WeightToFee = WeightToFee;
 }
 
