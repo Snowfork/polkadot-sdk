@@ -100,8 +100,7 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 use crate::{
 	bridge_hub_rococo_config::BridgeRefundBridgeHubWococoMessages,
-	bridge_hub_wococo_config::BridgeRefundBridgeHubRococoMessages,
-	xcm_config::XcmRouter,
+	bridge_hub_wococo_config::BridgeRefundBridgeHubRococoMessages, xcm_config::XcmRouter,
 };
 use parachains_common::{
 	impls::DealWithFees,
@@ -598,12 +597,6 @@ impl snowbridge_ethereum_beacon_client::Config for Runtime {
 	type WeightInfo = weights::snowbridge_ethereum_beacon_client::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-	// TODO: placeholder value - choose a real one
-	pub const MaxUpgradeDataSize: u32 = 1024;
-	pub const RelayNetwork: NetworkId = Rococo;
-}
-
 #[cfg(feature = "runtime-benchmarks")]
 impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 	fn make_xcm_origin(location: xcm::latest::MultiLocation) -> RuntimeOrigin {
@@ -613,6 +606,7 @@ impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 
 impl snowbridge_control::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type AssetHubParaId = bridge_hub_rococo_config::AssetHubRococoParaId;
 	type OwnParaId = ParachainInfo;
 	type OutboundQueue = EthereumOutboundQueue;
 	type MessageHasher = BlakeTwo256;
@@ -677,7 +671,7 @@ construct_runtime!(
 		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 48,
 		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 49,
 		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 50,
-		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 51,
+		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Config<T>, Event<T>} = 51,
 
 		// Message Queue. Registered after EthereumOutboundQueue so that their `on_initialize` handlers
 		// run in the desired order.
