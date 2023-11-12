@@ -22,8 +22,6 @@ use sp_core::H256;
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 const CHAIN_ID: u64 = 15;
 const DEST_PARA_ID: u32 = 1000;
-const SNOWBRIDGE_SOVEREIGN: [u8; 32] =
-	hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5");
 const TREASURY_ACCOUNT: [u8; 32] =
 	hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
@@ -177,12 +175,6 @@ fn register_token() {
 		INITIAL_FUND,
 	)]);
 
-	// Fund ethereum sovereign in asset hub
-	AssetHubRococo::fund_accounts(vec![(
-		SNOWBRIDGE_SOVEREIGN.into(),
-		5_000_000_000_000 * ROCOCO_ED,
-	)]);
-
 	let message_id_: H256 = [1; 32].into();
 
 	BridgeHubRococo::execute_with(|| {
@@ -193,7 +185,7 @@ fn register_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
@@ -231,7 +223,6 @@ fn send_token() {
 
 	// Fund ethereum sovereign in asset hub
 	AssetHubRococo::fund_accounts(vec![
-		(SNOWBRIDGE_SOVEREIGN.into(), INITIAL_FUND),
 		(ASSETHUB_SOVEREIGN.into(), INITIAL_FUND),
 		(AssetHubRococoReceiver::get(), INITIAL_FUND),
 	]);
@@ -246,7 +237,7 @@ fn send_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
@@ -256,7 +247,7 @@ fn send_token() {
 				amount: 1_000_000_000,
 			},
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
@@ -294,7 +285,6 @@ fn reserve_transfer_token() {
 
 	// Fund ethereum sovereign in asset hub
 	AssetHubRococo::fund_accounts(vec![
-		(SNOWBRIDGE_SOVEREIGN.into(), INITIAL_FUND),
 		(ASSETHUB_SOVEREIGN.into(), INITIAL_FUND),
 		(AssetHubRococoReceiver::get(), INITIAL_FUND),
 	]);
@@ -310,7 +300,7 @@ fn reserve_transfer_token() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into() },
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
@@ -320,7 +310,7 @@ fn reserve_transfer_token() {
 				amount: WETH_AMOUNT,
 			},
 		});
-		let xcm = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
