@@ -38,7 +38,6 @@ use traits::{
 mod assets;
 pub use assets::Assets;
 mod config;
-use crate::traits::XcmAssetTransfers;
 pub use config::Config;
 
 /// A struct to specify how fees are being paid.
