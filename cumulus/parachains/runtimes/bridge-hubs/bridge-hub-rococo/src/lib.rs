@@ -730,7 +730,7 @@ construct_runtime!(
 
 		// Message Queue. Registered after EthereumOutboundQueue so that their `on_initialize` handlers
 		// run in the desired order.
-		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>} = 70,
+		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>} = 250,
 	}
 );
 

@@ -348,39 +348,6 @@ pub type XcmRouter = WithUniqueTopic<(
 	XcmpQueue,
 )>;
 
-#[cfg(feature = "runtime-benchmarks")]
-pub(crate) mod benchmark_helper {
-	use crate::xcm_config::{
-		MultiAssets, MultiLocation, SendError, SendResult, SendXcm, Xcm, XcmHash,
-	};
-
-	pub struct DoNothingRouter;
-	impl SendXcm for DoNothingRouter {
-		type Ticket = ();
-		fn validate(
-			_dest: &mut Option<MultiLocation>,
-			_msg: &mut Option<Xcm<()>>,
-		) -> SendResult<()> {
-			Ok(((), MultiAssets::new()))
-		}
-		fn deliver(_: ()) -> Result<XcmHash, SendError> {
-			Ok([0; 32])
-		}
-	}
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
-	// Relay/native token can be teleported between BH and Relay.
-	pub TeleportableAssets: Option<(MultiAssets, MultiLocation)> = Some((
-		MultiAsset { fun: Fungible(10), id: Concrete(Parent.into()) }.into(),
-		Parent.into(),
-	));
-	// Reserve transfers are disabled on BH.
-	pub ReserveTransferableAssets: Option<(MultiAssets, MultiLocation)> = None;
-}
-
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type XcmRouter = XcmRouter;
