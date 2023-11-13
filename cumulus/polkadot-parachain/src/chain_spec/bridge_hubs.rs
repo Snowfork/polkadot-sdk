@@ -20,7 +20,6 @@ use parachains_common::Balance as BridgeHubBalance;
 use sc_chain_spec::ChainSpec;
 use sp_core::sr25519;
 use std::{path::PathBuf, str::FromStr};
-use hex_literal::hex;
 
 /// Collects all supported BridgeHub configurations
 #[derive(Debug, PartialEq)]
@@ -253,26 +252,6 @@ pub mod rococo {
 					bridges_pallet_owner_seed
 						.as_ref()
 						.map(|seed| get_account_id_from_seed::<sr25519::Public>(seed)),
-					snowbridge_agents: vec![
-						bridge_hub_rococo_runtime::AssetHubAgentId::get(),
-						bridge_hub_rococo_runtime::BridgeHubAgentId::get(),
-					],
-					snowbridge_channels: vec![
-						(
-							bridge_hub_rococo_runtime::AssetHubChannelId::get(),
-							Channel {
-								agent_id: bridge_hub_rococo_runtime::AssetHubAgentId::get(),
-								para_id: bridge_hub_rococo_runtime::AssetHubParaId::get(),
-							}
-						),
-						(
-							bridge_hub_rococo_runtime::BridgeHubChannelId::get(),
-							Channel {
-								agent_id: bridge_hub_rococo_runtime::BridgeHubAgentId::get(),
-								para_id: bridge_hub_rococo_runtime::BridgeHubParaId::get(),
-							}
-						)
-					]
 				)
 			},
 			Vec::new(),
@@ -349,7 +328,8 @@ pub mod rococo {
 			ethereum_control: bridge_hub_rococo_runtime::EthereumControlConfig {
 				para_id: id,
 				asset_hub_para_id: 1000.into(),
-			}
+				..Default::default()
+			},
 		}
 	}
 }
