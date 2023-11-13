@@ -40,6 +40,7 @@ use parachains_common::{
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use rococo_runtime_constants::system_parachain::SystemParachains;
+use snowbridge_runtime_common::XcmExportFeeToSibling;
 use sp_core::{Get, H256};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::marker::PhantomData;
@@ -316,6 +317,14 @@ impl xcm_executor::Config for XcmConfig {
 				crate::bridge_to_rococo_config::AssetHubRococoParaId,
 				crate::bridge_to_rococo_config::BridgeHubRococoChainId,
 				crate::bridge_to_rococo_config::AssetHubWococoToAssetHubRococoMessagesLane,
+			>,
+			XcmExportFeeToSibling<
+				bp_rococo::Balance,
+				AccountId,
+				TokenLocation,
+			 	EthereumNetwork,
+				Self::AssetTransactor,
+				crate::EthereumOutboundQueue,
 			>,
 			XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 		),

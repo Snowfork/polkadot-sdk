@@ -50,7 +50,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -80,7 +80,7 @@ use pallet_xcm::EnsureXcm;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm::VersionedMultiLocation;
-use xcm_config::{XcmOriginToTransactDispatchOrigin, XcmRouter};
+use xcm_config::{TreasuryAccount, XcmRouter, XcmOriginToTransactDispatchOrigin};
 
 use bp_runtime::HeaderId;
 use bridge_hub_common::{
@@ -529,7 +529,8 @@ parameter_types! {
 	pub const GatewayAddress: H160 = H160(hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39"));
 	pub const CreateAssetCall: [u8;2] = [53, 0];
 	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
-	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
+	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
+	pub const SendTokenExecutionFee: u128 = 2_000_000_000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -552,8 +553,14 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
-	type MessageConverter =
-		MessageToXcm<CreateAssetCall, CreateAssetExecutionFee, SendTokenExecutionFee>;
+	type MessageConverter = MessageToXcm<
+		CreateAssetCall,
+		CreateAssetExecutionFee,
+		CreateAssetDeposit,
+		SendTokenExecutionFee,
+		AccountId,
+		Balance,
+	>;
 	type WeightToFee = WeightToFee;
 }
 
@@ -628,10 +635,6 @@ parameter_types! {
 	// TODO: placeholder value - choose a real one
 	pub const MaxUpgradeDataSize: u32 = 1024;
 	pub const RelayNetwork: NetworkId = Rococo;
-}
-
-parameter_types! {
-	pub TreasuryAccount: AccountId = PalletId(*b"py/trsry").into_account_truncating();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
