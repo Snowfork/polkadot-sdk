@@ -322,7 +322,7 @@ impl xcm_executor::Config for XcmConfig {
 				bp_rococo::Balance,
 				AccountId,
 				TokenLocation,
-			 	EthereumNetwork,
+				EthereumNetwork,
 				Self::AssetTransactor,
 				crate::EthereumOutboundQueue,
 			>,
