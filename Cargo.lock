@@ -17134,6 +17134,7 @@ dependencies = [
  "snowbridge-beacon-primitives",
  "sp-arithmetic",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
  "staging-xcm",

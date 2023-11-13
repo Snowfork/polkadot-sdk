@@ -20,6 +20,7 @@ use parachains_common::Balance as BridgeHubBalance;
 use sc_chain_spec::ChainSpec;
 use sp_core::sr25519;
 use std::{path::PathBuf, str::FromStr};
+use hex_literal::hex;
 
 /// Collects all supported BridgeHub configurations
 #[derive(Debug, PartialEq)]
@@ -345,7 +346,10 @@ pub mod rococo {
 					owner: bridges_pallet_owner,
 					..Default::default()
 				},
-			ethereum_control: Default::default()
+			ethereum_control: bridge_hub_rococo_runtime::EthereumControlConfig {
+				para_id: id,
+				asset_hub_para_id: 1000.into(),
+			}
 		}
 	}
 }

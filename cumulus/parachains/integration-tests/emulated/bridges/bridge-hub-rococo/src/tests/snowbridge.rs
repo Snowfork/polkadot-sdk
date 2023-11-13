@@ -13,11 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::*;
+use codec::Encode;
 use hex_literal::hex;
 use integration_tests_common::{AssetHubRococoPallet, BridgeHubRococoPallet};
 use snowbridge_control;
 use snowbridge_router_primitives::inbound::{Command, Destination, MessageV1, VersionedMessage};
 use sp_core::H256;
+
+use snowbridge_core::outbound::OperatingMode;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 const CHAIN_ID: u64 = 15;
@@ -31,10 +34,12 @@ const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EB
 
 #[test]
 fn create_agent() {
+	let origin_para: u32 = 1001;
+
 	BridgeHubRococo::fund_accounts(vec![(
 		BridgeHubRococo::sovereign_account_id_of(MultiLocation {
 			parents: 1,
-			interior: X1(Parachain(DEST_PARA_ID)),
+			interior: X1(Parachain(origin_para)),
 		}),
 		INITIAL_FUND,
 	)]);
@@ -44,11 +49,11 @@ fn create_agent() {
 
 	let remote_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		DescendOrigin(X1(Parachain(DEST_PARA_ID))),
+		DescendOrigin(X1(Parachain(origin_para))),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
-			call: vec![51, 1].into(),
+			call: vec![51, 2].into(),
 		},
 	]));
 
@@ -91,7 +96,9 @@ fn create_agent() {
 
 #[test]
 fn create_channel() {
-	let source_location = MultiLocation { parents: 1, interior: X1(Parachain(DEST_PARA_ID)) };
+	let origin_para: u32 = 1001;
+
+	let source_location = MultiLocation { parents: 1, interior: X1(Parachain(origin_para)) };
 
 	BridgeHubRococo::fund_accounts(vec![(
 		BridgeHubRococo::sovereign_account_id_of(source_location),
@@ -104,21 +111,21 @@ fn create_channel() {
 
 	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		DescendOrigin(X1(Parachain(DEST_PARA_ID))),
+		DescendOrigin(X1(Parachain(origin_para))),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
-			call: vec![51, 1].into(),
+			call: vec![51, 2].into(),
 		},
 	]));
 
 	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		DescendOrigin(X1(Parachain(DEST_PARA_ID))),
+		DescendOrigin(X1(Parachain(origin_para))),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
-			call: vec![51, 2].into(),
+			call: ([51u8, 3u8], OperatingMode::Normal, 1u128).encode().into(),
 		},
 	]));
 
@@ -378,21 +385,25 @@ fn reserve_transfer_token() {
 		);
 		let events = BridgeHubRococo::events();
 		assert!(
-			events.iter().find(|&event| matches!(
-				event, 
-				RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
-					if *who == TREASURY_ACCOUNT.into() && *amount == 16903333
-			))
-			.is_some(),
+			events
+				.iter()
+				.find(|&event| matches!(
+					event,
+					RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
+						if *who == TREASURY_ACCOUNT.into() && *amount == 16903333
+				))
+				.is_some(),
 			"Snowbridge sovereign takes local fee."
 		);
 		assert!(
-			events.iter().find(|&event| matches!(
-				event, 
-				RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
-					if *who == ASSETHUB_SOVEREIGN.into() && *amount == 2200000000000
-			))
-			.is_some(),
+			events
+				.iter()
+				.find(|&event| matches!(
+					event,
+					RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
+						if *who == ASSETHUB_SOVEREIGN.into() && *amount == 2200000000000
+				))
+				.is_some(),
 			"Assethub sovereign takes remote fee."
 		);
 	});
