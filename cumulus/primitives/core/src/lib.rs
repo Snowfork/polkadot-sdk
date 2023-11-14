@@ -91,6 +91,11 @@ pub enum AggregateMessageOrigin {
 	///
 	/// This is used by the HRMP queue.
 	Sibling(ParaId),
+	/// The message came from some origin identified by a 32-byte ID.
+	///
+	/// Due to its generality, this is can be used by pallets
+	/// other than the DMP and HRMP queue.
+	GeneralKey([u8; 32]),
 }
 
 impl From<AggregateMessageOrigin> for xcm::v3::MultiLocation {
@@ -100,6 +105,8 @@ impl From<AggregateMessageOrigin> for xcm::v3::MultiLocation {
 			AggregateMessageOrigin::Parent => MultiLocation::parent(),
 			AggregateMessageOrigin::Sibling(id) =>
 				MultiLocation::new(1, Junction::Parachain(id.into())),
+			AggregateMessageOrigin::GeneralKey(id) =>
+				MultiLocation::new(0, Junction::GeneralKey { length: 32, data: id }),
 		}
 	}
 }

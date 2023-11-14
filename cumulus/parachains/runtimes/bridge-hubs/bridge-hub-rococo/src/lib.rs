@@ -60,7 +60,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use cumulus_primitives_core::ParaId;
+use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
@@ -76,17 +76,14 @@ use frame_system::{
 };
 
 use pallet_xcm::EnsureXcm;
-
+use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm::VersionedMultiLocation;
 use xcm_config::{TreasuryAccount, XcmOriginToTransactDispatchOrigin, XcmRouter};
 
 use bp_runtime::HeaderId;
-use bridge_hub_common::{
-	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
-	AggregateMessageOrigin, BridgeHubMessageRouter,
-};
+use bridge_hub_common::BridgeHubMessageRouter;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -404,7 +401,7 @@ impl pallet_message_queue::Config for Runtime {
 	type Size = u32;
 	// The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
 	type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
-	type QueuePausedQuery = (NarrowOriginToSibling<XcmpQueue>, EthereumOutboundQueue);
+	type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
 	type HeapSize = sp_core::ConstU32<{ 64 * 1024 }>;
 	type MaxStale = sp_core::ConstU32<8>;
 	type ServiceWeight = MessageQueueServiceWeight;
@@ -549,7 +546,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type XcmSender = XcmRouter;
 	#[cfg(feature = "runtime-benchmarks")]
 	type XcmSender = DoNothingRouter;
-	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
+	type ChannelLookup = EthereumControl;
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
@@ -562,6 +559,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 		Balance,
 	>;
 	type WeightToFee = WeightToFee;
+	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
 }
 
 impl snowbridge_outbound_queue::Config for Runtime {
@@ -571,7 +569,6 @@ impl snowbridge_outbound_queue::Config for Runtime {
 	type Decimals = ConstU8<12>;
 	type MaxMessagePayloadSize = ConstU32<2048>;
 	type MaxMessagesPerBlock = ConstU32<32>;
-	type OwnParaId = ParachainInfo;
 	type GasMeter = snowbridge_core::outbound::ConstantGasMeter;
 	type Balance = Balance;
 	type WeightToFee = WeightToFee;
@@ -646,9 +643,7 @@ impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 
 impl snowbridge_control::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OwnParaId = ParachainInfo;
 	type OutboundQueue = EthereumOutboundQueue;
-	type MessageHasher = BlakeTwo256;
 	type SiblingOrigin = EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = xcm_config::AgentIdOf;
 	type TreasuryAccount = TreasuryAccount;
@@ -729,7 +724,7 @@ construct_runtime!(
 		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 60,
 		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 61,
 		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 62,
-		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 63,
+		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Config<T>, Event<T>} = 63,
 
 		// Message Queue. Registered after EthereumOutboundQueue so that their `on_initialize` handlers
 		// run in the desired order.

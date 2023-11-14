@@ -17493,6 +17493,7 @@ dependencies = [
  "ethabi-decode",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "parity-scale-codec",
  "polkadot-parachain-primitives",
  "scale-info",
@@ -17500,6 +17501,7 @@ dependencies = [
  "snowbridge-beacon-primitives",
  "sp-arithmetic",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",
@@ -17587,7 +17589,7 @@ dependencies = [
 name = "snowbridge-outbound-queue"
 version = "0.1.1"
 dependencies = [
- "bridge-hub-common",
+ "cumulus-primitives-core",
  "ethabi-decode",
  "frame-benchmarking",
  "frame-support",
