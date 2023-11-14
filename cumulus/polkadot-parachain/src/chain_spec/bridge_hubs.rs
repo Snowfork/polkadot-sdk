@@ -325,6 +325,11 @@ pub mod rococo {
 					owner: bridges_pallet_owner,
 					..Default::default()
 				},
+			ethereum_control: bridge_hub_rococo_runtime::EthereumControlConfig {
+				para_id: id,
+				asset_hub_para_id: 1000.into(),
+				..Default::default()
+			},
 		}
 	}
 }

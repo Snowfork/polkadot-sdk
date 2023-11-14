@@ -491,7 +491,7 @@ impl pallet_message_queue::Config for Runtime {
 	type ServiceWeight = MessageQueueServiceWeight;
 	type MessageProcessor = EthereumOutboundQueue;
 	type QueueChangeHandler = ();
-	type QueuePausedQuery = EthereumOutboundQueue;
+	type QueuePausedQuery = ();
 	type WeightInfo = ();
 }
 
@@ -523,6 +523,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type XcmSender = DoNothingRouter;
 	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
+	type ChannelLookup = EthereumControl;
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
@@ -544,7 +545,6 @@ impl snowbridge_outbound_queue::Config for Runtime {
 	type Decimals = ConstU8<12>;
 	type MaxMessagePayloadSize = ConstU32<2048>;
 	type MaxMessagesPerBlock = ConstU32<32>;
-	type OwnParaId = ParachainInfo;
 	type GasMeter = snowbridge_core::outbound::ConstantGasMeter;
 	type Balance = Balance;
 	type WeightToFee = WeightToFee;
@@ -604,12 +604,6 @@ impl snowbridge_ethereum_beacon_client::Config for Runtime {
 	type WeightInfo = weights::snowbridge_ethereum_beacon_client::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-	// TODO: placeholder value - choose a real one
-	pub const MaxUpgradeDataSize: u32 = 1024;
-	pub const RelayNetwork: NetworkId = Rococo;
-}
-
 #[cfg(feature = "runtime-benchmarks")]
 impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 	fn make_xcm_origin(location: xcm::latest::MultiLocation) -> RuntimeOrigin {
@@ -619,9 +613,7 @@ impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
 
 impl snowbridge_control::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OwnParaId = ParachainInfo;
 	type OutboundQueue = EthereumOutboundQueue;
-	type MessageHasher = BlakeTwo256;
 	type SiblingOrigin = EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = xcm_config::AgentIdOf;
 	type TreasuryAccount = TreasuryAccount;
@@ -683,7 +675,7 @@ construct_runtime!(
 		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 48,
 		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 49,
 		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 50,
-		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Event<T>} = 51,
+		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Config<T>, Event<T>} = 51,
 
 		// Message Queue. Registered after EthereumOutboundQueue so that their `on_initialize` handlers
 		// run in the desired order.
