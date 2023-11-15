@@ -221,9 +221,9 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 						snowbridge_ethereum_beacon_client::Call::set_operating_mode { .. },
 				) | RuntimeCall::EthereumInboundQueue(
 				snowbridge_inbound_queue::Call::set_operating_mode { .. },
-			) /* | RuntimeCall::EthereumOutboundQueue(
-				  snowbridge_outbound_queue::Call::set_operating_mode { .. },
-			  ) | RuntimeCall::EthereumControl(..) */
+			) | RuntimeCall::EthereumOutboundQueue(
+				snowbridge_outbound_queue::Call::set_operating_mode { .. },
+			) | RuntimeCall::EthereumControl(..)
 		)
 	}
 }
@@ -486,5 +486,16 @@ impl<
 		}
 
 		fee
+	}
+}
+
+pub struct DoNothingRouter;
+impl SendXcm for DoNothingRouter {
+	type Ticket = ();
+	fn validate(_dest: &mut Option<MultiLocation>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
+		Ok(((), MultiAssets::new()))
+	}
+	fn deliver(_: ()) -> Result<XcmHash, SendError> {
+		Ok([0; 32])
 	}
 }

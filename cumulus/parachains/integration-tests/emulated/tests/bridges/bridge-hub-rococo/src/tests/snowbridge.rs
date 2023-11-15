@@ -13,9 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::*;
-use codec::Encode;
+use asset_hub_rococo_emulated_chain::AssetHubRococoParaPallet as AssetHubRococoPallet;
+use bridge_hub_rococo_emulated_chain::BridgeHubRococoParaPallet as BridgeHubRococoPallet;
+use codec::{Decode, Encode};
+use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
-use integration_tests_common::{AssetHubRococoPallet, BridgeHubRococoPallet};
 use snowbridge_control;
 use snowbridge_core::outbound::OperatingMode;
 use snowbridge_router_primitives::inbound::{Command, Destination, MessageV1, VersionedMessage};
@@ -52,7 +54,7 @@ fn create_agent() {
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
-			call: vec![51, 2].into(),
+			call: vec![63, 2].into(),
 		},
 	]));
 
@@ -81,16 +83,25 @@ fn create_agent() {
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
-				RuntimeEvent::DmpQueue(cumulus_pallet_dmp_queue::Event::ExecutedDownward {
-					outcome: Outcome::Complete(_),
-					..
-				}) => {},
 				RuntimeEvent::EthereumControl(snowbridge_control::Event::CreateAgent {
 					..
 				}) => {},
 			]
 		);
 	});
+}
+
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+pub enum CreateChannelCall {
+	#[codec(index = 3)]
+	CreateChannel { mode: OperatingMode, outbound_fee: u128 },
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+pub enum SnowbridgeControl {
+	#[codec(index = 63)]
+	Control(CreateChannelCall),
 }
 
 #[test]
@@ -114,9 +125,14 @@ fn create_channel() {
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
-			call: vec![51, 2].into(),
+			call: vec![63, 2].into(),
 		},
 	]));
+
+	let create_channel_call = SnowbridgeControl::Control(CreateChannelCall::CreateChannel {
+		mode: OperatingMode::Normal,
+		outbound_fee: 1,
+	});
 
 	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
@@ -124,7 +140,7 @@ fn create_channel() {
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
-			call: ([51u8, 3u8], OperatingMode::Normal, 1u128).encode().into(),
+			call: create_channel_call.encode().into(),
 		},
 	]));
 
@@ -159,10 +175,6 @@ fn create_channel() {
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
-				RuntimeEvent::DmpQueue(cumulus_pallet_dmp_queue::Event::ExecutedDownward {
-					outcome: Outcome::Complete(_),
-					..
-				}) => {},
 				RuntimeEvent::EthereumControl(snowbridge_control::Event::CreateChannel {
 					..
 				}) => {},
@@ -209,9 +221,6 @@ fn register_token() {
 			AssetHubRococo,
 			vec![
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Created { .. }) => {},
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { message_id, .. }) => {
-					message_id: H256::from(*message_id) == message_id_,
-				},
 			]
 		);
 	});
@@ -271,9 +280,6 @@ fn send_token() {
 			AssetHubRococo,
 			vec![
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { message_id, .. }) => {
-					message_id: H256::from(*message_id) == message_id_,
-				},
 			]
 		);
 	});
@@ -335,9 +341,6 @@ fn reserve_transfer_token() {
 			AssetHubRococo,
 			vec![
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { message_id, .. }) => {
-					message_id: H256::from(*message_id) == message_id_,
-				},
 			]
 		);
 		let assets = vec![MultiAsset {
@@ -379,7 +382,6 @@ fn reserve_transfer_token() {
 			BridgeHubRococo,
 			vec![
 				RuntimeEvent::EthereumOutboundQueue(snowbridge_outbound_queue::Event::MessageQueued {..}) => {},
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::Success { .. }) => {},
 			]
 		);
 		let events = BridgeHubRococo::events();
