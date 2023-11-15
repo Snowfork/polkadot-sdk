@@ -39,20 +39,21 @@ use parachains_common::{
 };
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
-use rococo_runtime_constants::system_parachain;
-use sp_core::Get;
+use rococo_runtime_constants::system_parachain::SystemParachains;
+use snowbridge_runtime_common::XcmExportFeeToSibling;
+use sp_core::{Get, H256};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::marker::PhantomData;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	deposit_or_burn_fee, AccountId32Aliases, AllowExplicitUnpaidExecutionFrom,
 	AllowKnownQueryResponses, AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom,
-	CurrencyAdapter, DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, HandleFee,
-	IsConcrete, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
-	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
-	XcmFeeToAccount,
+	CurrencyAdapter, DenyReserveTransferToRelayChain, DenyThenTry, DescribeAllTerminal,
+	DescribeFamily, EnsureXcmOrigin, HandleFee, HashedDescription, IsConcrete, ParentAsSuperuser,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
+	TrailingSetTopicAsId, UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
+	XcmFeeManagerFromComponents, XcmFeeToAccount,
 };
 use xcm_executor::{
 	traits::{FeeReason, TransactAsset, WithOriginFilter},
@@ -69,6 +70,9 @@ parameter_types! {
 	pub const MaxAssetsIntoHolding: u32 = 64;
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	pub RelayTreasuryLocation: MultiLocation = (Parent, PalletInstance(rococo_runtime_constants::TREASURY_PALLET_ID)).into();
+
+	// Network and location for the local Ethereum testnet.
+	pub const EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
 }
 
 /// Adapter for resolving `NetworkId` based on `pub storage Flavor: RuntimeFlavor`.
@@ -186,6 +190,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 						frame_system::Call::set_code_without_checks { .. } |
 						frame_system::Call::kill_prefix { .. },
 				) | RuntimeCall::ParachainSystem(..) |
+				RuntimeCall::Utility(..) |
 				RuntimeCall::Timestamp(..) |
 				RuntimeCall::Balances(..) |
 				RuntimeCall::CollatorSelection(
@@ -210,7 +215,15 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				RuntimeCall::BridgeWococoGrandpa(pallet_bridge_grandpa::Call::<
 					Runtime,
 					BridgeGrandpaWococoInstance,
-				>::initialize { .. })
+				>::initialize { .. }) |
+				RuntimeCall::EthereumBeaconClient(
+					snowbridge_ethereum_beacon_client::Call::force_checkpoint { .. } |
+						snowbridge_ethereum_beacon_client::Call::set_operating_mode { .. },
+				) | RuntimeCall::EthereumInboundQueue(
+				snowbridge_inbound_queue::Call::set_operating_mode { .. },
+			) | RuntimeCall::EthereumOutboundQueue(
+				snowbridge_outbound_queue::Call::set_operating_mode { .. },
+			) | RuntimeCall::EthereumControl(..)
 		)
 	}
 }
@@ -243,20 +256,6 @@ pub type Barrier = TrailingSetTopicAsId<
 		),
 	>,
 >;
-
-match_types! {
-	pub type SystemParachains: impl Contains<MultiLocation> = {
-		MultiLocation {
-			parents: 1,
-			interior: X1(Parachain(
-				system_parachain::ASSET_HUB_ID |
-				system_parachain::BRIDGE_HUB_ID |
-				system_parachain::CONTRACTS_ID |
-				system_parachain::ENCOINTER_ID
-			)),
-		}
-	};
-}
 
 /// Locations that will not be charged fees in the executor,
 /// either execution or delivery.
@@ -319,6 +318,14 @@ impl xcm_executor::Config for XcmConfig {
 				crate::bridge_to_rococo_config::BridgeHubRococoChainId,
 				crate::bridge_to_rococo_config::AssetHubWococoToAssetHubRococoMessagesLane,
 			>,
+			XcmExportFeeToSibling<
+				bp_rococo::Balance,
+				AccountId,
+				TokenLocation,
+				EthereumNetwork,
+				Self::AssetTransactor,
+				crate::EthereumOutboundQueue,
+			>,
 			XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 		),
 	>;
@@ -326,6 +333,7 @@ impl xcm_executor::Config for XcmConfig {
 		crate::bridge_to_westend_config::ToBridgeHubWestendHaulBlobExporter,
 		crate::bridge_to_wococo_config::ToBridgeHubWococoHaulBlobExporter,
 		crate::bridge_to_rococo_config::ToBridgeHubRococoHaulBlobExporter,
+		crate::bridge_to_rococo_config::SnowbridgeExporter,
 	);
 	type UniversalAliases = Nothing;
 	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
@@ -385,6 +393,8 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
+
+pub type AgentIdOf = HashedDescription<H256, DescribeFamily<DescribeAllTerminal>>;
 
 /// A `HandleFee` implementation that simply deposits the fees for `ExportMessage` XCM instructions
 /// into the accounts that are used for paying the relayer rewards.
@@ -476,5 +486,16 @@ impl<
 		}
 
 		fee
+	}
+}
+
+pub struct DoNothingRouter;
+impl SendXcm for DoNothingRouter {
+	type Ticket = ();
+	fn validate(_dest: &mut Option<MultiLocation>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
+		Ok(((), MultiAssets::new()))
+	}
+	fn deliver(_: ()) -> Result<XcmHash, SendError> {
+		Ok([0; 32])
 	}
 }

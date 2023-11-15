@@ -20,6 +20,7 @@ pub mod kusama;
 pub mod message_queue;
 pub mod polkadot;
 pub mod rococo;
+pub mod snowbridge_config;
 pub mod westend;
 pub mod wococo;
 pub mod xcm_config;

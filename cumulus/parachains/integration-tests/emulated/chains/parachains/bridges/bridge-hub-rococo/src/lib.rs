@@ -40,6 +40,9 @@ decl_test_parachains! {
 		pallets = {
 			PolkadotXcm: bridge_hub_rococo_runtime::PolkadotXcm,
 			Balances: bridge_hub_rococo_runtime::Balances,
+			EthereumControl: bridge_hub_rococo_runtime::EthereumControl,
+			EthereumInboundQueue: bridge_hub_rococo_runtime::EthereumInboundQueue,
+			EthereumOutboundQueue: bridge_hub_rococo_runtime::EthereumOutboundQueue,
 		}
 	},
 }

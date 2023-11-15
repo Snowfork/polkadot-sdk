@@ -18,7 +18,9 @@
 
 use crate::{
 	bridge_common_config::{BridgeParachainRococoInstance, DeliveryRewardInBalance},
-	weights, AccountId, BridgeRococoMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
+	weights,
+	xcm_config::{AgentIdOf, EthereumNetwork, UniversalLocation},
+	AccountId, BridgeRococoMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
 	XcmRouter,
 };
 use bp_messages::LaneId;
@@ -40,6 +42,7 @@ use bridge_runtime_common::{
 };
 use codec::Encode;
 use frame_support::{parameter_types, traits::PalletInfoAccess};
+use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 use sp_runtime::RuntimeDebug;
 use xcm::{
 	latest::prelude::*,
@@ -114,6 +117,14 @@ pub type ToBridgeHubRococoHaulBlobExporter = HaulBlobExporter<
 	RococoGlobalConsensusNetwork,
 	(),
 >;
+
+pub type SnowbridgeExporter = EthereumBlobExporter<
+	UniversalLocation,
+	EthereumNetwork,
+	snowbridge_outbound_queue::Pallet<Runtime>,
+	AgentIdOf,
+>;
+
 pub struct ToBridgeHubRococoXcmBlobHauler;
 impl XcmBlobHauler for ToBridgeHubRococoXcmBlobHauler {
 	type Runtime = Runtime;
