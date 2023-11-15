@@ -18,7 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use polkadot_parachain_primitives::primitives::HeadData;
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
@@ -74,6 +74,50 @@ impl From<MessageSendError> for &'static str {
 			NoChannel => "NoChannel",
 			TooBig => "TooBig",
 			Other => "Other",
+		}
+	}
+}
+
+/// The origin of an inbound message.
+#[derive(Encode, Decode, MaxEncodedLen, Clone, Eq, PartialEq, TypeInfo, Debug)]
+pub enum AggregateMessageOrigin {
+	/// The message came from the para-chain itself.
+	Here,
+	/// The message came from the relay-chain.
+	///
+	/// This is used by the DMP queue.
+	Parent,
+	/// The message came from a sibling para-chain.
+	///
+	/// This is used by the HRMP queue.
+	Sibling(ParaId),
+	/// The message came from some origin identified by a 32-byte ID.
+	///
+	/// Due to its generality, this is can be used by pallets
+	/// other than the DMP and HRMP queue.
+	GeneralKey([u8; 32]),
+}
+
+impl From<AggregateMessageOrigin> for xcm::v3::MultiLocation {
+	fn from(origin: AggregateMessageOrigin) -> Self {
+		match origin {
+			AggregateMessageOrigin::Here => MultiLocation::here(),
+			AggregateMessageOrigin::Parent => MultiLocation::parent(),
+			AggregateMessageOrigin::Sibling(id) =>
+				MultiLocation::new(1, Junction::Parachain(id.into())),
+			AggregateMessageOrigin::GeneralKey(id) =>
+				MultiLocation::new(0, Junction::GeneralKey { length: 32, data: id }),
+		}
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl From<u32> for AggregateMessageOrigin {
+	fn from(x: u32) -> Self {
+		match x {
+			0 => Self::Here,
+			1 => Self::Parent,
+			p => Self::Sibling(ParaId::from(p)),
 		}
 	}
 }

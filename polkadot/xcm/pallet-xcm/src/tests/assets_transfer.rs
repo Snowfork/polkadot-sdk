@@ -420,9 +420,9 @@ fn reserve_transfer_assets_with_destination_asset_reserve_and_local_fee_reserve_
 				// local chain; `assets` are burned on source and withdrawn from SA here
 				Xcm(vec![
 					ReserveAssetDeposited((Parent, FEE_AMOUNT).into()),
+					buy_limited_execution(expected_fee, Unlimited),
 					WithdrawAsset(expected_asset.into()),
 					ClearOrigin,
-					buy_limited_execution(expected_fee, Unlimited),
 					DepositAsset { assets: AllCounted(2).into(), beneficiary },
 				])
 			)]
@@ -606,11 +606,11 @@ fn reserve_transfer_assets_with_local_asset_reserve_and_destination_fee_reserve_
 					// fees are being sent through destination-reserve transfer because fee reserve
 					// is destination chain
 					WithdrawAsset(expected_fee.clone().into()),
+					buy_limited_execution(expected_fee, Unlimited),
 					// transfer is through local-reserve transfer because `assets` (native asset)
 					// have local reserve
 					ReserveAssetDeposited(expected_asset.into()),
 					ClearOrigin,
-					buy_limited_execution(expected_fee, Unlimited),
 					DepositAsset { assets: AllCounted(2).into(), beneficiary },
 				])
 			)]
@@ -977,10 +977,12 @@ fn reserve_transfer_assets_with_remote_asset_reserve_and_remote_fee_reserve_work
 		// reanchor according to test-case
 		let context = UniversalLocation::get();
 		let expected_dest_on_reserve = dest.reanchored(&usdc_chain, context).unwrap();
-		let expected_fee_on_reserve =
-			assets.get(fee_index).unwrap().clone().reanchored(&usdc_chain, context).unwrap();
-		let mut expected_assets = assets.clone();
-		expected_assets.reanchor(&dest, context).unwrap();
+		let fees = assets.get(fee_index).unwrap().clone();
+		let (fees_half_1, fees_half_2) = XcmPallet::halve_fees(fees).unwrap();
+		let mut expected_assets_on_reserve = assets.clone();
+		expected_assets_on_reserve.reanchor(&usdc_chain, context).unwrap();
+		let expected_fee_on_reserve = fees_half_1.reanchored(&usdc_chain, context).unwrap();
+		let expected_fee_on_dest = fees_half_2.reanchored(&dest, context).unwrap();
 
 		// balances checks before
 		assert_eq!(Assets::balance(usdc_id_multilocation, ALICE), usdc_initial_local_amount);
@@ -1022,7 +1024,7 @@ fn reserve_transfer_assets_with_remote_asset_reserve_and_remote_fee_reserve_work
 				// first message sent to reserve chain
 				usdc_chain,
 				Xcm(vec![
-					WithdrawAsset(expected_fee_on_reserve.clone().into()),
+					WithdrawAsset(expected_assets_on_reserve),
 					ClearOrigin,
 					BuyExecution { fees: expected_fee_on_reserve, weight_limit: Unlimited },
 					DepositReserveAsset {
@@ -1031,10 +1033,7 @@ fn reserve_transfer_assets_with_remote_asset_reserve_and_remote_fee_reserve_work
 						dest: expected_dest_on_reserve,
 						// message sent onward to `dest`
 						xcm: Xcm(vec![
-							buy_limited_execution(
-								expected_assets.get(0).unwrap().clone(),
-								Unlimited
-							),
+							buy_limited_execution(expected_fee_on_dest, Unlimited),
 							DepositAsset { assets: AllCounted(1).into(), beneficiary }
 						])
 					}
@@ -1138,11 +1137,11 @@ fn reserve_transfer_assets_with_local_asset_reserve_and_teleported_fee_works() {
 				Xcm(vec![
 					// fees are teleported to destination chain
 					ReceiveTeleportedAsset(expected_fee.clone().into()),
+					buy_limited_execution(expected_fee, Unlimited),
 					// transfer is through local-reserve transfer because `assets` (native
 					// asset) have local reserve
 					ReserveAssetDeposited(expected_asset.into()),
 					ClearOrigin,
-					buy_limited_execution(expected_fee, Unlimited),
 					DepositAsset { assets: AllCounted(2).into(), beneficiary },
 				])
 			)]
@@ -1269,10 +1268,10 @@ fn reserve_transfer_assets_with_destination_asset_reserve_and_teleported_fee_wor
 				Xcm(vec![
 					// fees are teleported to destination chain
 					ReceiveTeleportedAsset(expected_fee.clone().into()),
+					buy_limited_execution(expected_fee, Unlimited),
 					// assets are withdrawn from origin's local SA
 					WithdrawAsset(expected_asset.into()),
 					ClearOrigin,
-					buy_limited_execution(expected_fee, Unlimited),
 					DepositAsset { assets: AllCounted(2).into(), beneficiary },
 				])
 			)]
