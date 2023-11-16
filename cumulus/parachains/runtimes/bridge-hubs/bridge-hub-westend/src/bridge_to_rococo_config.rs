@@ -89,25 +89,25 @@ fn build_congestion_message<Call>(is_congested: bool) -> sp_std::vec::Vec<Instru
 		Transact {
 			origin_kind: OriginKind::Xcm,
 			require_weight_at_most:
-				bp_asset_hub_westend::XcmBridgeHubRouterTransactCallMaxWeight::get(),
+			bp_asset_hub_westend::XcmBridgeHubRouterTransactCallMaxWeight::get(),
 			call: bp_asset_hub_westend::Call::ToRococoXcmRouter(
 				bp_asset_hub_westend::XcmBridgeHubRouterCall::report_bridge_status {
 					bridge_id: Default::default(),
 					is_congested,
 				}
 			)
-			.encode()
-			.into(),
+				.encode()
+				.into(),
 		}
 	]
 }
 
 /// Proof of messages, coming from Rococo.
 pub type FromRococoBridgeHubMessagesProof =
-	FromBridgedChainMessagesProof<bp_bridge_hub_rococo::Hash>;
+FromBridgedChainMessagesProof<bp_bridge_hub_rococo::Hash>;
 /// Messages delivery proof for Rococo Bridge Hub -> Westend Bridge Hub messages.
 pub type ToRococoBridgeHubMessagesDeliveryProof =
-	FromBridgedChainMessagesDeliveryProof<bp_bridge_hub_rococo::Hash>;
+FromBridgedChainMessagesDeliveryProof<bp_bridge_hub_rococo::Hash>;
 
 /// Dispatches received XCM messages from other bridge
 type FromRococoMessageBlobDispatcher = BridgeBlobDispatcher<
@@ -152,11 +152,11 @@ impl MessageBridge for WithBridgeHubRococoMessageBridge {
 
 /// Message verifier for BridgeHubRococo messages sent from BridgeHubWestend
 type ToBridgeHubRococoMessageVerifier =
-	messages::source::FromThisChainMessageVerifier<WithBridgeHubRococoMessageBridge>;
+messages::source::FromThisChainMessageVerifier<WithBridgeHubRococoMessageBridge>;
 
 /// Maximal outbound payload size of BridgeHubWestend -> BridgeHubRococo messages.
 type ToBridgeHubRococoMaximalOutboundPayloadSize =
-	messages::source::FromThisChainMaximalOutboundPayloadSize<WithBridgeHubRococoMessageBridge>;
+messages::source::FromThisChainMaximalOutboundPayloadSize<WithBridgeHubRococoMessageBridge>;
 
 /// BridgeHubRococo chain from message lane point of view.
 #[derive(RuntimeDebug, Clone, Copy)]
@@ -214,7 +214,7 @@ impl pallet_bridge_parachains::Config<BridgeParachainRococoInstance> for Runtime
 	type BridgesGrandpaPalletInstance = BridgeGrandpaRococoInstance;
 	type ParasPalletName = RococoBridgeParachainPalletName;
 	type ParaStoredHeaderDataBuilder =
-		SingleParaStoredHeaderDataBuilder<bp_bridge_hub_rococo::BridgeHubRococo>;
+	SingleParaStoredHeaderDataBuilder<bp_bridge_hub_rococo::BridgeHubRococo>;
 	type HeadsToKeep = ParachainHeadsToKeep;
 	type MaxParaHeadDataSize = MaxRococoParaHeadDataSize;
 }
@@ -317,17 +317,17 @@ mod tests {
 			},
 			messages_pallet_constants: AssertBridgeMessagesPalletConstants {
 				max_unrewarded_relayers_in_bridged_confirmation_tx:
-					bp_bridge_hub_rococo::MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX,
+				bp_bridge_hub_rococo::MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX,
 				max_unconfirmed_messages_in_bridged_confirmation_tx:
-					bp_bridge_hub_rococo::MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX,
+				bp_bridge_hub_rococo::MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX,
 				bridged_chain_id: bp_runtime::BRIDGE_HUB_ROCOCO_CHAIN_ID,
 			},
 			pallet_names: AssertBridgePalletNames {
 				with_this_chain_messages_pallet_name:
-					bp_bridge_hub_westend::WITH_BRIDGE_HUB_WESTEND_MESSAGES_PALLET_NAME,
+				bp_bridge_hub_westend::WITH_BRIDGE_HUB_WESTEND_MESSAGES_PALLET_NAME,
 				with_bridged_chain_grandpa_pallet_name: bp_rococo::WITH_ROCOCO_GRANDPA_PALLET_NAME,
 				with_bridged_chain_messages_pallet_name:
-					bp_bridge_hub_rococo::WITH_BRIDGE_HUB_ROCOCO_MESSAGES_PALLET_NAME,
+				bp_bridge_hub_rococo::WITH_BRIDGE_HUB_ROCOCO_MESSAGES_PALLET_NAME,
 			},
 		});
 

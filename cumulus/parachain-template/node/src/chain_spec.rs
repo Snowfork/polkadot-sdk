@@ -73,7 +73,7 @@ pub fn development_config() -> ChainSpec {
 		Extensions {
 			relay_chain: "rococo-local".into(),
 			// You MUST set this to the correct network!
-			para_id: 1001,
+			para_id: 1000,
 		},
 	)
 	.with_name("Development")

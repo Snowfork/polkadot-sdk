@@ -77,10 +77,8 @@ parachains-common = { path = "../../../common", default-features = false }
 # Bridges
 bp-asset-hub-rococo = { path = "../../../../../bridges/primitives/chain-asset-hub-rococo", default-features = false }
 bp-asset-hub-westend = { path = "../../../../../bridges/primitives/chain-asset-hub-westend", default-features = false }
-bp-asset-hub-wococo = { path = "../../../../../bridges/primitives/chain-asset-hub-wococo", default-features = false }
 bp-bridge-hub-rococo = { path = "../../../../../bridges/primitives/chain-bridge-hub-rococo", default-features = false }
 bp-bridge-hub-westend = { path = "../../../../../bridges/primitives/chain-bridge-hub-westend", default-features = false }
-bp-bridge-hub-wococo = { path = "../../../../../bridges/primitives/chain-bridge-hub-wococo", default-features = false }
 bp-header-chain = { path = "../../../../../bridges/primitives/header-chain", default-features = false }
 bp-messages = { path = "../../../../../bridges/primitives/messages", default-features = false }
 bp-parachains = { path = "../../../../../bridges/primitives/parachains", default-features = false }
@@ -89,7 +87,6 @@ bp-relayers = { path = "../../../../../bridges/primitives/relayers", default-fea
 bp-runtime = { path = "../../../../../bridges/primitives/runtime", default-features = false }
 bp-rococo = { path = "../../../../../bridges/primitives/chain-rococo", default-features = false }
 bp-westend = { path = "../../../../../bridges/primitives/chain-westend", default-features = false }
-bp-wococo = { path = "../../../../../bridges/primitives/chain-wococo", default-features = false }
 pallet-bridge-grandpa = { path = "../../../../../bridges/modules/grandpa", default-features = false }
 pallet-bridge-messages = { path = "../../../../../bridges/modules/messages", default-features = false }
 pallet-bridge-parachains = { path = "../../../../../bridges/modules/parachains", default-features = false }
@@ -121,10 +118,8 @@ default = [ "std" ]
 std = [
 	"bp-asset-hub-rococo/std",
 	"bp-asset-hub-westend/std",
-	"bp-asset-hub-wococo/std",
 	"bp-bridge-hub-rococo/std",
 	"bp-bridge-hub-westend/std",
-	"bp-bridge-hub-wococo/std",
 	"bp-header-chain/std",
 	"bp-messages/std",
 	"bp-parachains/std",
@@ -133,7 +128,6 @@ std = [
 	"bp-rococo/std",
 	"bp-runtime/std",
 	"bp-westend/std",
-	"bp-wococo/std",
 	"bridge-runtime-common/std",
 	"bridge-hub-common/std",
 	"codec/std",
@@ -163,7 +157,6 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-message-queue/std",
 	"pallet-multisig/std",
-	"pallet-message-queue/std",
 	"pallet-session/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
@@ -212,7 +205,6 @@ std = [
 
 runtime-benchmarks = [
 	"bridge-runtime-common/runtime-benchmarks",
-	"bridge-hub-common/runtime-benchmarks",
 	"cumulus-pallet-dmp-queue/runtime-benchmarks",
 	"cumulus-pallet-parachain-system/runtime-benchmarks",
 	"cumulus-pallet-session-benchmarking/runtime-benchmarks",
