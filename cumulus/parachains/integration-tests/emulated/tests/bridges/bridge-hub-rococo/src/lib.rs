@@ -48,7 +48,7 @@ pub use rococo_wococo_system_emulated_network::{
 	AssetHubRococoParaSender as AssetHubRococoSender, AssetHubWococoPara as AssetHubWococo,
 	BridgeHubRococoPara as BridgeHubRococo, BridgeHubRococoParaReceiver as BridgeHubRococoReceiver,
 	BridgeHubRococoParaSender as BridgeHubRococoSender, BridgeHubWococoPara as BridgeHubWococo,
-	RococoRelay as Rococo, RococoRelayReceiver as RococoReceiver,
+	PenpalAPara as PenpalARococo, RococoRelay as Rococo, RococoRelayReceiver as RococoReceiver,
 	RococoRelaySender as RococoSender,
 };
 

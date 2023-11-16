@@ -25,12 +25,10 @@ use sp_core::H256;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 const CHAIN_ID: u64 = 15;
-const DEST_PARA_ID: u32 = 1000;
+const ASSETHUB_PARA_ID: u32 = 1000;
 const TREASURY_ACCOUNT: [u8; 32] =
 	hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
-const ASSETHUB_SOVEREIGN: [u8; 32] =
-	hex!("7369626ce8030000000000000000000000000000000000000000000000000000");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
 #[test]
@@ -188,7 +186,7 @@ fn register_token() {
 	BridgeHubRococo::fund_accounts(vec![(
 		BridgeHubRococo::sovereign_account_id_of(MultiLocation {
 			parents: 1,
-			interior: X1(Parachain(DEST_PARA_ID)),
+			interior: X1(Parachain(ASSETHUB_PARA_ID)),
 		}),
 		INITIAL_FUND,
 	)]);
@@ -204,7 +202,7 @@ fn register_token() {
 			command: Command::RegisterToken { token: WETH.into() },
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
@@ -227,18 +225,17 @@ fn register_token() {
 }
 
 #[test]
-fn send_token() {
+fn send_token_to_penpal() {
 	BridgeHubRococo::fund_accounts(vec![(
 		BridgeHubRococo::sovereign_account_id_of(MultiLocation {
 			parents: 1,
-			interior: X1(Parachain(DEST_PARA_ID)),
+			interior: X1(Parachain(ASSETHUB_PARA_ID)),
 		}),
 		INITIAL_FUND,
 	)]);
 
 	// Fund ethereum sovereign in asset hub
 	AssetHubRococo::fund_accounts(vec![
-		(ASSETHUB_SOVEREIGN.into(), INITIAL_FUND),
 		(AssetHubRococoReceiver::get(), INITIAL_FUND),
 	]);
 
@@ -253,7 +250,7 @@ fn send_token() {
 			command: Command::RegisterToken { token: WETH.into() },
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
@@ -263,7 +260,77 @@ fn send_token() {
 			},
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	PenpalARococo::execute_with(|| {
+		type RuntimeEvent = <PenpalARococo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			PenpalARococo,
+			vec![
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+			]
+		);
+	});
+}
+
+#[test]
+fn send_token() {
+	BridgeHubRococo::fund_accounts(vec![(
+		BridgeHubRococo::sovereign_account_id_of(MultiLocation {
+			parents: 1,
+			interior: X1(Parachain(ASSETHUB_PARA_ID)),
+		}),
+		INITIAL_FUND,
+	)]);
+
+	// Fund ethereum sovereign in asset hub
+	AssetHubRococo::fund_accounts(vec![
+		(AssetHubRococoReceiver::get(), INITIAL_FUND),
+	]);
+
+	let message_id_: H256 = [1; 32].into();
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type EthereumInboundQueue =
+			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterToken { token: WETH.into() },
+		});
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendToken {
+				token: WETH.into(),
+				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
+				amount: 1_000_000_000,
+			},
+		});
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
@@ -287,17 +354,18 @@ fn send_token() {
 
 #[test]
 fn reserve_transfer_token() {
-	BridgeHubRococo::fund_accounts(vec![(
-		BridgeHubRococo::sovereign_account_id_of(MultiLocation {
+	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(
+		MultiLocation {
 			parents: 1,
-			interior: X1(Parachain(DEST_PARA_ID)),
-		}),
-		INITIAL_FUND,
-	)]);
+			interior: X1(Parachain(ASSETHUB_PARA_ID)),
+		}
+	);
 
-	// Fund ethereum sovereign in asset hub
+	BridgeHubRococo::fund_accounts(vec![
+		(assethub_sovereign.clone(), INITIAL_FUND)
+	]);
+
 	AssetHubRococo::fund_accounts(vec![
-		(ASSETHUB_SOVEREIGN.into(), INITIAL_FUND),
 		(AssetHubRococoReceiver::get(), INITIAL_FUND),
 	]);
 
@@ -313,7 +381,7 @@ fn reserve_transfer_token() {
 			command: Command::RegisterToken { token: WETH.into() },
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
@@ -323,7 +391,7 @@ fn reserve_transfer_token() {
 			},
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, DEST_PARA_ID.into()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
@@ -402,7 +470,7 @@ fn reserve_transfer_token() {
 				.find(|&event| matches!(
 					event,
 					RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
-						if *who == ASSETHUB_SOVEREIGN.into() && *amount == 2200000000000
+						if who == &assethub_sovereign && *amount == 2200000000000
 				))
 				.is_some(),
 			"Assethub sovereign takes remote fee."
