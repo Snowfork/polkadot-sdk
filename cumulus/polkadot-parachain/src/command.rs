@@ -245,6 +245,10 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 				.load_config()?,
 
 		// -- Penpall
+		"penpal-rococo" => Box::new(chain_spec::penpal::get_penpal_chain_spec(
+			para_id.expect("Must specify parachain id"),
+			"rococo-local",
+		)),
 		"penpal-kusama" => Box::new(chain_spec::penpal::get_penpal_chain_spec(
 			para_id.expect("Must specify parachain id"),
 			"kusama-local",
