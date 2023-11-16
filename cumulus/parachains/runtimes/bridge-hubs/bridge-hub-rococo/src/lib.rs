@@ -43,11 +43,12 @@ pub mod xcm_config;
 
 use codec::{Decode, Encode};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-use snowbridge_beacon_primitives::{Fork, ForkVersions};
+use snowbridge_beacon_primitives::{CompactExecutionHeader, Fork, ForkVersions};
 use snowbridge_core::{outbound::Message, AgentId, AllowSiblingsOnly};
 use snowbridge_router_primitives::inbound::MessageToXcm;
+
 use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160, H256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
@@ -102,16 +103,9 @@ use parachains_common::{
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::xcm_config::DoNothingRouter;
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_beacon_primitives::CompactExecutionHeader;
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_core::RingBufferMap;
-#[cfg(feature = "runtime-benchmarks")]
-pub use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
+
 #[cfg(feature = "runtime-benchmarks")]
 use snowbridge_inbound_queue::BenchmarkHelper;
-#[cfg(feature = "runtime-benchmarks")]
-use sp_core::H256;
 
 /// Enum for handling differences in the runtime configuration for BridgeHubRococo vs
 /// BridgeHubWococo.
@@ -533,13 +527,13 @@ parameter_types! {
 #[cfg(feature = "runtime-benchmarks")]
 impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Runtime {
 	fn initialize_storage(block_hash: H256, header: CompactExecutionHeader) {
-		<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
+		EthereumBeaconClient::store_execution_header(block_hash, header, 0, H256::default());
 	}
 }
 
 impl snowbridge_inbound_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Verifier = snowbridge_ethereum_beacon_client::Pallet<Runtime>;
+	type Verifier = EthereumBeaconClient;
 	type Token = Balances;
 	type Reward = Reward;
 	#[cfg(not(feature = "runtime-benchmarks"))]
