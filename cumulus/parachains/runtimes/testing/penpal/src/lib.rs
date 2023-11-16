@@ -32,11 +32,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod weights;
 pub mod xcm_config;
 
-use assets_common::{
-	foreign_creators::ForeignCreators,
-	matching::FromSiblingParachain,
-	MultiLocationForAssetId,
-};
+use assets_common::MultiLocationForAssetId;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
@@ -75,7 +71,7 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use xcm_config::{AssetsToBlockAuthor, ForeignCreatorsSovereignAccountOf, XcmOriginToTransactDispatchOrigin};
+use xcm_config::{AssetsToBlockAuthor, XcmOriginToTransactDispatchOrigin};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -473,9 +469,6 @@ parameter_types! {
 	pub const ForeignAssetsMetadataDepositPerByte: Balance = MetadataDepositPerByte::get();
 }
 
-/// We allow root to execute privileged asset operations.
-pub type AssetsForceOrigin = EnsureRoot<AccountId>;
-
 /// Another pallet assets instance to store foreign assets from bridgehub.
 pub type ForeignAssetsInstance = pallet_assets::Instance2;
 impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
@@ -484,12 +477,8 @@ impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
 	type AssetId = MultiLocationForAssetId;
 	type AssetIdParameter = MultiLocationForAssetId;
 	type Currency = Balances;
-	type CreateOrigin = ForeignCreators<
-		(FromSiblingParachain<parachain_info::Pallet<Runtime>>,),
-		ForeignCreatorsSovereignAccountOf,
-		AccountId,
-	>;
-	type ForceOrigin = AssetsForceOrigin;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = ForeignAssetsAssetDeposit;
 	type MetadataDepositBase = ForeignAssetsMetadataDepositBase;
 	type MetadataDepositPerByte = ForeignAssetsMetadataDepositPerByte;

@@ -43,13 +43,14 @@ pub use rococo_wococo_system_emulated_network::{
 	bridge_hub_rococo_emulated_chain::{
 		genesis::ED as BRIDGE_HUB_ROCOCO_ED, BridgeHubRococoParaPallet as BridgeHubRococoPallet,
 	},
+	penpal_emulated_chain::PenpalAParaPallet as PenpalAPallet,
 	rococo_emulated_chain::{genesis::ED as ROCOCO_ED, RococoRelayPallet as RococoPallet},
 	AssetHubRococoPara as AssetHubRococo, AssetHubRococoParaReceiver as AssetHubRococoReceiver,
 	AssetHubRococoParaSender as AssetHubRococoSender, AssetHubWococoPara as AssetHubWococo,
 	BridgeHubRococoPara as BridgeHubRococo, BridgeHubRococoParaReceiver as BridgeHubRococoReceiver,
 	BridgeHubRococoParaSender as BridgeHubRococoSender, BridgeHubWococoPara as BridgeHubWococo,
-	PenpalAPara as PenpalARococo, RococoRelay as Rococo, RococoRelayReceiver as RococoReceiver,
-	RococoRelaySender as RococoSender,
+	PenpalAPara as PenpalA, PenpalAParaSender as PenpalASender, PenpalAParaReceiver as PenpalAReceiver,
+	RococoRelay as Rococo, RococoRelayReceiver as RococoReceiver, RococoRelaySender as RococoSender,
 };
 
 pub const ASSET_ID: u32 = 1;

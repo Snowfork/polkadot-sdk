@@ -188,15 +188,21 @@ pub type Barrier = TrailingSetTopicAsId<
 pub type AccountIdOf<R> = <R as frame_system::Config>::AccountId;
 
 /// Asset filter that allows all assets from a certain location matching asset id.
-pub struct AssetsFrom<T>(PhantomData<T>);
-impl<T: Get<MultiLocation>> ContainsPair<MultiAsset, MultiLocation> for AssetsFrom<T> {
+pub struct AssetPrefixFrom<Prefix, Origin>(PhantomData<(Prefix, Origin)>);
+impl<Prefix, Origin> ContainsPair<MultiAsset, MultiLocation> for AssetPrefixFrom<Prefix, Origin> 
+where 
+	Prefix: Get<MultiLocation>,
+	Origin: Get<MultiLocation>,
+{
 	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		let loc = T::get();
+		let loc = Origin::get();
 		&loc == origin &&
 			matches!(asset, MultiAsset { id: AssetId::Concrete(asset_loc), fun: Fungible(_a) }
-			if asset_loc.starts_with(&loc))
+			if asset_loc.starts_with(&Prefix::get()))
 	}
 }
+
+type AssetsFrom<T> = AssetPrefixFrom<T, T>;
 
 /// Asset filter that allows native/relay asset if coming from a certain location.
 pub struct NativeAssetFrom<T>(PhantomData<T>);
@@ -245,10 +251,15 @@ parameter_types! {
 	pub SystemAssetHubAssetsPalletLocation: MultiLocation =
 		MultiLocation::new(1, X2(Parachain(1000), PalletInstance(50)));
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+	pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(Ethereum { chain_id: 15 })));
 }
 
-pub type Reserves =
-	(NativeAsset, AssetsFrom<SystemAssetHubLocation>, NativeAssetFrom<SystemAssetHubLocation>);
+pub type Reserves = (
+	NativeAsset,
+	AssetsFrom<SystemAssetHubLocation>,
+	NativeAssetFrom<SystemAssetHubLocation>,
+	AssetPrefixFrom<EthereumLocation, SystemAssetHubLocation>,
+);
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -292,13 +303,6 @@ pub type XcmRouter = WithUniqueTopic<(
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 )>;
-
-// TODO(alistair): Only assethub should be able to create.
-pub type ForeignCreatorsSovereignAccountOf = (
-	SiblingParachainConvertsVia<Sibling, AccountId>,
-	AccountId32Aliases<RelayNetwork, AccountId>,
-	ParentIsPreset<AccountId>,
-);
 
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;

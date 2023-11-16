@@ -93,5 +93,6 @@ decl_test_sender_receiver_accounts_parameter_types! {
 	BridgeHubRococoPara { sender: ALICE, receiver: BOB },
 	WococoRelay { sender: ALICE, receiver: BOB },
 	AssetHubWococoPara { sender: ALICE, receiver: BOB },
-	BridgeHubWococoPara { sender: ALICE, receiver: BOB }
+	BridgeHubWococoPara { sender: ALICE, receiver: BOB },
+	PenpalAPara { sender: ALICE, receiver: BOB }
 }

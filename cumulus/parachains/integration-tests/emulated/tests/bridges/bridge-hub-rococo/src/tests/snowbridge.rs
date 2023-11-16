@@ -226,11 +226,14 @@ fn register_token() {
 
 #[test]
 fn send_token_to_penpal() {
-	BridgeHubRococo::fund_accounts(vec![(
-		BridgeHubRococo::sovereign_account_id_of(MultiLocation {
+	let asset_hub_sovereign = BridgeHubRococo::sovereign_account_id_of(
+		MultiLocation {
 			parents: 1,
 			interior: X1(Parachain(ASSETHUB_PARA_ID)),
-		}),
+		}
+	);
+	BridgeHubRococo::fund_accounts(vec![(
+		asset_hub_sovereign.clone(),
 		INITIAL_FUND,
 	)]);
 
@@ -238,6 +241,30 @@ fn send_token_to_penpal() {
 	AssetHubRococo::fund_accounts(vec![
 		(AssetHubRococoReceiver::get(), INITIAL_FUND),
 	]);
+
+	PenpalA::fund_accounts(vec![
+		(PenpalAReceiver::get(), INITIAL_FUND),
+		(PenpalASender::get(), INITIAL_FUND),
+	]);
+
+	let weth_asset_id: MultiLocation = (
+		Parent,
+		Parent,
+		Ethereum { chain_id: 15 },
+		AccountKey20 { network: None, key: WETH }
+	).into();
+
+	// Create asset on penpal.
+	PenpalA::execute_with(|| {
+		assert_ok!(<PenpalA as PenpalAPallet>::ForeignAssets::create(
+			<PenpalA as Chain>::RuntimeOrigin::signed(PenpalASender::get()),
+			weth_asset_id,
+			asset_hub_sovereign.into(),
+			1000,
+		));
+
+		//assert!(<PenpalA as PenpalAPallet>::Assets::asset_exists(weth_asset_id));
+	});
 
 	let message_id_: H256 = [1; 32].into();
 
@@ -255,7 +282,7 @@ fn send_token_to_penpal() {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
 				token: WETH.into(),
-				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
+				destination: Destination::ForeignAccountId32 { para_id: 2000, id: AssetHubRococoReceiver::get().into() },
 				amount: 1_000_000_000,
 			},
 		});
@@ -282,11 +309,11 @@ fn send_token_to_penpal() {
 		);
 	});
 
-	PenpalARococo::execute_with(|| {
-		type RuntimeEvent = <PenpalARococo as Chain>::RuntimeEvent;
+	PenpalA::execute_with(|| {
+		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
 
 		assert_expected_events!(
-			PenpalARococo,
+			PenpalA,
 			vec![
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
 			]
