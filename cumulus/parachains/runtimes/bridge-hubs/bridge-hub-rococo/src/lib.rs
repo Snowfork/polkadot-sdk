@@ -527,7 +527,7 @@ parameter_types! {
 	pub const CreateAssetCall: [u8;2] = [53, 0];
 	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
 	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
-	pub const SendTokenExecutionFee: u128 = 2_000_000_000;
+	pub const SendTokenExecutionFee: u128 = 4_000_000_000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

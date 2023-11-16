@@ -282,7 +282,7 @@ fn send_token_to_penpal() {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
 				token: WETH.into(),
-				destination: Destination::ForeignAccountId32 { para_id: 2000, id: AssetHubRococoReceiver::get().into() },
+				destination: Destination::ForeignAccountId32 { para_id: 2000, id: PenpalAReceiver::get().into() },
 				amount: 1_000_000_000,
 			},
 		});
