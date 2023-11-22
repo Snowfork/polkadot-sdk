@@ -73,7 +73,7 @@ pub fn development_config() -> ChainSpec {
 		Extensions {
 			relay_chain: "rococo-local".into(),
 			// You MUST set this to the correct network!
-			para_id: 1000,
+			para_id: 1001,
 		},
 	)
 	.with_name("Development")
@@ -158,7 +158,7 @@ pub fn local_testnet_config() -> ChainSpec {
 			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		1000.into(),
+		1001.into(),
 	))
 	.with_protocol_id("template-local")
 	.with_properties(properties)
