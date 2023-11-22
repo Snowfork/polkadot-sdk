@@ -52,10 +52,10 @@ use xcm_builder::{
 	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	TrailingSetTopicAsId, UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
-	XcmFeeManagerFromComponents, XcmFeeToAccount,
+	XcmFeeToAccount,
 };
 use xcm_executor::{
-	traits::{FeeReason, TransactAsset, WithOriginFilter},
+	traits::{FeeManager, FeeReason, FeeReason::Export, TransactAsset, WithOriginFilter},
 	XcmExecutor,
 };
 
@@ -281,7 +281,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SubscriptionService = PolkadotXcm;
 	type PalletInstancesInfo = AllPalletsWithSystem;
 	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
-	type FeeManager = XcmFeeManagerFromComponents<
+	type FeeManager = XcmFeeManagerFromComponentsBridgeHub<
 		WaivedLocations,
 		(
 			XcmExportFeeToRelayerRewardAccounts<
@@ -457,6 +457,25 @@ impl<
 		}
 
 		fee
+	}
+}
+
+pub struct XcmFeeManagerFromComponentsBridgeHub<WaivedLocations, HandleFee>(
+	PhantomData<(WaivedLocations, HandleFee)>,
+);
+impl<WaivedLocations: Contains<MultiLocation>, FeeHandler: HandleFee> FeeManager
+	for XcmFeeManagerFromComponentsBridgeHub<WaivedLocations, FeeHandler>
+{
+	fn is_waived(origin: Option<&MultiLocation>, fee_reason: FeeReason) -> bool {
+		let Some(loc) = origin else { return false };
+		if let Export { network: Ethereum { chain_id: 15 }, destination: Here } = fee_reason {
+			return false
+		}
+		WaivedLocations::contains(loc)
+	}
+
+	fn handle_fee(fee: MultiAssets, context: Option<&XcmContext>, reason: FeeReason) {
+		FeeHandler::handle_fee(fee, context, reason);
 	}
 }
 
