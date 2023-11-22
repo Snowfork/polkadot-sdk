@@ -18,11 +18,11 @@
 
 use crate::{
 	bridge_common_config::{BridgeParachainWestendInstance, DeliveryRewardInBalance},
-	weights, AccountId, BridgeWestendMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
-	XcmRouter,
+	weights,
 	xcm_config::{AgentIdOf, EthereumNetwork, UniversalLocation},
+	AccountId, BridgeWestendMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
+	XcmRouter,
 };
-use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 use bp_messages::LaneId;
 use bridge_runtime_common::{
 	messages,
@@ -40,6 +40,7 @@ use bridge_runtime_common::{
 		RefundableMessagesLane, RefundableParachain,
 	},
 };
+use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 
 use codec::Encode;
 use frame_support::{parameter_types, traits::PalletInfoAccess};
@@ -84,25 +85,25 @@ fn build_congestion_message<Call>(is_congested: bool) -> sp_std::vec::Vec<Instru
 		Transact {
 			origin_kind: OriginKind::Xcm,
 			require_weight_at_most:
-			bp_asset_hub_rococo::XcmBridgeHubRouterTransactCallMaxWeight::get(),
+				bp_asset_hub_rococo::XcmBridgeHubRouterTransactCallMaxWeight::get(),
 			call: bp_asset_hub_rococo::Call::ToWestendXcmRouter(
 				bp_asset_hub_rococo::XcmBridgeHubRouterCall::report_bridge_status {
 					bridge_id: Default::default(),
 					is_congested,
 				}
 			)
-				.encode()
-				.into(),
+			.encode()
+			.into(),
 		}
 	]
 }
 
 /// Proof of messages, coming from Westend.
 pub type FromWestendBridgeHubMessagesProof =
-FromBridgedChainMessagesProof<bp_bridge_hub_westend::Hash>;
+	FromBridgedChainMessagesProof<bp_bridge_hub_westend::Hash>;
 /// Messages delivery proof for Rococo Bridge Hub -> Westend Bridge Hub messages.
 pub type ToWestendBridgeHubMessagesDeliveryProof =
-FromBridgedChainMessagesDeliveryProof<bp_bridge_hub_westend::Hash>;
+	FromBridgedChainMessagesDeliveryProof<bp_bridge_hub_westend::Hash>;
 
 /// Dispatches received XCM messages from other bridge
 type FromWestendMessageBlobDispatcher = BridgeBlobDispatcher<
@@ -155,11 +156,11 @@ impl MessageBridge for WithBridgeHubWestendMessageBridge {
 
 /// Message verifier for BridgeHubWestend messages sent from BridgeHubRococo
 pub type ToBridgeHubWestendMessageVerifier =
-messages::source::FromThisChainMessageVerifier<WithBridgeHubWestendMessageBridge>;
+	messages::source::FromThisChainMessageVerifier<WithBridgeHubWestendMessageBridge>;
 
 /// Maximal outbound payload size of BridgeHubRococo -> BridgeHubWestend messages.
 pub type ToBridgeHubWestendMaximalOutboundPayloadSize =
-messages::source::FromThisChainMaximalOutboundPayloadSize<WithBridgeHubWestendMessageBridge>;
+	messages::source::FromThisChainMaximalOutboundPayloadSize<WithBridgeHubWestendMessageBridge>;
 
 /// BridgeHubWestend chain from message lane point of view.
 #[derive(RuntimeDebug, Clone, Copy)]
@@ -301,18 +302,18 @@ mod tests {
 			},
 			messages_pallet_constants: AssertBridgeMessagesPalletConstants {
 				max_unrewarded_relayers_in_bridged_confirmation_tx:
-				bp_bridge_hub_westend::MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX,
+					bp_bridge_hub_westend::MAX_UNREWARDED_RELAYERS_IN_CONFIRMATION_TX,
 				max_unconfirmed_messages_in_bridged_confirmation_tx:
-				bp_bridge_hub_westend::MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX,
+					bp_bridge_hub_westend::MAX_UNCONFIRMED_MESSAGES_IN_CONFIRMATION_TX,
 				bridged_chain_id: bp_runtime::BRIDGE_HUB_WESTEND_CHAIN_ID,
 			},
 			pallet_names: AssertBridgePalletNames {
 				with_this_chain_messages_pallet_name:
-				bp_bridge_hub_rococo::WITH_BRIDGE_HUB_ROCOCO_MESSAGES_PALLET_NAME,
+					bp_bridge_hub_rococo::WITH_BRIDGE_HUB_ROCOCO_MESSAGES_PALLET_NAME,
 				with_bridged_chain_grandpa_pallet_name:
-				bp_westend::WITH_WESTEND_GRANDPA_PALLET_NAME,
+					bp_westend::WITH_WESTEND_GRANDPA_PALLET_NAME,
 				with_bridged_chain_messages_pallet_name:
-				bp_bridge_hub_westend::WITH_BRIDGE_HUB_WESTEND_MESSAGES_PALLET_NAME,
+					bp_bridge_hub_westend::WITH_BRIDGE_HUB_WESTEND_MESSAGES_PALLET_NAME,
 			},
 		});
 

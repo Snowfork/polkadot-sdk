@@ -907,10 +907,10 @@ impl pallet_xcm_bridge_hub_router::Config<ToEthereumXcmRouterInstance> for Runti
 
 	type ToBridgeHubSender = XcmpQueue;
 	type WithBridgeHubChannel =
-	cumulus_pallet_xcmp_queue::bridging::InAndOutXcmpChannelStatusProvider<
-		xcm_config::bridging::SiblingBridgeHubParaId,
-		Runtime,
-	>;
+		cumulus_pallet_xcmp_queue::bridging::InAndOutXcmpChannelStatusProvider<
+			xcm_config::bridging::SiblingBridgeHubParaId,
+			Runtime,
+		>;
 
 	type ByteFee = xcm_config::bridging::XcmBridgeHubRouterByteFee;
 	type FeeAsset = xcm_config::bridging::XcmBridgeHubRouterFeeAssetId;

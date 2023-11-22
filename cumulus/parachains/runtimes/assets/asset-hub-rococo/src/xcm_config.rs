@@ -16,8 +16,8 @@
 use super::{
 	AccountId, AllPalletsWithSystem, Assets, Authorship, Balance, Balances, BaseDeliveryFee,
 	FeeAssetId, ForeignAssets, ForeignAssetsInstance, ParachainInfo, ParachainSystem, PolkadotXcm,
-	PoolAssets, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, ToWestendXcmRouter,
-	TransactionByteFee, TrustBackedAssetsInstance, WeightToFee, XcmpQueue, ToEthereumXcmRouter
+	PoolAssets, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, ToEthereumXcmRouter,
+	ToWestendXcmRouter, TransactionByteFee, TrustBackedAssetsInstance, WeightToFee, XcmpQueue,
 };
 use assets_common::{
 	local_and_foreign_assets::MatchesLocalAndForeignAssetsMultiLocation,
@@ -557,7 +557,10 @@ impl xcm_executor::Config for XcmConfig {
 	// as reserve locations (we trust the Bridge Hub to relay the message that a reserve is being
 	// held). Asset Hub may _act_ as a reserve location for ROC and assets created
 	// under `pallet-assets`. Users must use teleport where allowed (e.g. ROC with the Relay Chain).
-	type IsReserve = (bridging::to_westend::IsTrustedBridgedReserveLocationForConcreteAsset, bridging::to_ethereum::IsTrustedBridgedReserveLocationForForeignAsset);
+	type IsReserve = (
+		bridging::to_westend::IsTrustedBridgedReserveLocationForConcreteAsset,
+		bridging::to_ethereum::IsTrustedBridgedReserveLocationForForeignAsset,
+	);
 	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
@@ -608,7 +611,8 @@ impl xcm_executor::Config for XcmConfig {
 		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 	>;
 	type MessageExporter = ();
-	type UniversalAliases = (bridging::to_westend::UniversalAliases, bridging::to_ethereum::UniversalAliases);
+	type UniversalAliases =
+		(bridging::to_westend::UniversalAliases, bridging::to_ethereum::UniversalAliases);
 	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
 	type SafeCallFilter = SafeCallFilter;
 	type Aliasers = Nothing;
