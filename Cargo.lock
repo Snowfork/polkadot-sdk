@@ -2311,13 +2311,17 @@ dependencies = [
 name = "bridge-hub-rococo-integration-tests"
 version = "1.0.0"
 dependencies = [
+ "asset-hub-rococo-emulated-chain",
  "asset-test-utils",
  "bp-messages",
+ "bridge-hub-rococo-emulated-chain",
  "bridge-hub-rococo-runtime",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-xcmp-queue",
  "emulated-integration-tests-common",
  "frame-support",
+ "hex",
+ "hex-literal",
  "pallet-assets",
  "pallet-balances",
  "pallet-bridge-messages",
@@ -2326,6 +2330,7 @@ dependencies = [
  "parachains-common",
  "parity-scale-codec",
  "penpal-emulated-chain",
+ "rococo-westend-system-emulated-network",
  "scale-info",
  "snowbridge-control",
  "snowbridge-core",
@@ -2333,7 +2338,6 @@ dependencies = [
  "snowbridge-outbound-queue",
  "snowbridge-router-primitives",
  "sp-core",
- "rococo-westend-system-emulated-network",
  "staging-xcm",
  "staging-xcm-executor",
 ]
@@ -14998,7 +15002,6 @@ dependencies = [
  "bridge-hub-rococo-emulated-chain",
  "bridge-hub-westend-emulated-chain",
  "emulated-integration-tests-common",
- "penpal-emulated-chain",
  "rococo-emulated-chain",
  "westend-emulated-chain",
 ]

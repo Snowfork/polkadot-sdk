@@ -56,10 +56,11 @@ pub use rococo_westend_system_emulated_network::{
 	AssetHubRococoPara as AssetHubRococo, AssetHubRococoParaReceiver as AssetHubRococoReceiver,
 	AssetHubRococoParaSender as AssetHubRococoSender, AssetHubWestendPara as AssetHubWestend,
 	AssetHubWestendParaReceiver as AssetHubWestendReceiver, BridgeHubRococoPara as BridgeHubRococo,
-	BridgeHubRococoParaSender as BridgeHubRococoSender, BridgeHubWestendPara as BridgeHubWestend,
 	BridgeHubRococoParaReceiver as BridgeHubRococoReceiver,
-	PenpalAPara as PenpalA, PenpalAParaSender as PenpalASender, PenpalAParaReceiver as PenpalAReceiver,
-	RococoRelay as Rococo, RococoRelayReceiver as RococoReceiver, RococoRelaySender as RococoSender,
+	BridgeHubRococoParaSender as BridgeHubRococoSender, BridgeHubWestendPara as BridgeHubWestend,
+	PenpalAPara as PenpalA, PenpalAParaReceiver as PenpalAReceiver,
+	PenpalAParaSender as PenpalASender, RococoRelay as Rococo,
+	RococoRelayReceiver as RococoReceiver, RococoRelaySender as RococoSender,
 };
 
 pub const ASSET_ID: u32 = 1;
