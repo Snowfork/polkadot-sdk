@@ -302,7 +302,10 @@ impl xcm_executor::Config for XcmConfig {
 			XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 		),
 	>;
-	type MessageExporter = (crate::bridge_to_westend_config::ToBridgeHubWestendHaulBlobExporter, crate::bridge_to_westend_config::SnowbridgeExporter);
+	type MessageExporter = (
+		crate::bridge_to_westend_config::ToBridgeHubWestendHaulBlobExporter,
+		crate::bridge_to_westend_config::SnowbridgeExporter,
+	);
 	type UniversalAliases = Nothing;
 	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
 	type SafeCallFilter = SafeCallFilter;
