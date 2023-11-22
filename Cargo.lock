@@ -2403,6 +2403,7 @@ dependencies = [
  "pallet-xcm",
  "parachains-common",
  "parity-scale-codec",
+ "penpal-emulated-chain",
  "rococo-wococo-system-emulated-network",
  "scale-info",
  "snowbridge-control",
@@ -11924,6 +11925,7 @@ dependencies = [
 name = "penpal-runtime"
 version = "0.9.27"
 dependencies = [
+ "assets-common",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -14902,6 +14904,7 @@ dependencies = [
  "bridge-hub-rococo-emulated-chain",
  "bridge-hub-wococo-emulated-chain",
  "emulated-integration-tests-common",
+ "penpal-emulated-chain",
  "rococo-emulated-chain",
  "wococo-emulated-chain",
 ]
