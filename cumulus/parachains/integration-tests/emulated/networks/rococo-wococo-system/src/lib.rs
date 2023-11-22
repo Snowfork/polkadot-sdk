@@ -17,6 +17,7 @@ pub use asset_hub_rococo_emulated_chain;
 pub use asset_hub_wococo_emulated_chain;
 pub use bridge_hub_rococo_emulated_chain;
 pub use bridge_hub_wococo_emulated_chain;
+pub use penpal_emulated_chain;
 pub use rococo_emulated_chain;
 pub use wococo_emulated_chain;
 
@@ -24,6 +25,7 @@ use asset_hub_rococo_emulated_chain::AssetHubRococo;
 use asset_hub_wococo_emulated_chain::AssetHubWococo;
 use bridge_hub_rococo_emulated_chain::BridgeHubRococo;
 use bridge_hub_wococo_emulated_chain::BridgeHubWococo;
+use penpal_emulated_chain::PenpalA;
 use rococo_emulated_chain::Rococo;
 use wococo_emulated_chain::Wococo;
 
@@ -43,6 +45,7 @@ decl_test_networks! {
 		parachains = vec![
 			AssetHubRococo,
 			BridgeHubRococo,
+			PenpalA,
 		],
 		bridge = RococoWococoMockBridge
 
@@ -90,5 +93,6 @@ decl_test_sender_receiver_accounts_parameter_types! {
 	BridgeHubRococoPara { sender: ALICE, receiver: BOB },
 	WococoRelay { sender: ALICE, receiver: BOB },
 	AssetHubWococoPara { sender: ALICE, receiver: BOB },
-	BridgeHubWococoPara { sender: ALICE, receiver: BOB }
+	BridgeHubWococoPara { sender: ALICE, receiver: BOB },
+	PenpalAPara { sender: ALICE, receiver: BOB }
 }

@@ -42,6 +42,7 @@ decl_test_parachains! {
 		pallets = {
 			PolkadotXcm: penpal_runtime::PolkadotXcm,
 			Assets: penpal_runtime::Assets,
+			ForeignAssets: penpal_runtime::ForeignAssets,
 			Balances: penpal_runtime::Balances,
 		}
 	},
@@ -59,6 +60,7 @@ decl_test_parachains! {
 		pallets = {
 			PolkadotXcm: penpal_runtime::PolkadotXcm,
 			Assets: penpal_runtime::Assets,
+			ForeignAssets: penpal_runtime::ForeignAssets,
 			Balances: penpal_runtime::Balances,
 		}
 	},
