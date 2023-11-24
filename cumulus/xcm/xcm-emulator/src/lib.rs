@@ -245,7 +245,7 @@ pub trait Parachain: Chain {
 	type LocationToAccountId: ConvertLocation<AccountIdOf<Self::Runtime>>;
 	type ParachainInfo: Get<ParaId>;
 	type ParachainSystem;
-	type MessageProcessor: ProcessMessage<Origin = CumulusAggregateMessageOrigin> + ServiceQueues;
+	type MessageProcessor: ProcessMessage + ServiceQueues;
 
 	fn init();
 
@@ -1007,7 +1007,7 @@ macro_rules! decl_test_networks {
 									<$parachain<Self>>::ext_wrapper(|| {
 										let _ =  <$parachain<Self> as Parachain>::MessageProcessor::process_message(
 											&msg[..],
-											$crate::CumulusAggregateMessageOrigin::Parent,
+											$crate::CumulusAggregateMessageOrigin::Parent.into(),
 											&mut weight_meter,
 											&mut msg.using_encoded($crate::blake2_256),
 										);
@@ -1317,11 +1317,16 @@ pub struct DefaultParaMessageProcessor<T, M>(PhantomData<(T, M)>);
 // Process HRMP messages from sibling paraids
 impl<T, M> ProcessMessage for DefaultParaMessageProcessor<T, M>
 where
-	M: codec::FullCodec + MaxEncodedLen + Clone + Eq + PartialEq + frame_support::pallet_prelude::TypeInfo + Debug,
+	M: codec::FullCodec
+		+ MaxEncodedLen
+		+ Clone
+		+ Eq
+		+ PartialEq
+		+ frame_support::pallet_prelude::TypeInfo
+		+ Debug,
 	T: Parachain,
 	T::Runtime: MessageQueueConfig,
-	<<T::Runtime as MessageQueueConfig>::MessageProcessor as ProcessMessage>::Origin:
-		PartialEq<M>,
+	<<T::Runtime as MessageQueueConfig>::MessageProcessor as ProcessMessage>::Origin: PartialEq<M>,
 	MessageQueuePallet<T::Runtime>: EnqueueMessage<M> + ServiceQueues,
 {
 	type Origin = M;
@@ -1346,8 +1351,7 @@ where
 	M: MaxEncodedLen,
 	T: Parachain,
 	T::Runtime: MessageQueueConfig,
-	<<T::Runtime as MessageQueueConfig>::MessageProcessor as ProcessMessage>::Origin:
-		PartialEq<M>,
+	<<T::Runtime as MessageQueueConfig>::MessageProcessor as ProcessMessage>::Origin: PartialEq<M>,
 	MessageQueuePallet<T::Runtime>: EnqueueMessage<M> + ServiceQueues,
 {
 	type OverweightMessageAddress = ();
