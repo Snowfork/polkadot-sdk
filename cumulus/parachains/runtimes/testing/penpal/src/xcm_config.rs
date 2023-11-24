@@ -112,10 +112,8 @@ pub type FungiblesTransactor = FungiblesAdapter<
 >;
 
 /// `AssetId/Balance` converter for `TrustBackedAssets`
-pub type ForeignAssetsConvertedConcreteId = assets_common::ForeignAssetsConvertedConcreteId<
-	StartsWith<RelayLocation>,
-	Balance,
->;
+pub type ForeignAssetsConvertedConcreteId =
+	assets_common::ForeignAssetsConvertedConcreteId<StartsWith<RelayLocation>, Balance>;
 
 /// Means for transacting foreign assets from different global consensus.
 pub type ForeignFungiblesTransactor = FungiblesAdapter<
@@ -211,8 +209,8 @@ pub type AccountIdOf<R> = <R as frame_system::Config>::AccountId;
 
 /// Asset filter that allows all assets from a certain location matching asset id.
 pub struct AssetPrefixFrom<Prefix, Origin>(PhantomData<(Prefix, Origin)>);
-impl<Prefix, Origin> ContainsPair<MultiAsset, MultiLocation> for AssetPrefixFrom<Prefix, Origin> 
-where 
+impl<Prefix, Origin> ContainsPair<MultiAsset, MultiLocation> for AssetPrefixFrom<Prefix, Origin>
+where
 	Prefix: Get<MultiLocation>,
 	Origin: Get<MultiLocation>,
 {
