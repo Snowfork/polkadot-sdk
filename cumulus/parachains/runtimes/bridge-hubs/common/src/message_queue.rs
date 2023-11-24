@@ -13,23 +13,74 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //! Runtime configuration for MessageQueue pallet
-use cumulus_primitives_core::AggregateMessageOrigin;
+use codec::{Decode, Encode, MaxEncodedLen};
+use cumulus_primitives_core::ParaId;
 use frame_support::{
-	traits::{ProcessMessage, ProcessMessageError},
+	traits::{ProcessMessage, ProcessMessageError, QueueFootprint, QueuePausedQuery},
 	weights::WeightMeter,
 };
-use sp_std::marker::PhantomData;
+use pallet_message_queue::OnQueueChanged;
+use scale_info::TypeInfo;
+use sp_std::{marker::PhantomData, prelude::*};
+use xcm::v3::{Junction, MultiLocation};
+use snowbridge_core::ChannelId;
+
+/// The aggregate origin of an inbound message.
+/// This is specialized for BridgeHub, as the snowbridge-outbound-queue pallet is also using
+/// the shared MessageQueue pallet.
+#[derive(Encode, Decode, Copy, MaxEncodedLen, Clone, Eq, PartialEq, TypeInfo, Debug)]
+pub enum AggregateMessageOrigin {
+	/// The message came from the para-chain itself.
+	Here,
+	/// The message came from the relay-chain.
+	///
+	/// This is used by the DMP queue.
+	Parent,
+	/// The message came from a sibling para-chain.
+	///
+	/// This is used by the HRMP queue.
+	Sibling(ParaId),
+	Snowbridge(ChannelId),
+}
+
+impl From<AggregateMessageOrigin> for MultiLocation {
+	fn from(origin: AggregateMessageOrigin) -> Self {
+		use AggregateMessageOrigin::*;
+		match origin {
+			Here => MultiLocation::here(),
+			Parent => MultiLocation::parent(),
+			Sibling(id) => MultiLocation::new(1, Junction::Parachain(id.into())),
+			// NOTE: We don't need this conversion for Snowbridge. However we have to
+			// implement it anyway as xcm_builder::ProcessXcmMessage requires it.
+			Snowbridge(_) => MultiLocation::default(),
+		}
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl From<u32> for AggregateMessageOrigin {
+	fn from(x: u32) -> Self {
+		match x {
+			0 => Self::Here,
+			1 => Self::Parent,
+			p => Self::Sibling(ParaId::from(p)),
+		}
+	}
+}
 
 /// Routes messages to either the XCMP or Snowbridge processor.
 pub struct BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>(
 	PhantomData<(XcmpProcessor, SnowbridgeProcessor)>,
-);
+)
+	where
+		XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
+		SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>;
 
 impl<XcmpProcessor, SnowbridgeProcessor> ProcessMessage
-	for BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>
-where
-	XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
-	SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
+for BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>
+	where
+		XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
+		SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
 {
 	type Origin = AggregateMessageOrigin;
 
@@ -43,7 +94,37 @@ where
 		match origin {
 			Here | Parent | Sibling(_) =>
 				XcmpProcessor::process_message(message, origin, meter, id),
-			GeneralKey(_) => SnowbridgeProcessor::process_message(message, origin, meter, id),
+			Snowbridge(_) => SnowbridgeProcessor::process_message(message, origin, meter, id),
 		}
+	}
+}
+
+pub struct NarrowOriginToSibling<Inner>(PhantomData<Inner>);
+impl<Inner: QueuePausedQuery<ParaId>> QueuePausedQuery<AggregateMessageOrigin>
+for NarrowOriginToSibling<Inner>
+{
+	fn is_paused(origin: &AggregateMessageOrigin) -> bool {
+		match origin {
+			AggregateMessageOrigin::Sibling(id) => Inner::is_paused(id),
+			_ => false,
+		}
+	}
+}
+
+impl<Inner: OnQueueChanged<ParaId>> OnQueueChanged<AggregateMessageOrigin>
+for NarrowOriginToSibling<Inner>
+{
+	fn on_queue_changed(origin: AggregateMessageOrigin, fp: QueueFootprint) {
+		if let AggregateMessageOrigin::Sibling(id) = origin {
+			Inner::on_queue_changed(id, fp)
+		}
+	}
+}
+
+/// Convert a sibling `ParaId` to an `AggregateMessageOrigin`.
+pub struct ParaIdToSibling;
+impl sp_runtime::traits::Convert<ParaId, AggregateMessageOrigin> for ParaIdToSibling {
+	fn convert(para_id: ParaId) -> AggregateMessageOrigin {
+		AggregateMessageOrigin::Sibling(para_id)
 	}
 }
