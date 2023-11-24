@@ -49,6 +49,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
@@ -61,6 +62,10 @@ use frame_support::{
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
+};
+use bridge_hub_common::{
+	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
+	AggregateMessageOrigin,
 };
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
