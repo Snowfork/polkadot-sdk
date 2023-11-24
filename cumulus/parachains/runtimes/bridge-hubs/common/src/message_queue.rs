@@ -21,9 +21,9 @@ use frame_support::{
 };
 use pallet_message_queue::OnQueueChanged;
 use scale_info::TypeInfo;
+use snowbridge_core::ChannelId;
 use sp_std::{marker::PhantomData, prelude::*};
 use xcm::v3::{Junction, MultiLocation};
-use snowbridge_core::ChannelId;
 
 /// The aggregate origin of an inbound message.
 /// This is specialized for BridgeHub, as the snowbridge-outbound-queue pallet is also using
@@ -72,15 +72,15 @@ impl From<u32> for AggregateMessageOrigin {
 pub struct BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>(
 	PhantomData<(XcmpProcessor, SnowbridgeProcessor)>,
 )
-	where
-		XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
-		SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>;
+where
+	XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
+	SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>;
 
 impl<XcmpProcessor, SnowbridgeProcessor> ProcessMessage
-for BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>
-	where
-		XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
-		SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
+	for BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>
+where
+	XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
+	SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
 {
 	type Origin = AggregateMessageOrigin;
 
@@ -101,7 +101,7 @@ for BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>
 
 pub struct NarrowOriginToSibling<Inner>(PhantomData<Inner>);
 impl<Inner: QueuePausedQuery<ParaId>> QueuePausedQuery<AggregateMessageOrigin>
-for NarrowOriginToSibling<Inner>
+	for NarrowOriginToSibling<Inner>
 {
 	fn is_paused(origin: &AggregateMessageOrigin) -> bool {
 		match origin {
@@ -112,7 +112,7 @@ for NarrowOriginToSibling<Inner>
 }
 
 impl<Inner: OnQueueChanged<ParaId>> OnQueueChanged<AggregateMessageOrigin>
-for NarrowOriginToSibling<Inner>
+	for NarrowOriginToSibling<Inner>
 {
 	fn on_queue_changed(origin: AggregateMessageOrigin, fp: QueueFootprint) {
 		if let AggregateMessageOrigin::Sibling(id) = origin {
