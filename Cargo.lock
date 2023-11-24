@@ -2153,6 +2153,7 @@ dependencies = [
  "pallet-message-queue",
  "parity-scale-codec",
  "scale-info",
+ "snowbridge-core",
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",
@@ -2533,6 +2534,7 @@ dependencies = [
  "bp-rococo",
  "bp-runtime",
  "bp-westend",
+ "bridge-hub-common",
  "bridge-hub-test-utils",
  "bridge-runtime-common",
  "cumulus-pallet-aura-ext",
@@ -17708,7 +17710,7 @@ dependencies = [
 name = "snowbridge-outbound-queue"
 version = "0.1.1"
 dependencies = [
- "cumulus-primitives-core",
+ "bridge-hub-common",
  "ethabi-decode",
  "frame-benchmarking",
  "frame-support",
