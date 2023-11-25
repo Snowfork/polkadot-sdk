@@ -16,7 +16,6 @@ cumulus-primitives-core = { path = "../../../../primitives/core", default-featur
 xcm = { package = "staging-xcm", path = "../../../../../polkadot/xcm", default-features = false}
 pallet-message-queue = { path = "../../../../../substrate/frame/message-queue", default-features = false}
 snowbridge-core = { path = "../../../../../../parachain/primitives/core", default-features = false }
-log = { version = "0.4.20", default-features = false }
 
 [features]
 default = [ "std" ]
@@ -29,8 +28,7 @@ std = [
 	"cumulus-primitives-core/std",
 	"xcm/std",
 	"pallet-message-queue/std",
-	"snowbridge-core/std",
-	"log/std"
+	"snowbridge-core/std"
 ]
 
 runtime-benchmarks = [

@@ -101,7 +101,6 @@ where
 		id: &mut [u8; 32],
 	) -> Result<bool, ProcessMessageError> {
 		use AggregateMessageOrigin::*;
-		log::info!(target: "xcm", "💫 in process message origin is {:?}.", origin);
 		match origin {
 			Here | Parent | Sibling(_) =>
 				XcmpProcessor::process_message(message, origin, meter, id),
