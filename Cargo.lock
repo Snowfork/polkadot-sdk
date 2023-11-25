@@ -2293,6 +2293,7 @@ dependencies = [
 name = "bridge-hub-rococo-emulated-chain"
 version = "0.0.0"
 dependencies = [
+ "bridge-hub-common",
  "bridge-hub-rococo-runtime",
  "cumulus-primitives-core",
  "emulated-integration-tests-common",
@@ -2331,6 +2332,8 @@ dependencies = [
  "parachains-common",
  "parity-scale-codec",
  "penpal-emulated-chain",
+ "penpal-runtime",
+ "rococo-system-emulated-network",
  "rococo-westend-system-emulated-network",
  "scale-info",
  "snowbridge-control",
@@ -2486,6 +2489,7 @@ dependencies = [
 name = "bridge-hub-westend-emulated-chain"
 version = "0.0.0"
 dependencies = [
+ "bridge-hub-common",
  "bridge-hub-westend-runtime",
  "cumulus-primitives-core",
  "emulated-integration-tests-common",

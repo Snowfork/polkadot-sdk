@@ -40,6 +40,8 @@ rococo-westend-system-emulated-network = { path = "../../../networks/rococo-west
 bridge-hub-rococo-emulated-chain = { path = "../../../chains/parachains/bridges/bridge-hub-rococo"}
 asset-hub-rococo-emulated-chain = { path = "../../../chains/parachains/assets/asset-hub-rococo"}
 penpal-emulated-chain = { path = "../../../chains/parachains/testing/penpal" }
+penpal-runtime = { path = "../../../../../runtimes/testing/penpal" }
+rococo-system-emulated-network ={ path = "../../../networks/rococo-system" }
 
 # Snowbridge
 snowbridge-core = { path = "../../../../../../../../parachain/primitives/core", default-features = false }

@@ -14,7 +14,7 @@
 // limitations under the License.
 //! Runtime configuration for MessageQueue pallet
 use codec::{Decode, Encode, MaxEncodedLen};
-use cumulus_primitives_core::ParaId;
+use cumulus_primitives_core::{AggregateMessageOrigin as CumulusAggregateMessageOrigin, ParaId};
 use frame_support::{
 	traits::{ProcessMessage, ProcessMessageError, QueueFootprint, QueuePausedQuery},
 	weights::WeightMeter,
@@ -53,6 +53,16 @@ impl From<AggregateMessageOrigin> for MultiLocation {
 			// NOTE: We don't need this conversion for Snowbridge. However we have to
 			// implement it anyway as xcm_builder::ProcessXcmMessage requires it.
 			Snowbridge(_) => MultiLocation::default(),
+		}
+	}
+}
+
+impl From<CumulusAggregateMessageOrigin> for AggregateMessageOrigin {
+	fn from(origin: CumulusAggregateMessageOrigin) -> Self {
+		match origin {
+			CumulusAggregateMessageOrigin::Here => Self::Here,
+			CumulusAggregateMessageOrigin::Parent => Self::Parent,
+			CumulusAggregateMessageOrigin::Sibling(id) => Self::Sibling(id),
 		}
 	}
 }
