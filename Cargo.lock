@@ -10899,15 +10899,12 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std 8.0.0",
- "staging-xcm",
 ]
 
 [[package]]
@@ -17715,6 +17712,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
+ "log",
  "parity-scale-codec",
  "scale-info",
  "serde",
