@@ -16,3 +16,4 @@ asset-hub-rococo-emulated-chain = { path = "../../chains/parachains/assets/asset
 asset-hub-wococo-emulated-chain = { path = "../../chains/parachains/assets/asset-hub-wococo" }
 bridge-hub-rococo-emulated-chain = { path = "../../chains/parachains/bridges/bridge-hub-rococo" }
 bridge-hub-wococo-emulated-chain = { path = "../../chains/parachains/bridges/bridge-hub-wococo" }
+penpal-emulated-chain = { path = "../../chains/parachains/testing/penpal" }

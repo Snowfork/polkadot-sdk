@@ -21,7 +21,7 @@ use frame_support::traits::OnInitialize;
 // Cumulus
 use emulated_integration_tests_common::{
 	impl_accounts_helpers_for_parachain, impl_assert_events_helpers_for_parachain,
-	xcm_emulator::decl_test_parachains,
+	impls::Parachain, xcm_emulator::decl_test_parachains,
 };
 
 // BridgeHubWestend Parachain declaration
@@ -36,6 +36,7 @@ decl_test_parachains! {
 			XcmpMessageHandler: bridge_hub_westend_runtime::XcmpQueue,
 			LocationToAccountId: bridge_hub_westend_runtime::xcm_config::LocationToAccountId,
 			ParachainInfo: bridge_hub_westend_runtime::ParachainInfo,
+			MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
 		},
 		pallets = {
 			PolkadotXcm: bridge_hub_westend_runtime::PolkadotXcm,

@@ -18,7 +18,9 @@
 
 use crate::{
 	bridge_common_config::{BridgeParachainWestendInstance, DeliveryRewardInBalance},
-	weights, AccountId, BridgeWestendMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
+	weights,
+	xcm_config::{AgentIdOf, EthereumNetwork, UniversalLocation},
+	AccountId, BridgeWestendMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
 	XcmRouter,
 };
 use bp_messages::LaneId;
@@ -38,6 +40,7 @@ use bridge_runtime_common::{
 		RefundableMessagesLane, RefundableParachain,
 	},
 };
+use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 
 use codec::Encode;
 use frame_support::{parameter_types, traits::PalletInfoAccess};
@@ -115,6 +118,14 @@ pub type ToBridgeHubWestendHaulBlobExporter = HaulBlobExporter<
 	WestendGlobalConsensusNetwork,
 	(),
 >;
+
+pub type SnowbridgeExporter = EthereumBlobExporter<
+	UniversalLocation,
+	EthereumNetwork,
+	snowbridge_outbound_queue::Pallet<Runtime>,
+	AgentIdOf,
+>;
+
 pub struct ToBridgeHubWestendXcmBlobHauler;
 impl XcmBlobHauler for ToBridgeHubWestendXcmBlobHauler {
 	type Runtime = Runtime;
@@ -196,7 +207,7 @@ bp_runtime::generate_static_str_provider!(OnBridgeHubRococoRefundBridgeHubWesten
 pub type WithBridgeHubWestendMessagesInstance = pallet_bridge_messages::Instance3;
 impl pallet_bridge_messages::Config<WithBridgeHubWestendMessagesInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = weights::pallet_bridge_messages_rococo_to_westend::WeightInfo<Runtime>;
+	type WeightInfo = weights::pallet_bridge_messages::WeightInfo<Runtime>;
 	type BridgedChainId = BridgeHubWestendChainId;
 	type ActiveOutboundLanes = ActiveOutboundLanesToBridgeHubWestend;
 	type MaxUnrewardedRelayerEntriesAtInboundLane = MaxUnrewardedRelayerEntriesAtInboundLane;
