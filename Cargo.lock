@@ -15003,6 +15003,7 @@ dependencies = [
  "bridge-hub-rococo-emulated-chain",
  "bridge-hub-westend-emulated-chain",
  "emulated-integration-tests-common",
+ "penpal-emulated-chain",
  "rococo-emulated-chain",
  "westend-emulated-chain",
 ]
