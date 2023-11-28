@@ -851,6 +851,11 @@ pub mod bridging {
 		parameter_types! {
 			pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
 			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
+			/// User fee for ERC20 token transfer back to Ethereum.
+			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
+			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
+			/// Polkadot uses 12 decimals, Kusama and Rococo 10 decimals.
+			pub const BridgeHubEthereumBaseFeeInROC: u128 = 2_750_872_500_000;
 
 			/// Set up exporters configuration.
 			/// `Option<MultiAsset>` represents static "base fee" which is used for total delivery fee calculation.
@@ -863,7 +868,7 @@ pub mod bridging {
 					SiblingBridgeHub::get(),
 					Some((
 						XcmBridgeHubRouterFeeAssetId::get(),
-						BridgeHubEthereumBaseFeeInRocs::get(),
+						BridgeHubEthereumBaseFeeInROC::get(),
 					).into())
 				),
 			];
