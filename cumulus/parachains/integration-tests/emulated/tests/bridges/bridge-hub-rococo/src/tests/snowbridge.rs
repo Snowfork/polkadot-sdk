@@ -238,17 +238,36 @@ fn send_token_to_penpal() {
 	});
 	BridgeHubRococo::fund_accounts(vec![(asset_hub_sovereign.clone(), INITIAL_FUND)]);
 
-	// Fund ethereum sovereign in asset hub
-	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
-
 	PenpalA::fund_accounts(vec![
 		(PenpalAReceiver::get(), INITIAL_FUND),
 		(PenpalASender::get(), INITIAL_FUND),
 	]);
 
-	let weth_asset_id: MultiLocation =
+	let weth_asset_location: MultiLocation =
 		(Parent, Parent, Ethereum { chain_id: 15 }, AccountKey20 { network: None, key: WETH })
 			.into();
+	let weth_asset_id = weth_asset_location.into();
+
+	let origin_location =
+		MultiLocation { parents: 2, interior: weth_asset_location.interior.split_last().0 };
+
+	// Fund ethereum sovereign in asset hub
+	let ethereum_sovereign: AccountId =
+		hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5").into();
+	AssetHubRococo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
+	// Create asset on assethub.
+	AssetHubRococo::execute_with(|| {
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::create(
+			pallet_xcm::Origin::Xcm(origin_location).into(),
+			weth_asset_id,
+			asset_hub_sovereign.clone().into(),
+			1000,
+		));
+
+		assert!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::asset_exists(
+			weth_asset_id
+		));
+	});
 
 	// Create asset on penpal.
 	PenpalA::execute_with(|| {
@@ -259,7 +278,7 @@ fn send_token_to_penpal() {
 			1000,
 		));
 
-		//assert!(<PenpalA as PenpalAPallet>::Assets::asset_exists(weth_asset_id));
+		assert!(<PenpalA as PenpalAPallet>::ForeignAssets::asset_exists(weth_asset_id));
 	});
 
 	let message_id_: H256 = [1; 32].into();
@@ -268,12 +287,6 @@ fn send_token_to_penpal() {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into() },
-		});
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
