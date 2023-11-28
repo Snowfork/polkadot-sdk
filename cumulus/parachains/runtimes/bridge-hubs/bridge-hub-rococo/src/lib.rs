@@ -511,7 +511,6 @@ parameter_types! {
 		fee_per_gas: gwei(20),
 		rewards: Rewards { local: 1 * UNITS, remote: meth(1) }
 	};
-	pub const InboundDeliveryCost: u128 = 1_000_000_000;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -630,7 +629,7 @@ impl snowbridge_control::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 	type DefaultPricingParameters = Parameters;
-	type InboundDeliveryCost = InboundDeliveryCost;
+	type InboundDeliveryCost = EthereumInboundQueue;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
