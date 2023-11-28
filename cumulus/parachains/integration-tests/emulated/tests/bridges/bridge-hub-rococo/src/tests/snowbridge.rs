@@ -31,6 +31,22 @@ const TREASURY_ACCOUNT: [u8; 32] =
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
+
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+pub enum ControlCall {
+	#[codec(index = 2)]
+	CreateAgent,
+	#[codec(index = 3)]
+	CreateChannel { mode: OperatingMode, outbound_fee: u128 },
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
+pub enum SnowbridgeControl {
+	#[codec(index = 83)]
+	Control(ControlCall),
+}
+
 #[test]
 fn create_agent() {
 	let origin_para: u32 = 1001;
@@ -46,13 +62,15 @@ fn create_agent() {
 	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
 	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
+	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateChannel {});
+
 	let remote_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(origin_para))),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
-			call: vec![63, 2].into(),
+			call: create_agent_call.encode().into(),
 		},
 	]));
 
@@ -89,19 +107,6 @@ fn create_agent() {
 	});
 }
 
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
-pub enum CreateChannelCall {
-	#[codec(index = 3)]
-	CreateChannel { mode: OperatingMode, outbound_fee: u128 },
-}
-
-#[allow(clippy::large_enum_variant)]
-#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
-pub enum SnowbridgeControl {
-	#[codec(index = 63)]
-	Control(CreateChannelCall),
-}
-
 #[test]
 fn create_channel() {
 	let origin_para: u32 = 1001;
@@ -117,17 +122,19 @@ fn create_channel() {
 	let destination: VersionedMultiLocation =
 		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
+	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateChannel {});
+
 	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(origin_para))),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
-			call: vec![63, 2].into(),
+			call: create_agent_call.encode().into(),
 		},
 	]));
 
-	let create_channel_call = SnowbridgeControl::Control(CreateChannelCall::CreateChannel {
+	let create_channel_call = SnowbridgeControl::Control(ControlCall::CreateChannel {
 		mode: OperatingMode::Normal,
 		outbound_fee: 1,
 	});
