@@ -30,13 +30,14 @@ const TREASURY_ACCOUNT: [u8; 32] =
 	hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
+const XCM_FEE: u128 = 4_000_000_000;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
-	#[codec(index = 2)]
-	CreateAgent,
 	#[codec(index = 3)]
-	CreateChannel { mode: OperatingMode, outbound_fee: u128 },
+	CreateAgent,
+	#[codec(index = 4)]
+	CreateChannel { mode: OperatingMode },
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -133,10 +134,8 @@ fn create_channel() {
 		},
 	]));
 
-	let create_channel_call = SnowbridgeControl::Control(ControlCall::CreateChannel {
-		mode: OperatingMode::Normal,
-		outbound_fee: 1,
-	});
+	let create_channel_call =
+		SnowbridgeControl::Control(ControlCall::CreateChannel { mode: OperatingMode::Normal });
 
 	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
@@ -294,8 +293,10 @@ fn send_token_to_penpal() {
 				destination: Destination::ForeignAccountId32 {
 					para_id: 2000,
 					id: PenpalAReceiver::get().into(),
+					fee: XCM_FEE,
 				},
 				amount: 1_000_000_000,
+				fee: XCM_FEE,
 			},
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
@@ -364,6 +365,7 @@ fn send_token() {
 				token: WETH.into(),
 				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
 				amount: 1_000_000_000,
+				fee: XCM_FEE,
 			},
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
@@ -419,6 +421,7 @@ fn reserve_transfer_token() {
 				token: WETH.into(),
 				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
 				amount: WETH_AMOUNT,
+				fee: XCM_FEE,
 			},
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
