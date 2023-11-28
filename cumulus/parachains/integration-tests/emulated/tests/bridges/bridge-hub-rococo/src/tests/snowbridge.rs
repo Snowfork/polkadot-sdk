@@ -31,7 +31,6 @@ const TREASURY_ACCOUNT: [u8; 32] =
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 
-
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
 	#[codec(index = 2)]
@@ -233,33 +232,23 @@ fn register_token() {
 
 #[test]
 fn send_token_to_penpal() {
-	let asset_hub_sovereign = BridgeHubRococo::sovereign_account_id_of(
-		MultiLocation {
-			parents: 1,
-			interior: X1(Parachain(ASSETHUB_PARA_ID)),
-		}
-	);
-	BridgeHubRococo::fund_accounts(vec![(
-		asset_hub_sovereign.clone(),
-		INITIAL_FUND,
-	)]);
+	let asset_hub_sovereign = BridgeHubRococo::sovereign_account_id_of(MultiLocation {
+		parents: 1,
+		interior: X1(Parachain(ASSETHUB_PARA_ID)),
+	});
+	BridgeHubRococo::fund_accounts(vec![(asset_hub_sovereign.clone(), INITIAL_FUND)]);
 
 	// Fund ethereum sovereign in asset hub
-	AssetHubRococo::fund_accounts(vec![
-		(AssetHubRococoReceiver::get(), INITIAL_FUND),
-	]);
+	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
 
 	PenpalA::fund_accounts(vec![
 		(PenpalAReceiver::get(), INITIAL_FUND),
 		(PenpalASender::get(), INITIAL_FUND),
 	]);
 
-	let weth_asset_id: MultiLocation = (
-		Parent,
-		Parent,
-		Ethereum { chain_id: 15 },
-		AccountKey20 { network: None, key: WETH }
-	).into();
+	let weth_asset_id: MultiLocation =
+		(Parent, Parent, Ethereum { chain_id: 15 }, AccountKey20 { network: None, key: WETH })
+			.into();
 
 	// Create asset on penpal.
 	PenpalA::execute_with(|| {
@@ -289,7 +278,10 @@ fn send_token_to_penpal() {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
 				token: WETH.into(),
-				destination: Destination::ForeignAccountId32 { para_id: 2000, id: PenpalAReceiver::get().into() },
+				destination: Destination::ForeignAccountId32 {
+					para_id: 2000,
+					id: PenpalAReceiver::get().into(),
+				},
 				amount: 1_000_000_000,
 			},
 		});
@@ -339,9 +331,7 @@ fn send_token() {
 	)]);
 
 	// Fund ethereum sovereign in asset hub
-	AssetHubRococo::fund_accounts(vec![
-		(AssetHubRococoReceiver::get(), INITIAL_FUND),
-	]);
+	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
 
 	let message_id_: H256 = [1; 32].into();
 
@@ -388,20 +378,14 @@ fn send_token() {
 
 #[test]
 fn reserve_transfer_token() {
-	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(
-		MultiLocation {
-			parents: 1,
-			interior: X1(Parachain(ASSETHUB_PARA_ID)),
-		}
-	);
+	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(MultiLocation {
+		parents: 1,
+		interior: X1(Parachain(ASSETHUB_PARA_ID)),
+	});
 
-	BridgeHubRococo::fund_accounts(vec![
-		(assethub_sovereign.clone(), INITIAL_FUND)
-	]);
+	BridgeHubRococo::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
 
-	AssetHubRococo::fund_accounts(vec![
-		(AssetHubRococoReceiver::get(), INITIAL_FUND),
-	]);
+	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
 
 	const WETH_AMOUNT: u128 = 1_000_000_000;
 	let message_id_: H256 = [1; 32].into();
