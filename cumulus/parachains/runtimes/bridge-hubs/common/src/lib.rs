@@ -16,4 +16,4 @@
 
 pub mod message_queue;
 
-pub use message_queue::BridgeHubMessageRouter;
+pub use message_queue::{AggregateMessageOrigin, BridgeHubMessageRouter};

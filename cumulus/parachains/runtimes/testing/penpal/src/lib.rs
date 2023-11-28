@@ -458,7 +458,6 @@ impl pallet_assets::Config<pallet_assets::Instance1> for Runtime {
 	type BenchmarkHelper = ();
 }
 
-
 parameter_types! {
 	// we just reuse the same deposits
 	pub const ForeignAssetsAssetDeposit: Balance = AssetDeposit::get();
