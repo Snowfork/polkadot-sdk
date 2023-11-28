@@ -683,10 +683,10 @@ construct_runtime!(
 
 		BridgeRelayers: pallet_bridge_relayers::{Pallet, Call, Storage, Event<T>} = 47,
 
-		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 60,
-		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 61,
-		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 62,
-		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Config<T>, Event<T>} = 63,
+		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 80,
+		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 81,
+		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 82,
+		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Config<T>, Event<T>} = 83,
 
 		// Message Queue. Importantly, is registered last so that messages are processed after
 		// the `on_initialize` hooks of bridging pallets.
