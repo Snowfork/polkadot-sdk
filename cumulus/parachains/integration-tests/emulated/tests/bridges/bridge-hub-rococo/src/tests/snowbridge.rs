@@ -62,7 +62,7 @@ fn create_agent() {
 	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
 	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
-	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateChannel {});
+	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
 
 	let remote_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
@@ -122,7 +122,7 @@ fn create_channel() {
 	let destination: VersionedMultiLocation =
 		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
-	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateChannel {});
+	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
 
 	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
