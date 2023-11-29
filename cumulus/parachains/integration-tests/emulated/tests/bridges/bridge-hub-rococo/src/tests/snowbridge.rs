@@ -204,7 +204,7 @@ fn register_token() {
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into() },
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
@@ -355,7 +355,7 @@ fn send_token() {
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into() },
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
@@ -411,7 +411,7 @@ fn reserve_transfer_token() {
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into() },
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, ASSETHUB_PARA_ID.into()).unwrap();
