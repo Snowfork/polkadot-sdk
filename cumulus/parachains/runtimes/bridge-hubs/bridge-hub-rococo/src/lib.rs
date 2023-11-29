@@ -507,7 +507,6 @@ parameter_types! {
 	pub const Reward: u128 = 10;
 	pub const GatewayAddress: H160 = H160(hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39"));
 	pub const CreateAssetCall: [u8;2] = [53, 0];
-	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
 	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
@@ -535,13 +534,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
-	type MessageConverter = MessageToXcm<
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		AccountId,
-		Balance,
-	>;
+	type MessageConverter = MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>;
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
 	type PricingParameters = EthereumControl;
