@@ -59,9 +59,9 @@ impl<SelfParaId: Get<ParaId>> ContainsPair<MultiLocation, MultiLocation>
 	}
 }
 
-pub struct FromNetwork<SelfNetworkId>(sp_std::marker::PhantomData<SelfNetworkId>);
-impl<SelfNetworkId: Get<NetworkId>> ContainsPair<MultiLocation, MultiLocation>
-	for FromNetwork<SelfNetworkId>
+pub struct FromNetwork<ExpectedNetworkId>(sp_std::marker::PhantomData<ExpectedNetworkId>);
+impl<ExpectedNetworkId: Get<NetworkId>> ContainsPair<MultiLocation, MultiLocation>
+	for FromNetwork<ExpectedNetworkId>
 {
 	fn contains(&a: &MultiLocation, b: &MultiLocation) -> bool {
 		// `a` needs to be from `b` at least
@@ -71,7 +71,7 @@ impl<SelfNetworkId: Get<NetworkId>> ContainsPair<MultiLocation, MultiLocation>
 
 		match a {
 			MultiLocation { parents: 2, interior } => {
-				matches!(interior.first(), Some(GlobalConsensus(network)) if *network == SelfNetworkId::get())
+				matches!(interior.first(), Some(GlobalConsensus(network)) if *network == ExpectedNetworkId::get())
 			},
 			_ => false,
 		}
