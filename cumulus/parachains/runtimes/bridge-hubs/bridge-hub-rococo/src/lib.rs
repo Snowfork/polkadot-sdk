@@ -28,6 +28,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod bridge_common_config;
+pub mod bridge_to_ethereum_config;
 pub mod bridge_to_westend_config;
 mod weights;
 pub mod xcm_config;
