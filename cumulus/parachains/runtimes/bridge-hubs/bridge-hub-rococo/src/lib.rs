@@ -65,6 +65,8 @@ use frame_system::{
 	EnsureRoot,
 };
 
+#[cfg(not(feature = "runtime-benchmarks"))]
+use bridge_hub_common::BridgeHubMessageRouter;
 use bridge_hub_common::{
 	message_queue::{NarrowOriginToSibling, ParaIdToSibling},
 	AggregateMessageOrigin,
@@ -76,7 +78,6 @@ use xcm::VersionedMultiLocation;
 use xcm_config::{TreasuryAccount, XcmOriginToTransactDispatchOrigin, XcmRouter};
 
 use bp_runtime::HeaderId;
-use bridge_hub_common::BridgeHubMessageRouter;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
