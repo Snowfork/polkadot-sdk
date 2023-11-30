@@ -46,6 +46,6 @@ rococo-system-emulated-network ={ path = "../../../networks/rococo-system" }
 # Snowbridge
 snowbridge-core = { path = "../../../../../../../../parachain/primitives/core", default-features = false }
 snowbridge-router-primitives = { path = "../../../../../../../../parachain/primitives/router", default-features = false }
-snowbridge-control = { path = "../../../../../../../../parachain/pallets/control", default-features = false }
+snowbridge-system = { path = "../../../../../../../../parachain/pallets/system", default-features = false }
 snowbridge-inbound-queue = { path = "../../../../../../../../parachain/pallets/inbound-queue", default-features = false }
 snowbridge-outbound-queue = { path = "../../../../../../../../parachain/pallets/outbound-queue", default-features = false }
