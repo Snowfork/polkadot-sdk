@@ -18,9 +18,9 @@ use bridge_hub_rococo_emulated_chain::BridgeHubRococoParaPallet as BridgeHubRoco
 use codec::{Decode, Encode};
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
-use snowbridge_control;
 use snowbridge_core::outbound::OperatingMode;
 use snowbridge_router_primitives::inbound::{Command, Destination, MessageV1, VersionedMessage};
+use snowbridge_system;
 use sp_core::H256;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
@@ -98,7 +98,7 @@ fn create_agent() {
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
-				RuntimeEvent::EthereumControl(snowbridge_control::Event::CreateAgent {
+				RuntimeEvent::EthereumSystem(snowbridge_system::Event::CreateAgent {
 					..
 				}) => {},
 			]
@@ -179,7 +179,7 @@ fn create_channel() {
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
-				RuntimeEvent::EthereumControl(snowbridge_control::Event::CreateChannel {
+				RuntimeEvent::EthereumSystem(snowbridge_system::Event::CreateChannel {
 					..
 				}) => {},
 			]

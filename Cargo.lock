@@ -2337,13 +2337,13 @@ dependencies = [
  "frame-support 4.0.0-dev",
  "parachains-common",
  "serde_json",
- "snowbridge-control",
  "snowbridge-core",
  "snowbridge-inbound-queue",
  "snowbridge-outbound-queue",
  "snowbridge-router-primitives",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
+ "snowbridge-system",
+ "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -2373,14 +2373,14 @@ dependencies = [
  "rococo-system-emulated-network",
  "rococo-westend-system-emulated-network",
  "scale-info",
- "snowbridge-control",
  "snowbridge-core",
  "snowbridge-inbound-queue",
  "snowbridge-outbound-queue",
  "snowbridge-router-primitives",
- "sp-core 21.0.0",
- "staging-xcm 1.0.0",
- "staging-xcm-executor 1.0.0",
+ "snowbridge-system",
+ "sp-core",
+ "staging-xcm",
+ "staging-xcm-executor",
 ]
 
 [[package]]
@@ -2446,8 +2446,6 @@ dependencies = [
  "serde",
  "smallvec",
  "snowbridge-beacon-primitives",
- "snowbridge-control",
- "snowbridge-control-runtime-api",
  "snowbridge-core",
  "snowbridge-ethereum-beacon-client",
  "snowbridge-inbound-queue",
@@ -2455,7 +2453,9 @@ dependencies = [
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
  "snowbridge-runtime-common",
- "sp-api 4.0.0-dev",
+ "snowbridge-system",
+ "snowbridge-system-runtime-api",
+ "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core 21.0.0",
@@ -17885,41 +17885,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-control"
-version = "4.0.0-dev"
-source = "git+https://github.com/Snowfork/snowbridge.git?branch=main#9d28d963ec0dc0ac4ccac1e84ca87b8016620469"
-dependencies = [
- "ethabi-decode",
- "frame-benchmarking 4.0.0-dev (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "frame-support 4.0.0-dev (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "frame-system 4.0.0-dev (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "log",
- "parity-scale-codec",
- "scale-info",
- "snowbridge-core",
- "sp-core 21.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "sp-io 23.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "sp-runtime 24.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "sp-std 8.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "staging-xcm 1.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "staging-xcm-builder 1.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "staging-xcm-executor 1.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
-]
-
-[[package]]
-name = "snowbridge-control-runtime-api"
-version = "0.1.0"
-source = "git+https://github.com/Snowfork/snowbridge.git?branch=main#9d28d963ec0dc0ac4ccac1e84ca87b8016620469"
-dependencies = [
- "parity-scale-codec",
- "snowbridge-core",
- "sp-api 4.0.0-dev (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "sp-core 21.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "sp-std 8.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
- "staging-xcm 1.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
-]
-
-[[package]]
 name = "snowbridge-core"
 version = "0.1.1"
 source = "git+https://github.com/Snowfork/snowbridge.git?branch=main#9d28d963ec0dc0ac4ccac1e84ca87b8016620469"
@@ -18109,6 +18074,39 @@ dependencies = [
  "staging-xcm 1.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
  "staging-xcm-builder 1.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
  "staging-xcm-executor 1.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
+]
+
+[[package]]
+name = "snowbridge-system"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "snowbridge-core",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 8.0.0",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-system-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "snowbridge-core",
+ "sp-api",
+ "sp-core",
+ "sp-std 8.0.0",
+ "staging-xcm",
 ]
 
 [[package]]
