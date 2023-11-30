@@ -18,8 +18,7 @@
 
 use crate::{
 	bridge_common_config::{BridgeParachainWestendInstance, DeliveryRewardInBalance},
-	weights,
-	AccountId, BridgeWestendMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
+	weights, AccountId, BridgeWestendMessages, ParachainInfo, Runtime, RuntimeEvent, RuntimeOrigin,
 	XcmRouter,
 };
 use bp_messages::LaneId;
