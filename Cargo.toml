@@ -547,3 +547,15 @@ wasmi = { opt-level = 3 }
 x25519-dalek = { opt-level = 3 }
 yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
+
+[patch.'https://github.com/snowfork/snowbridge']
+snowbridge-beacon-primitives = { path = "../parachain/primitives/beacon" }
+snowbridge-control = { path = "../parachain/pallets/control" }
+snowbridge-control-runtime-api = { path = "../parachain/pallets/control/runtime-api" }
+snowbridge-core = { path = "../parachain/primitives/core" }
+snowbridge-ethereum-beacon-client = { path = "../parachain/pallets/ethereum-beacon-client" }
+snowbridge-inbound-queue = { path = "../parachain/pallets/inbound-queue" }
+snowbridge-outbound-queue = { path = "../parachain/pallets/outbound-queue" }
+snowbridge-outbound-queue-runtime-api = { path = "../parachain/pallets/outbound-queue/runtime-api" }
+snowbridge-router-primitives = { path = "../parachain/primitives/router" }
+snowbridge-runtime-common = { path = "../parachain/runtime/runtime-common" }
