@@ -538,7 +538,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type MessageConverter = MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>;
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
-	type PricingParameters = EthereumControl;
+	type PricingParameters = EthereumSystem;
 }
 
 impl snowbridge_outbound_queue::Config for Runtime {
@@ -552,7 +552,7 @@ impl snowbridge_outbound_queue::Config for Runtime {
 	type Balance = Balance;
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_outbound_queue::WeightInfo<Runtime>;
-	type PricingParameters = EthereumControl;
+	type PricingParameters = EthereumSystem;
 }
 
 #[cfg(not(feature = "beacon-spec-mainnet"))]
