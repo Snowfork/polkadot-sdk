@@ -34,7 +34,9 @@ pub mod xcm_config;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
-use snowbridge_core::{outbound::Message, AgentId, AllowSiblingsOnly};
+use snowbridge_core::{
+	gwei, meth, outbound::Message, AgentId, AllowSiblingsOnly, PricingParameters, Rewards,
+};
 use snowbridge_router_primitives::inbound::MessageToXcm;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
@@ -42,7 +44,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Keccak256},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult, FixedU128,
 };
 
 use sp_std::prelude::*;
@@ -505,9 +507,12 @@ parameter_types! {
 	pub const Reward: u128 = 10;
 	pub const GatewayAddress: H160 = H160(hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39"));
 	pub const CreateAssetCall: [u8;2] = [53, 0];
-	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
 	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
-	pub const SendTokenExecutionFee: u128 = 4_000_000_000;
+	pub Parameters: PricingParameters<u128> = PricingParameters {
+		exchange_rate: FixedU128::from_rational(1, 400),
+		fee_per_gas: gwei(20),
+		rewards: Rewards { local: 1 * UNITS, remote: meth(1) }
+	};
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -521,7 +526,6 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = snowbridge_ethereum_beacon_client::Pallet<Runtime>;
 	type Token = Balances;
-	type Reward = Reward;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmSender = XcmRouter;
 	#[cfg(feature = "runtime-benchmarks")]
@@ -530,16 +534,10 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
-	type MessageConverter = MessageToXcm<
-		CreateAssetCall,
-		CreateAssetExecutionFee,
-		CreateAssetDeposit,
-		SendTokenExecutionFee,
-		AccountId,
-		Balance,
-	>;
+	type MessageConverter = MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>;
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
+	type PricingParameters = EthereumControl;
 }
 
 impl snowbridge_outbound_queue::Config for Runtime {
@@ -553,6 +551,7 @@ impl snowbridge_outbound_queue::Config for Runtime {
 	type Balance = Balance;
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_outbound_queue::WeightInfo<Runtime>;
+	type PricingParameters = EthereumControl;
 }
 
 #[cfg(not(feature = "beacon-spec-mainnet"))]
@@ -625,6 +624,8 @@ impl snowbridge_system::Config for Runtime {
 	type WeightInfo = weights::snowbridge_system::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
+	type DefaultPricingParameters = Parameters;
+	type InboundDeliveryCost = EthereumInboundQueue;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
