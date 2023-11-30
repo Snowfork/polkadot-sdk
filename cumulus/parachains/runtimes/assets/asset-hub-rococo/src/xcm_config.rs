@@ -850,6 +850,7 @@ pub mod bridging {
 		parameter_types! {
 			pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
 			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
+
 			/// User fee for ERC20 token transfer back to Ethereum.
 			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
 			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
@@ -881,7 +882,7 @@ pub mod bridging {
 		}
 
 		pub type IsTrustedBridgedReserveLocationForForeignAsset =
-			matching::IsForeignConcreteAsset<FromNetwork<EthereumNetwork>>;
+			matching::IsForeignConcreteAsset<FromNetwork<UniversalLocation, EthereumNetwork>>;
 
 		impl Contains<(MultiLocation, Junction)> for UniversalAliases {
 			fn contains(alias: &(MultiLocation, Junction)) -> bool {
