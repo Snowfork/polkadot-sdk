@@ -1113,6 +1113,7 @@ dependencies = [
  "rococo-runtime-constants",
  "scale-info",
  "smallvec",
+ "snowbridge-rococo-common",
  "snowbridge-router-primitives",
  "sp-api 4.0.0-dev",
  "sp-block-builder",
@@ -2376,6 +2377,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-inbound-queue",
  "snowbridge-outbound-queue",
+ "snowbridge-rococo-common",
  "snowbridge-router-primitives",
  "snowbridge-system",
  "sp-core",
@@ -2451,6 +2453,7 @@ dependencies = [
  "snowbridge-inbound-queue",
  "snowbridge-outbound-queue",
  "snowbridge-outbound-queue-runtime-api",
+ "snowbridge-rococo-common",
  "snowbridge-router-primitives",
  "snowbridge-runtime-common",
  "snowbridge-system",
@@ -12307,7 +12310,8 @@ dependencies = [
  "polkadot-runtime-common",
  "scale-info",
  "smallvec",
- "sp-api 4.0.0-dev",
+ "snowbridge-rococo-common",
+ "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core 21.0.0",
@@ -18036,6 +18040,15 @@ dependencies = [
  "sp-core 21.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
  "sp-std 8.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
  "staging-xcm 1.0.0 (git+https://github.com/Snowfork/snowbridge.git?branch=main)",
+]
+
+[[package]]
+name = "snowbridge-rococo-common"
+version = "0.0.1"
+dependencies = [
+ "frame-support",
+ "log",
+ "staging-xcm",
 ]
 
 [[package]]

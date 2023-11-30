@@ -41,6 +41,7 @@ use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use rococo_runtime_constants::system_parachain;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
+use snowbridge_rococo_common::EthereumNetwork;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -848,7 +849,6 @@ pub mod bridging {
 		use super::*;
 
 		parameter_types! {
-			pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 15 };
 			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 
 			/// User fee for ERC20 token transfer back to Ethereum.

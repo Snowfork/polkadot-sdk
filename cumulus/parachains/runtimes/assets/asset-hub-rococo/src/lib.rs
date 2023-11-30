@@ -892,7 +892,7 @@ impl pallet_xcm_bridge_hub_router::Config<ToEthereumXcmRouterInstance> for Runti
 	type WeightInfo = weights::pallet_xcm_bridge_hub_router::WeightInfo<Runtime>;
 
 	type UniversalLocation = xcm_config::UniversalLocation;
-	type BridgedNetworkId = xcm_config::bridging::to_ethereum::EthereumNetwork;
+	type BridgedNetworkId = snowbridge_rococo_common::EthereumNetwork;
 	type Bridges = xcm_config::bridging::NetworkExportTable;
 
 	#[cfg(not(feature = "runtime-benchmarks"))]
