@@ -531,14 +531,14 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type XcmSender = XcmRouter;
 	#[cfg(feature = "runtime-benchmarks")]
 	type XcmSender = DoNothingRouter;
-	type ChannelLookup = EthereumControl;
+	type ChannelLookup = EthereumSystem;
 	type GatewayAddress = GatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
 	type MessageConverter = MessageToXcm<CreateAssetCall, CreateAssetDeposit, AccountId, Balance>;
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
-	type PricingParameters = EthereumControl;
+	type PricingParameters = EthereumSystem;
 }
 
 impl snowbridge_outbound_queue::Config for Runtime {
@@ -552,7 +552,7 @@ impl snowbridge_outbound_queue::Config for Runtime {
 	type Balance = Balance;
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_outbound_queue::WeightInfo<Runtime>;
-	type PricingParameters = EthereumControl;
+	type PricingParameters = EthereumSystem;
 }
 
 #[cfg(not(feature = "beacon-spec-mainnet"))]
@@ -609,20 +609,20 @@ impl snowbridge_ethereum_beacon_client::Config for Runtime {
 }
 
 #[cfg(feature = "runtime-benchmarks")]
-impl snowbridge_control::BenchmarkHelper<RuntimeOrigin> for () {
+impl snowbridge_system::BenchmarkHelper<RuntimeOrigin> for () {
 	fn make_xcm_origin(location: xcm::latest::MultiLocation) -> RuntimeOrigin {
 		RuntimeOrigin::from(pallet_xcm::Origin::Xcm(location))
 	}
 }
 
-impl snowbridge_control::Config for Runtime {
+impl snowbridge_system::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OutboundQueue = EthereumOutboundQueue;
 	type SiblingOrigin = EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = xcm_config::AgentIdOf;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
-	type WeightInfo = weights::snowbridge_control::WeightInfo<Runtime>;
+	type WeightInfo = weights::snowbridge_system::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 	type DefaultPricingParameters = Parameters;
@@ -682,7 +682,7 @@ construct_runtime!(
 		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 80,
 		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 81,
 		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 82,
-		EthereumControl: snowbridge_control::{Pallet, Call, Storage, Config<T>, Event<T>} = 83,
+		EthereumSystem: snowbridge_system::{Pallet, Call, Storage, Config<T>, Event<T>} = 83,
 
 		// Message Queue. Importantly, is registered last so that messages are processed after
 		// the `on_initialize` hooks of bridging pallets.
@@ -727,7 +727,7 @@ mod benches {
 		// Ethereum Bridge
 		[snowbridge_inbound_queue, EthereumInboundQueue]
 		[snowbridge_outbound_queue, EthereumOutboundQueue]
-		[snowbridge_control, EthereumControl]
+		[snowbridge_system, EthereumSystem]
 		[snowbridge_ethereum_beacon_client, EthereumBeaconClient]
 	);
 }
@@ -931,9 +931,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl snowbridge_control_runtime_api::ControlApi<Block> for Runtime {
+	impl snowbridge_system_runtime_api::ControlApi<Block> for Runtime {
 		fn agent_id(location: VersionedMultiLocation) -> Option<AgentId> {
-			snowbridge_control::api::agent_id::<Runtime>(location)
+			snowbridge_system::api::agent_id::<Runtime>(location)
 		}
 	}
 

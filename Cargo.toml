@@ -550,8 +550,8 @@ zeroize = { opt-level = 3 }
 
 [patch.'https://github.com/snowfork/snowbridge']
 snowbridge-beacon-primitives = { path = "../parachain/primitives/beacon" }
-snowbridge-control = { path = "../parachain/pallets/control" }
-snowbridge-control-runtime-api = { path = "../parachain/pallets/control/runtime-api" }
+snowbridge-system = { path = "../parachain/pallets/system" }
+snowbridge-system-runtime-api = { path = "../parachain/pallets/system/runtime-api" }
 snowbridge-core = { path = "../parachain/primitives/core" }
 snowbridge-ethereum-beacon-client = { path = "../parachain/pallets/ethereum-beacon-client" }
 snowbridge-inbound-queue = { path = "../parachain/pallets/inbound-queue" }
