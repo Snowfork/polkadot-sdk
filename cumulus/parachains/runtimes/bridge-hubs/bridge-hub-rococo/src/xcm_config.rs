@@ -40,8 +40,8 @@ use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use rococo_runtime_constants::system_parachain;
 use snowbridge_core::DescribeHere;
-use snowbridge_runtime_common::XcmExportFeeToSibling;
 use snowbridge_rococo_common::EthereumNetwork;
+use snowbridge_runtime_common::XcmExportFeeToSibling;
 use sp_core::{Get, H256};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::marker::PhantomData;
@@ -469,7 +469,7 @@ impl<WaivedLocations: Contains<MultiLocation>, FeeHandler: HandleFee> FeeManager
 	fn is_waived(origin: Option<&MultiLocation>, fee_reason: FeeReason) -> bool {
 		let Some(loc) = origin else { return false };
 		if let Export { network, destination: Here } = fee_reason {
-			return !(network == EthereumNetwork::get());
+			return !(network == EthereumNetwork::get())
 		}
 		WaivedLocations::contains(loc)
 	}

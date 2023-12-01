@@ -2,8 +2,8 @@ use crate::{
 	xcm_config::{AgentIdOf, UniversalLocation},
 	Runtime,
 };
-use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 use snowbridge_rococo_common::EthereumNetwork;
+use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 
 pub type SnowbridgeExporter = EthereumBlobExporter<
 	UniversalLocation,
