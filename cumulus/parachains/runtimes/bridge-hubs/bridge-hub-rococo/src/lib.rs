@@ -510,7 +510,7 @@ parameter_types! {
 	pub const GatewayAddress: H160 = H160(hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39"));
 	pub const CreateAssetCall: [u8;2] = [53, 0];
 	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
-	pub const InboundQueuePalletInstance: u8 = 80;
+	pub const InboundQueuePalletInstance: u8 = snowbridge_rococo_common::INBOUND_QUEUE_MESSAGES_PALLET_INDEX;
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
 		fee_per_gas: gwei(20),

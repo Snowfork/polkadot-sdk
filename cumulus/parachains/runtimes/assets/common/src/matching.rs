@@ -72,7 +72,6 @@ impl<UniversalLocation: Get<InteriorMultiLocation>, ExpectedNetworkId: Get<Netwo
 
 		let universal_source = UniversalLocation::get();
 
-		// check remote origin
 		return match ensure_is_remote(universal_source, a) {
 			Ok((network_id, _)) => network_id == ExpectedNetworkId::get(),
 			Err(e) => {
