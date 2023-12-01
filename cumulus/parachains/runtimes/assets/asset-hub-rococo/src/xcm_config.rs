@@ -856,6 +856,13 @@ pub mod bridging {
 			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
 			/// Polkadot uses 12 decimals, Kusama and Rococo 10 decimals.
 			pub const BridgeHubEthereumBaseFeeInROC: u128 = 2_750_872_500_000;
+			pub SiblingBridgeHubWithBridgeHubInboundInstance: MultiLocation = MultiLocation::new(
+				1,
+				X2(
+					Parachain(SiblingBridgeHubParaId::get()),
+					PalletInstance(80)
+				)
+			);
 
 			/// Set up exporters configuration.
 			/// `Option<MultiAsset>` represents static "base fee" which is used for total delivery fee calculation.
@@ -876,7 +883,7 @@ pub mod bridging {
 			/// Universal aliases
 			pub UniversalAliases: BTreeSet<(MultiLocation, Junction)> = BTreeSet::from_iter(
 				sp_std::vec![
-					(SiblingBridgeHub::get(), GlobalConsensus(EthereumNetwork::get())),
+					(SiblingBridgeHubWithBridgeHubInboundInstance::get(), GlobalConsensus(EthereumNetwork::get())),
 				]
 			);
 		}
