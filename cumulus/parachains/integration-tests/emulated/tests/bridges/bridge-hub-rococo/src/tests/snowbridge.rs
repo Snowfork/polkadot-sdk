@@ -19,6 +19,7 @@ use codec::{Decode, Encode};
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use snowbridge_core::outbound::OperatingMode;
+use snowbridge_rococo_common::EthereumNetwork;
 use snowbridge_router_primitives::inbound::{Command, Destination, MessageV1, VersionedMessage};
 use snowbridge_system;
 use sp_core::H256;
@@ -243,8 +244,7 @@ fn send_token_to_penpal() {
 	]);
 
 	let weth_asset_location: MultiLocation =
-		(Parent, Parent, Ethereum { chain_id: 15 }, AccountKey20 { network: None, key: WETH })
-			.into();
+		(Parent, Parent, EthereumNetwork::get(), AccountKey20 { network: None, key: WETH }).into();
 	let weth_asset_id = weth_asset_location.into();
 
 	let origin_location =

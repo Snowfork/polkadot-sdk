@@ -42,6 +42,7 @@ use pallet_assets::Instance1;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
+use snowbridge_rococo_common::EthereumNetwork;
 use sp_runtime::traits::Zero;
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -271,7 +272,7 @@ parameter_types! {
 	pub SystemAssetHubAssetsPalletLocation: MultiLocation =
 		MultiLocation::new(1, X2(Parachain(1000), PalletInstance(50)));
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
-	pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(Ethereum { chain_id: 15 })));
+	pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
 }
 
 pub type Reserves = (
