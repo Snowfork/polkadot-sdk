@@ -43,6 +43,7 @@ use rococo_runtime_constants::system_parachain;
 use snowbridge_rococo_common::EthereumNetwork;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
+use sp_std::marker::PhantomData;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses,
@@ -60,6 +61,7 @@ use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
 
 #[cfg(feature = "runtime-benchmarks")]
 use cumulus_primitives_core::ParaId;
+use frame_support::traits::{ContainsPair, Get};
 
 parameter_types! {
 	pub const TokenLocation: MultiLocation = MultiLocation::parent();
@@ -544,6 +546,7 @@ pub type WaivedLocations =
 /// - Sibling parachains' assets from where they originate (as `ForeignCreators`).
 pub type TrustedTeleporters = (
 	ConcreteAssetFromSystem<TokenLocation>,
+	ConcreteAssetFromSnowBridgeMessageQueue<TokenLocation>,
 	IsForeignConcreteAsset<FromSiblingParachain<parachain_info::Pallet<Runtime>>>,
 );
 
@@ -727,6 +730,18 @@ where
 	}
 }
 
+pub struct ConcreteAssetFromSnowBridgeMessageQueue<AssetLocation>(PhantomData<AssetLocation>);
+impl<AssetLocation: Get<MultiLocation>> ContainsPair<MultiAsset, MultiLocation>
+	for ConcreteAssetFromSnowBridgeMessageQueue<AssetLocation>
+{
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		log::trace!(target: "xcm::contains", "ConcreteAssetFromSystem asset: {:?}, origin: {:?}", asset, origin);
+		let from_snowbridge = origin
+			.eq(&bridging::to_ethereum::SiblingBridgeHubWithEthereumInboundQueueInstance::get());
+		matches!(asset.id, Concrete(id) if id == AssetLocation::get()) && from_snowbridge
+	}
+}
+
 /// All configuration related to bridging
 pub mod bridging {
 	use super::*;
@@ -856,11 +871,11 @@ pub mod bridging {
 			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
 			/// Polkadot uses 12 decimals, Kusama and Rococo 10 decimals.
 			pub const BridgeHubEthereumBaseFeeInROC: u128 = 2_750_872_500_000;
-			pub SiblingBridgeHubWithBridgeHubInboundInstance: MultiLocation = MultiLocation::new(
+			pub SiblingBridgeHubWithEthereumInboundQueueInstance: MultiLocation = MultiLocation::new(
 				1,
 				X2(
 					Parachain(SiblingBridgeHubParaId::get()),
-					PalletInstance(80)
+					PalletInstance(snowbridge_rococo_common::INBOUND_QUEUE_MESSAGES_PALLET_INDEX)
 				)
 			);
 
@@ -883,7 +898,7 @@ pub mod bridging {
 			/// Universal aliases
 			pub UniversalAliases: BTreeSet<(MultiLocation, Junction)> = BTreeSet::from_iter(
 				sp_std::vec![
-					(SiblingBridgeHubWithBridgeHubInboundInstance::get(), GlobalConsensus(EthereumNetwork::get())),
+					(SiblingBridgeHubWithEthereumInboundQueueInstance::get(), GlobalConsensus(EthereumNetwork::get())),
 				]
 			);
 		}
