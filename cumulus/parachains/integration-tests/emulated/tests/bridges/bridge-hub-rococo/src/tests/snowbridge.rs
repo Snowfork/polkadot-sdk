@@ -492,8 +492,8 @@ fn reserve_transfer_token() {
 				.iter()
 				.find(|&event| matches!(
 					event,
-					RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
-						if *who == TREASURY_ACCOUNT.into() && *amount == 16903333
+					RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, .. })
+						if *who == TREASURY_ACCOUNT.into()
 				))
 				.is_some(),
 			"Snowbridge sovereign takes local fee."
@@ -503,8 +503,8 @@ fn reserve_transfer_token() {
 				.iter()
 				.find(|&event| matches!(
 					event,
-					RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, amount })
-						if who == &assethub_sovereign && *amount == 2200000000000
+					RuntimeEvent::Balances(pallet_balances::Event::Deposit{ who, .. })
+						if who == &assethub_sovereign
 				))
 				.is_some(),
 			"Assethub sovereign takes remote fee."

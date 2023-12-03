@@ -870,7 +870,7 @@ pub mod bridging {
 			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
 			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
 			/// Polkadot uses 12 decimals, Kusama and Rococo 10 decimals.
-			pub const BridgeHubEthereumBaseFeeInROC: u128 = 4_750_872_500_000;
+			pub const BridgeHubEthereumBaseFeeInROC: u128 = 3_750_872_500_000;
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: MultiLocation = MultiLocation::new(
 				1,
 				X2(
