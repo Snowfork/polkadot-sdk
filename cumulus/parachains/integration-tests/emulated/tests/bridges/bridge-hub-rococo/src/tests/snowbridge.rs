@@ -252,7 +252,7 @@ fn send_token_to_penpal() {
 
 	// Fund ethereum sovereign in asset hub
 	let ethereum_sovereign: AccountId =
-		hex!("da4d66c3651dc151264eee5460493210338e41a7bbfca91a520e438daf180bf5").into();
+		hex!("a0141059b224a45521038f88bd0bf13535b8d2ca7dac8c6777f1ef61f52166a2").into();
 	AssetHubRococo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
 	// Create asset on assethub.
 	AssetHubRococo::execute_with(|| {
