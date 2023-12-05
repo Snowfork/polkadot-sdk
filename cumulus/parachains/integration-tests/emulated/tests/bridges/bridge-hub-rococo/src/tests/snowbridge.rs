@@ -25,7 +25,7 @@ use snowbridge_system;
 use sp_core::H256;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
-const CHAIN_ID: u64 = 5;
+const CHAIN_ID: u64 = 11155111;
 const ASSETHUB_PARA_ID: u32 = 1000;
 const TREASURY_ACCOUNT: [u8; 32] =
 	hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
@@ -252,7 +252,7 @@ fn send_token_to_penpal() {
 
 	// Fund ethereum sovereign in asset hub
 	let ethereum_sovereign: AccountId =
-		hex!("a0141059b224a45521038f88bd0bf13535b8d2ca7dac8c6777f1ef61f52166a2").into();
+		hex!("ce796ae65569a670d0c1cc1ac12515a3ce21b5fbf729d63d7b289baad070139d").into();
 	AssetHubRococo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
 	// Create asset on assethub.
 	AssetHubRococo::execute_with(|| {
