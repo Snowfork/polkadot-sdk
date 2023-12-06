@@ -159,4 +159,6 @@ try-runtime = [
 	"shell-runtime/try-runtime",
 	"sp-runtime/try-runtime",
 ]
-beacon-spec-mainnet = []
+beacon-spec-mainnet = [
+	"bridge-hub-rococo-runtime/beacon-spec-mainnet"
+]
