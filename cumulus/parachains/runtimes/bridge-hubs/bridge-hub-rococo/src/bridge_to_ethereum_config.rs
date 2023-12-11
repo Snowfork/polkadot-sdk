@@ -18,14 +18,32 @@ use crate::{
 	xcm_config::{AgentIdOf, UniversalLocation},
 	Runtime,
 };
-use frame_support::traits::Everything;
+use cumulus_primitives_core::{InteriorMultiLocation, Parachain, X1};
+use frame_support::traits::{ContainsPair, EverythingBut};
+use rococo_runtime_constants::system_parachain::ASSET_HUB_ID;
+use snowbridge_core::outbound::{AgentExecuteCommand, Command, Message};
 use snowbridge_rococo_common::EthereumNetwork;
 use snowbridge_router_primitives::outbound::EthereumBlobExporter;
+
+pub struct NonAssetHubTokenTransfers;
+impl ContainsPair<InteriorMultiLocation, Message> for NonAssetHubTokenTransfers {
+	fn contains(origin: &InteriorMultiLocation, message: &Message) -> bool {
+		if let Command::AgentExecute {
+			command: AgentExecuteCommand::TransferToken { .. }, ..
+		} = message.command
+		{
+			return origin != &X1(Parachain(ASSET_HUB_ID));
+		}
+		return false;
+	}
+}
+
+type SnowbridgeExportFilter = EverythingBut<NonAssetHubTokenTransfers>;
 
 pub type SnowbridgeExporter = EthereumBlobExporter<
 	UniversalLocation,
 	EthereumNetwork,
 	snowbridge_outbound_queue::Pallet<Runtime>,
 	AgentIdOf,
-	Everything,
+	SnowbridgeExportFilter,
 >;
