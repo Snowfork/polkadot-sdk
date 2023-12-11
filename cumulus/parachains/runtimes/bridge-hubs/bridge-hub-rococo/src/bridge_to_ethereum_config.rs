@@ -28,13 +28,10 @@ use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 pub struct NonAssetHubTokenTransfers;
 impl ContainsPair<InteriorMultiLocation, Message> for NonAssetHubTokenTransfers {
 	fn contains(origin: &InteriorMultiLocation, message: &Message) -> bool {
-		if let Command::AgentExecute {
-			command: AgentExecuteCommand::TransferToken { .. }, ..
-		} = message.command
-		{
-			return origin != &X1(Parachain(ASSET_HUB_ID));
-		}
-		return false;
+		matches!(
+			message.command,
+			Command::AgentExecute { command: AgentExecuteCommand::TransferToken { .. }, .. }
+		) && origin != &X1(Parachain(ASSET_HUB_ID))
 	}
 }
 
