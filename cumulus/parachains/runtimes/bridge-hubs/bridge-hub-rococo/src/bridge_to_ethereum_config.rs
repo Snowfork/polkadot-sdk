@@ -18,6 +18,7 @@ use crate::{
 	xcm_config::{AgentIdOf, UniversalLocation},
 	Runtime,
 };
+use frame_support::traits::Everything;
 use snowbridge_rococo_common::EthereumNetwork;
 use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 
@@ -26,4 +27,5 @@ pub type SnowbridgeExporter = EthereumBlobExporter<
 	EthereumNetwork,
 	snowbridge_outbound_queue::Pallet<Runtime>,
 	AgentIdOf,
+	Everything,
 >;
