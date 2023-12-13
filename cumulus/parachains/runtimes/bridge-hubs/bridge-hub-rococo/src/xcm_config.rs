@@ -481,7 +481,6 @@ impl<WaivedLocations: Contains<MultiLocation>, FeeHandler: HandleFee> FeeManager
 	}
 }
 
-#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
 pub struct DoNothingRouter;
 impl SendXcm for DoNothingRouter {
 	type Ticket = Xcm<()>;
