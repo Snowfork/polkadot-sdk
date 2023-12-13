@@ -25,6 +25,7 @@ use crate::bridge_common_config::{
 use bp_messages::LaneId;
 use bp_relayers::{PayRewardFromAccount, RewardsAccountOwner, RewardsAccountParams};
 use bp_runtime::ChainId;
+use codec::Encode;
 use frame_support::{
 	match_types, parameter_types,
 	traits::{ConstU32, Contains, Equals, Everything, Nothing},
@@ -480,13 +481,19 @@ impl<WaivedLocations: Contains<MultiLocation>, FeeHandler: HandleFee> FeeManager
 	}
 }
 
+#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
 pub struct DoNothingRouter;
 impl SendXcm for DoNothingRouter {
-	type Ticket = ();
-	fn validate(_dest: &mut Option<MultiLocation>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
-		Ok(((), MultiAssets::new()))
+	type Ticket = Xcm<()>;
+
+	fn validate(
+		_dest: &mut Option<MultiLocation>,
+		xcm: &mut Option<Xcm<()>>,
+	) -> SendResult<Self::Ticket> {
+		Ok((xcm.clone().unwrap(), MultiAssets::new()))
 	}
-	fn deliver(_: ()) -> Result<XcmHash, SendError> {
-		Ok([0; 32])
+	fn deliver(xcm: Xcm<()>) -> Result<XcmHash, SendError> {
+		let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
+		Ok(hash)
 	}
 }

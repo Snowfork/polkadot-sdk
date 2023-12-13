@@ -96,19 +96,14 @@ use parachains_common::{
 	AccountId, Balance, BlockNumber, Hash, Header, Nonce, Signature, AVERAGE_ON_INITIALIZE_RATIO,
 	HOURS, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, SLOT_DURATION,
 };
-
-#[cfg(feature = "runtime-benchmarks")]
-use crate::xcm_config::DoNothingRouter;
-#[cfg(feature = "runtime-benchmarks")]
 use snowbridge_beacon_primitives::CompactExecutionHeader;
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_core::RingBufferMap;
-#[cfg(feature = "runtime-benchmarks")]
-pub use snowbridge_ethereum_beacon_client::ExecutionHeaderBuffer;
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_inbound_queue::BenchmarkHelper;
-#[cfg(feature = "runtime-benchmarks")]
 use sp_core::H256;
+
+#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
+use crate::xcm_config::DoNothingRouter;
+
+#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
+use snowbridge_inbound_queue::BenchmarkHelper;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -513,10 +508,10 @@ parameter_types! {
 	};
 }
 
-#[cfg(feature = "runtime-benchmarks")]
+#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
 impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Runtime {
 	fn initialize_storage(block_hash: H256, header: CompactExecutionHeader) {
-		<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
+		EthereumBeaconClient::store_execution_header(block_hash, header, 0, H256::default())
 	}
 }
 
@@ -524,13 +519,13 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = snowbridge_ethereum_beacon_client::Pallet<Runtime>;
 	type Token = Balances;
-	#[cfg(not(feature = "runtime-benchmarks"))]
+	#[cfg(not(any(feature = "runtime-tests", feature = "runtime-benchmarks")))]
 	type XcmSender = XcmRouter;
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
 	type XcmSender = DoNothingRouter;
 	type ChannelLookup = EthereumSystem;
 	type GatewayAddress = GatewayAddress;
-	#[cfg(feature = "runtime-benchmarks")]
+	#[cfg(any(feature = "runtime-tests", feature = "runtime-benchmarks"))]
 	type Helper = Runtime;
 	type MessageConverter = MessageToXcm<
 		CreateAssetCall,

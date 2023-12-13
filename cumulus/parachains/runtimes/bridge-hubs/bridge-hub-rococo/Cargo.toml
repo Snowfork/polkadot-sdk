@@ -248,7 +248,7 @@ runtime-benchmarks = [
 	"snowbridge-inbound-queue/runtime-benchmarks",
 	"snowbridge-outbound-queue/runtime-benchmarks",
 	"snowbridge-runtime-common/runtime-benchmarks",
-	"beacon-spec-mainnet"
+	"beacon-spec-mainnet",
 ]
 
 try-runtime = [
@@ -288,3 +288,5 @@ experimental = ["pallet-aura/experimental"]
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller like logging for example.
 on-chain-release-build = ["sp-api/disable-logging"]
+
+runtime-tests = ["snowbridge-inbound-queue/runtime-tests"]
