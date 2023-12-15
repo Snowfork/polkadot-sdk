@@ -47,6 +47,11 @@ function clean() {
 }
 
 function create_patch() {
+    [[ -z "$(git status --porcelain)" ]] || {
+        echo >&2 "The git copy must be clean (stash all your changes):";
+        git status --porcelain
+        exit 1;
+    }
     echo "Creating diff patch file to apply to snowbridge"
     #add_parachain_dir
     git diff snowbridge/$SNOWBRIDGE_BRANCH $POLKADOT_SDK_BRANCH:bridges/snowbridge --diff-filter=ACM > snowbridge.patch
