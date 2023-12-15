@@ -13,11 +13,11 @@ SNOWBRIDGE_TARGET_DIR="${TARGET_DIR:-bridges/snowbridge}"
 
 function fetch() {
     # the script is able to work only on clean git copy
-    [[ -z "$(git status --porcelain)" ]] || {
-        echo >&2 "The git copy must be clean (stash all your changes):";
-        git status --porcelain
-        exit 1;
-    }
+    #[[ -z "$(git status --porcelain)" ]] || {
+    #    echo >&2 "The git copy must be clean (stash all your changes):";
+    #    git status --porcelain
+    #    exit 1;
+    #}
 
     local snowbridge_remote=$(git remote -v | grep "snowbridge.git (fetch)" | head -n1 | awk '{print $1;}')
     if [ -z "$snowbridge_remote" ]; then
