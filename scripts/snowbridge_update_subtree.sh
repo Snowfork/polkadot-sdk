@@ -24,7 +24,7 @@ function fetch() {
         echo ""
         echo "Adding new remote: 'snowbridge' repo..."
         echo ""
-        git remote add -f snowbridge git@github.com:snowfork/snowbridge.git
+        git remote add -f snowbridge https://github.com/Snowfork/snowbridge.git
         snowbridge_remote="snowbridge"
     else
         echo ""
