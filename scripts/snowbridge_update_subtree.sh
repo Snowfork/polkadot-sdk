@@ -30,7 +30,7 @@ function fetch() {
         echo ""
         echo "Fetching remote: '${snowbridge_remote}' repo..."
         echo ""
-        git fetch ${snowbridge_remote} --prune
+        git fetch https://github.com/Snowfork/snowbridge.git --prune
     fi
 
     echo ""
