@@ -52,9 +52,9 @@ function create_patch() {
         git status --porcelain
         exit 1;
     }
-    echo "Creating diff patch file to apply to snowbridge"
+    echo "Creating diff patch file to apply to snowbridg. No Cargo.toml files will be included in the patch."
     #add_parachain_dir
-    git diff snowbridge/$SNOWBRIDGE_BRANCH $POLKADOT_SDK_BRANCH:bridges/snowbridge --diff-filter=ACM > snowbridge.patch ':!Cargo.toml'
+    git diff snowbridge/$SNOWBRIDGE_BRANCH $POLKADOT_SDK_BRANCH:bridges/snowbridge --diff-filter=ACM -- . ':(exclude)*/Cargo.toml' > snowbridge.patch
 }
 
 function remove_parachain_dir() {
