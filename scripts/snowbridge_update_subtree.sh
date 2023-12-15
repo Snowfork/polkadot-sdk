@@ -18,7 +18,7 @@ function fetch() {
     #    git status --porcelain
     #    exit 1;
     #}
-
+    add_parachain_dir
     local snowbridge_remote=$(git remote -v | grep "snowbridge.git (fetch)" | head -n1 | awk '{print $1;}')
     if [ -z "$snowbridge_remote" ]; then
         echo ""
@@ -43,6 +43,7 @@ function clean() {
     echo ""
     echo "Patching/removing unneeded stuff from subtree in target directory: '$SNOWBRIDGE_TARGET_DIR'"
     remove_parachain_dir
+    chmod +x $SNOWBRIDGE_TARGET_DIR/scripts/verify-pallets-build.sh
     $SNOWBRIDGE_TARGET_DIR/scripts/verify-pallets-build.sh --ignore-git-state --no-revert
 }
 

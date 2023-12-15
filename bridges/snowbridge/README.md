@@ -1,120 +1,147 @@
-# Snowbridge &middot; [![codecov](https://codecov.io/gh/Snowfork/snowbridge/branch/main/graph/badge.svg?token=9hvgSws4rN)](https://codecov.io/gh/Snowfork/snowbridge) ![GitHub](https://img.shields.io/github/license/Snowfork/snowbridge)
+# Parachain modules
 
-Snowbridge is a trustless bridge between Polkadot and Ethereum. For documentation, visit https://docs.snowbridge.network.
+## Configuration
 
-## Components
+Note: This section is not necessary for local development, as there are scripts to auto-configure the parachain in the
+[test directory](../web/packages/test).
 
-### Parachain
+For a fully operational chain, further configuration of the initial chain spec is required. The specific configuration will depend heavily on your environment, so this guide will remain high-level.
 
-Polkadot parachain and our pallets. See [parachain/README.md](parachain/README.md).
+After completing a release build of the parachain, build an initial spec for the snowbase runtime:
 
-### Contracts
-
-Ethereum contracts and unit tests. See [contracts/README.md](contracts/README.md)
-
-### Relayer
-
-Off-chain relayer services for relaying messages between Polkadot and Ethereum. See [relayer/README.md](relayer/README.md)
-
-### Local Testnet
-
-Scripts to provision a local testnet, running the above services to bridge between local deployments of Polkadot and Ethereum. See [web/packages/test/README.md](web/packages/test/README.md).
-
-### Smoke Tests
-
-Integration tests for our local testnet. See [smoketest/README.md](smoketest/README.md).
-
-## Development
-
-We use the Nix package manager to provide a reproducible and maintainable developer environment.
-
-After [installing nix](https://nixos.org/download.html) Nix, enable [flakes](https://nixos.wiki/wiki/Flakes):
-
-```sh
-mkdir -p ~/.config/nix
-echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+```bash
+target/release/snowbridge build-spec --chain snowbase --disable-default-bootnode > spec.json
 ```
 
-Then activate a developer shell in the root of our repo, where [`flake.nix`](./flake.nix) is located:
+Now edit the spec and configure the following:
+1. Recently finalized ethereum header and difficulty for the ethereum light client
+2. Contract addresses for the Ether, Erc20, and Dot apps.
+3. Authorized principal for the basic channel
 
-```sh
-nix develop
+For an example configuration, consult the [setup script](https://github.com/Snowfork/snowbridge/blob/main/web/packages/test/scripts/start-services.sh) for our local development stack. Specifically the `start_polkadot_launch` bash function.
+
+## Tests
+
+To run the parachain tests locally, use `cargo test --workspace`. For the full suite of tests, use `cargo test --workspace --features runtime-benchmarks`.
+
+Optionally exclude the top-level and runtime crates:
+
+```bash
+cargo test --workspace \
+        --features runtime-benchmarks \
+        --exclude snowbridge \
+        --exclude snowbridge-runtime \
+        --exclude snowblink-runtime \
+        --exclude snowbase-runtime
 ```
 
-Also make sure to run this initialization script once:
-```sh
-scripts/init.sh
+### Updating test data for inbound channel unit tests
+
+To regenerate the test data, use a test with multiple `submit` calls in `ethereum/test/test_basic_outbound_channel.js`, eg.
+"should increment nonces correctly".
+
+Add the following preamble:
+
+```javascript
+const rlp = require("rlp");
+const contract = BasicOutboundChannel;
+const signature = 'Message(address,address,uint64,uint64,bytes)';
 ```
 
-### Support for code editors
+For each encoded log you want to create, find a transaction object `tx` returned from a `submit` call and run this:
 
-To ensure your code editor (such as VS Code) can execute tools in the nix shell, startup your editor within the
-interactive shell.
-
-Example for VS Code:
-
-```sh
-nix develop
-code .
+```javascript
+const rawLog = tx.receipt.rawLogs[0];
+const encodedLog = rlp.encode([rawLog.address, rawLog.topics, rawLog.data]).toString("hex");
+console.log(`encodedLog: ${encodedLog}`);
+const iface = new ethers.utils.Interface(contract.abi);
+const decodedEventLog = iface.decodeEventLog(
+  signature,
+  rawLog.data,
+  rawLog.topics,
+);
+console.log(`decoded rawLog.data: ${JSON.stringify(decodedEventLog)}`);
 ```
 
-### Custom shells
+Place the `encodedLog` string in the `message.data` field in the test data. Use the `decoded rawLog.data` field to update the comments
+with the decoded log data.
 
-The developer shell is bash by default. To preserve your existing shell:
+## Generating pallet weights from benchmarks
 
-```sh
-nix develop --command $SHELL
+Build the parachain with the runtime benchmark flags for the chosen runtime:
+
+```bash
+runtime=snowbase
+cargo build \
+    --release \
+    --no-default-features \
+    --features "$runtime-native,rococo-native,runtime-benchmarks,$runtime-runtime-benchmarks" \
+    --bin snowbridge
 ```
 
-### Automatic developer shells
+List available pallets and their benchmarks:
 
-To automatically enter the developer shell whenever you open the project, install
-[`direnv`](https://direnv.net/docs/installation.html) and use the template `.envrc`:
-
-```sh
-cp .envrc.example .envrc
-direnv allow
+```bash
+./target/release/snowbridge benchmark pallet --chain $runtime --list
 ```
 
-### Upgrading the Rust toolchain
+Run a benchmark for a pallet, generating weights:
 
-Sometimes we would like to upgrade rust toolchain. First update `parachain/rust-toolchain.toml` as required and then update `flake.lock` running
-```sh
-nix flake lock --update-input rust-overlay
+```bash
+target/release/snowbridge benchmark pallet \
+  --chain=$runtime \
+  --execution=wasm \
+  --wasm-execution=compiled \
+  --pallet=basic_channel_inbound \
+  --extra \
+  --extrinsic=* \
+  --repeat=20 \
+  --steps=50 \
+  --output=pallets/basic-channel/src/inbound/weights.rs \
+  --template=templates/module-weight-template.hbs
 ```
 
-## Troubleshooting
+## Generating beacon test fixtures and benchmarking data
 
-Check the contents of all `.envrc` files.
+### Minimal Spec
 
-Remove untracked files:
-```sh
-git clean -idx
+To generate `minimal` test data and benchmarking data, make sure to start the local E2E setup to spin up a local beacon node instance to connect to:
+
+```bash
+cd web/packages/test
+./scripts/start-services.sh
 ```
 
-Ensure that the current Rust toolchain is the one selected in `scripts/init.sh`.
+Wait for output `Testnet has been initialized`.
 
-Ensure submodules are up-to-date:
-```sh
-git submodule update
+In a separate terminal, from the `snowbridge` directory, run:
+
+```bash
+mage -d relayer build && relayer/build/snowbridge-relay generate-beacon-data --spec "minimal" && cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
 ```
 
-Check untracked files & directories:
-```sh
-git clean -ndx | awk '{print $3}'
-```
-After removing `node_modules` directories (eg. with `git clean above`), clear the pnpm cache:
-```sh
-pnpm store prune
-```
+### Mainnet Spec
 
-Check Nix config in `~/.config/nix/nix.conf`.
+We only use the mainnet spec for generating fixtures for pallet weight benchmarks.
 
-Run a pure developer shell (note that this removes access to your local tools):
-```sh
-nix develop -i --pure-eval
+To generate the data we can connect to the Lodestar Goerli public node. The script already connects to the Lodestar node, so no need to start up additional services. In the event of the Lodestar node not being available, you can start up your own stack with these commands:
+
+```bash
+cd web/packages/test
+./scripts/start-goerli.sh
 ```
 
-## Security
+From the `snowbridge` directory, run:
 
-The security policy and procedures can be found in SECURITY.md.
+```bash
+mage -d relayer build && relayer/build/snowbridge-relay generate-beacon-data --spec "mainnet" && cd parachain && cargo +nightly fmt -- --config-path rustfmt.toml && cd -
+```
+
+###  Benchmarking tests
+
+To run the benchmark tests
+
+```bash
+cd parachain/pallets/ethereum-beacon-client
+cargo test --release --features runtime-benchmarks
+```
