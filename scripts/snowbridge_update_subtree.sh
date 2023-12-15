@@ -42,13 +42,13 @@ function fetch() {
 function clean() {
     echo ""
     echo "Patching/removing unneeded stuff from subtree in target directory: '$SNOWBRIDGE_TARGET_DIR'"
-    remove_parachain_dir
+    #remove_parachain_dir
     $SNOWBRIDGE_TARGET_DIR/scripts/verify-pallets-build.sh --ignore-git-state --no-revert
 }
 
 function create_patch() {
     echo "Creating diff patch file to apply to snowbridge"
-    add_parachain_dir
+    #add_parachain_dir
     git diff snowbridge/$SNOWBRIDGE_BRANCH $POLKADOT_SDK_BRANCH:bridges/snowbridge --diff-filter=ACM > snowbridge.patch
 }
 
