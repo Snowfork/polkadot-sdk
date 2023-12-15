@@ -54,7 +54,7 @@ function create_patch() {
     }
     echo "Creating diff patch file to apply to snowbridge"
     #add_parachain_dir
-    git diff snowbridge/$SNOWBRIDGE_BRANCH $POLKADOT_SDK_BRANCH:bridges/snowbridge --diff-filter=ACM > snowbridge.patch
+    git diff snowbridge/$SNOWBRIDGE_BRANCH $POLKADOT_SDK_BRANCH:bridges/snowbridge --diff-filter=ACM > snowbridge.patch ':!Cargo.toml'
 }
 
 function remove_parachain_dir() {
