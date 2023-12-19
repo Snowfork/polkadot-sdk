@@ -194,7 +194,7 @@ mod bridge_hub_westend_tests {
 			bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID,
 			Box::new(|call| RuntimeCall::System(call).encode()),
 			|| (EthereumGatewayAddress::key().to_vec(), EthereumGatewayAddress::get()),
-			|_| H160::default(),
+			|_| [1; 20].into(),
 		)
 	}
 
