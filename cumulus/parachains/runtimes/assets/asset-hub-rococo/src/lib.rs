@@ -371,7 +371,7 @@ impl pallet_assets::Config<ForeignAssetsInstance> for Runtime {
 	type CreateOrigin = ForeignCreators<
 		(
 			FromSiblingParachain<parachain_info::Pallet<Runtime>>,
-			snowbridge_router_primitives::inbound::FromEthereumGlobalConsensus<EthereumLocation>,
+			FromNetwork<xcm_config::UniversalLocation, EthereumLocation>,
 		),
 		ForeignCreatorsSovereignAccountOf,
 		AccountId,
