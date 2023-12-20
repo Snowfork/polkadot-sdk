@@ -2144,7 +2144,6 @@ dependencies = [
 name = "bridge-hub-westend-emulated-chain"
 version = "0.0.0"
 dependencies = [
- "bridge-hub-common",
  "bridge-hub-westend-runtime",
  "cumulus-primitives-core",
  "emulated-integration-tests-common",
@@ -2195,7 +2194,6 @@ dependencies = [
  "bp-rococo",
  "bp-runtime",
  "bp-westend",
- "bridge-hub-common",
  "bridge-hub-test-utils",
  "bridge-runtime-common",
  "cumulus-pallet-aura-ext",

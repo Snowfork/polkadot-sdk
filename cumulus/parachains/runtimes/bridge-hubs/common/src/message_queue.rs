@@ -41,7 +41,7 @@ pub enum AggregateMessageOrigin {
 	/// This is used by the HRMP queue.
 	Sibling(ParaId),
 	/// The message came from a snowbridge channel.
-	/// 
+	///
 	/// This is used by Snowbridge inbound queue.
 	Snowbridge(ChannelId),
 }
@@ -70,6 +70,17 @@ impl From<CumulusAggregateMessageOrigin> for AggregateMessageOrigin {
 	}
 }
 
+impl From<AggregateMessageOrigin> for CumulusAggregateMessageOrigin {
+	fn from(origin: AggregateMessageOrigin) -> Self {
+		match origin {
+			AggregateMessageOrigin::Here => Self::Here,
+			AggregateMessageOrigin::Parent => Self::Parent,
+			AggregateMessageOrigin::Sibling(id) => Self::Sibling(id),
+			AggregateMessageOrigin::Snowbridge(_) => Self::Here,
+		}
+	}
+}
+
 #[cfg(feature = "runtime-benchmarks")]
 impl From<u32> for AggregateMessageOrigin {
 	fn from(x: u32) -> Self {
@@ -86,13 +97,13 @@ pub struct BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>(
 	PhantomData<(XcmpProcessor, SnowbridgeProcessor)>,
 )
 where
-	XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
+	XcmpProcessor: ProcessMessage<Origin = CumulusAggregateMessageOrigin>,
 	SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>;
 
 impl<XcmpProcessor, SnowbridgeProcessor> ProcessMessage
 	for BridgeHubMessageRouter<XcmpProcessor, SnowbridgeProcessor>
 where
-	XcmpProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
+	XcmpProcessor: ProcessMessage<Origin = CumulusAggregateMessageOrigin>,
 	SnowbridgeProcessor: ProcessMessage<Origin = AggregateMessageOrigin>,
 {
 	type Origin = AggregateMessageOrigin;
@@ -106,7 +117,7 @@ where
 		use AggregateMessageOrigin::*;
 		match origin {
 			Here | Parent | Sibling(_) =>
-				XcmpProcessor::process_message(message, origin, meter, id),
+				XcmpProcessor::process_message(message, origin.into(), meter, id),
 			Snowbridge(_) => SnowbridgeProcessor::process_message(message, origin, meter, id),
 		}
 	}
