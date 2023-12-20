@@ -842,14 +842,12 @@ pub mod bridging {
 		use super::*;
 
 		parameter_types! {
-			pub EthereumLocation: MultiLocation = MultiLocation::new(2, X1(GlobalConsensus(EthereumNetwork::get())));
-
 			/// User fee for ERC20 token transfer back to Ethereum.
 			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
 			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
 			/// Polkadot uses 10 decimals, Kusama and Rococo 12 decimals.
-			pub const DefaultBridgeHubEthereumBaseFee: u128 = 2_750_872_500_000;
-			pub storage BridgeHubEthereumBaseFee: u128 = DefaultBridgeHubEthereumBaseFee::get();
+			pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: MultiLocation = MultiLocation::new(
 				1,
 				X2(
@@ -863,9 +861,7 @@ pub mod bridging {
 			pub BridgeTable: sp_std::vec::Vec<NetworkExportTableItem> = sp_std::vec![
 				NetworkExportTableItem::new(
 					EthereumNetwork::get(),
-					Some(sp_std::vec![
-						EthereumLocation::get().interior.split_global().expect("invalid configuration for Ethereum").1,
-					]),
+					Some(sp_std::vec![Junctions::Here]),
 					SiblingBridgeHub::get(),
 					Some((
 						XcmBridgeHubRouterFeeAssetId::get(),
