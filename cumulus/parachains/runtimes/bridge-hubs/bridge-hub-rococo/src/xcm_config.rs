@@ -294,7 +294,7 @@ impl xcm_executor::Config for XcmConfig {
 		MaxInstructions,
 	>;
 	type Trader =
-	UsingComponents<WeightToFee, TokenLocation, AccountId, Balances, ToStakingPot<Runtime>>;
+		UsingComponents<WeightToFee, TokenLocation, AccountId, Balances, ToStakingPot<Runtime>>;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetLocker = ();
@@ -336,7 +336,7 @@ impl xcm_executor::Config for XcmConfig {
 }
 
 pub type PriceForParentDelivery =
-ExponentialPrice<FeeAssetId, BaseDeliveryFee, TransactionByteFee, ParachainSystem>;
+	ExponentialPrice<FeeAssetId, BaseDeliveryFee, TransactionByteFee, ParachainSystem>;
 
 /// Converts a local signed origin into an XCM multilocation.
 /// Forms the basis for local origins sending/executing XCMs.
@@ -388,8 +388,8 @@ impl cumulus_pallet_xcm::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
-/// Creates an AgentId from a MultiLocation. An AgentId is a unique mapping to a Agent contract
-/// which acts as the sovereign account for the MultiLocation.
+/// Creates an AgentId from a MultiLocation. An AgentId is a unique mapping to a Agent contract on
+/// Ethereum which acts as the sovereign account for the MultiLocation.
 pub type AgentIdOf = HashedDescription<H256, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
 
 /// A `HandleFee` implementation that simply deposits the fees for `ExportMessage` XCM instructions
@@ -404,19 +404,19 @@ pub struct XcmExportFeeToRelayerRewardAccounts<
 >(PhantomData<(AssetTransactor, DestNetwork, DestParaId, DestBridgedChainId, BridgeLaneId)>);
 
 impl<
-	AssetTransactor: TransactAsset,
-	DestNetwork: Get<NetworkId>,
-	DestParaId: Get<cumulus_primitives_core::ParaId>,
-	DestBridgedChainId: Get<ChainId>,
-	BridgeLaneId: Get<LaneId>,
-> HandleFee
-for XcmExportFeeToRelayerRewardAccounts<
-	AssetTransactor,
-	DestNetwork,
-	DestParaId,
-	DestBridgedChainId,
-	BridgeLaneId,
->
+		AssetTransactor: TransactAsset,
+		DestNetwork: Get<NetworkId>,
+		DestParaId: Get<cumulus_primitives_core::ParaId>,
+		DestBridgedChainId: Get<ChainId>,
+		BridgeLaneId: Get<LaneId>,
+	> HandleFee
+	for XcmExportFeeToRelayerRewardAccounts<
+		AssetTransactor,
+		DestNetwork,
+		DestParaId,
+		DestBridgedChainId,
+		BridgeLaneId,
+	>
 {
 	fn handle_fee(
 		fee: MultiAssets,
@@ -489,7 +489,7 @@ pub struct XcmFeeManagerFromComponentsBridgeHub<WaivedLocations, HandleFee>(
 	PhantomData<(WaivedLocations, HandleFee)>,
 );
 impl<WaivedLocations: Contains<MultiLocation>, FeeHandler: HandleFee> FeeManager
-for XcmFeeManagerFromComponentsBridgeHub<WaivedLocations, FeeHandler>
+	for XcmFeeManagerFromComponentsBridgeHub<WaivedLocations, FeeHandler>
 {
 	fn is_waived(origin: Option<&MultiLocation>, fee_reason: FeeReason) -> bool {
 		let Some(loc) = origin else { return false };
