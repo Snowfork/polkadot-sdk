@@ -29,7 +29,7 @@ pub mod xcm_config;
 
 use assets_common::{
 	foreign_creators::ForeignCreators,
-	local_and_foreign_assets::{LocalAndForeignAssets, LocalFromLeft, MultiLocationConverter, TargetFromLeft},
+	local_and_foreign_assets::{LocalFromLeft, TargetFromLeft},
 	matching::{FromNetwork, FromSiblingParachain},
 	AssetIdForTrustBackedAssetsConvert, MultiLocationForAssetId,
 };
