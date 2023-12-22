@@ -594,20 +594,20 @@ parameter_types! {
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
 		genesis: Fork {
-			version: [0, 0, 16, 32], // 0x00001020
+			version: [144, 0, 0, 111], // 0x90000069
 			epoch: 0,
 		},
 		altair: Fork {
-			version: [1, 0, 16, 32], // 0x01001020
-			epoch: 36660,
+			version: [144, 0, 0, 112], // 0x90000070
+			epoch: 50,
 		},
 		bellatrix: Fork {
-			version: [2, 0, 16, 32], // 0x02001020
-			epoch: 112260,
+			version: [144, 0, 0, 113], // 0x90000071
+			epoch: 100,
 		},
 		capella: Fork {
-			version: [3, 0, 16, 32], // 0x03001020
-			epoch: 162304,
+			version: [144, 0, 0, 114], // 0x90000072
+			epoch: 56832,
 		},
 	};
 }
