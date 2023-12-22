@@ -299,7 +299,7 @@ try-runtime = [
 
 experimental = ["pallet-aura/experimental"]
 fast-runtime = [
-	"snowbridge-ethereum-beacon-client/fast-runtime",
+	"snowbridge-ethereum-beacon-client/beacon-spec-minimal",
 ]
 
 # A feature that should be enabled when the runtime should be built for on-chain
