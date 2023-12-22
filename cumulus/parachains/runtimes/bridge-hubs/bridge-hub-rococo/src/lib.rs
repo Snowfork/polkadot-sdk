@@ -568,7 +568,7 @@ impl snowbridge_outbound_queue::Config for Runtime {
 	type Channels = EthereumSystem;
 }
 
-#[cfg(feature = "beacon-spec-minimal")]
+#[cfg(feature = "fast-runtime")]
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
 		genesis: Fork {
@@ -590,7 +590,7 @@ parameter_types! {
 	};
 }
 
-#[cfg(not(feature = "beacon-spec-minimal"))]
+#[cfg(not(feature = "fast-runtime"))]
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
 		genesis: Fork {
