@@ -545,6 +545,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 		InboundQueuePalletInstance,
 		AccountId,
 		Balance,
+		parachain_info::Pallet<Runtime>,
 	>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
