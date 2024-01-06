@@ -594,7 +594,7 @@ parameter_types! {
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
 		genesis: Fork {
-			version: [144, 0, 0, 111], // 0x90000069
+			version: [144, 0, 0, 111], // 0x9000006f
 			epoch: 0,
 		},
 		altair: Fork {
