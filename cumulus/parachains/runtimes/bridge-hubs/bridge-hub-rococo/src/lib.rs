@@ -733,7 +733,7 @@ bridge_runtime_common::generate_bridge_reject_obsolete_headers_and_messages! {
 	BridgeRococoBulletinMessages
 }
 
-#[cfg(feature = "runtime-benchmarks")]
+#[cfg(all(feature = "runtime-benchmarks", not(feature = "fast-runtime")))]
 mod benches {
 	frame_benchmarking::define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
@@ -762,6 +762,37 @@ mod benches {
 		[snowbridge_outbound_queue, EthereumOutboundQueue]
 		[snowbridge_system, EthereumSystem]
 		[snowbridge_ethereum_beacon_client, EthereumBeaconClient]
+	);
+}
+
+#[cfg(all(feature = "runtime-benchmarks", feature = "fast-runtime"))]
+mod benches {
+	frame_benchmarking::define_benchmarks!(
+		[frame_system, SystemBench::<Runtime>]
+		[pallet_balances, Balances]
+		[pallet_message_queue, MessageQueue]
+		[pallet_multisig, Multisig]
+		[pallet_session, SessionBench::<Runtime>]
+		[pallet_utility, Utility]
+		[pallet_timestamp, Timestamp]
+		[pallet_collator_selection, CollatorSelection]
+		[cumulus_pallet_parachain_system, ParachainSystem]
+		[cumulus_pallet_xcmp_queue, XcmpQueue]
+		// XCM
+		[pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>]
+		// NOTE: Make sure you point to the individual modules below.
+		[pallet_xcm_benchmarks::fungible, XcmBalances]
+		[pallet_xcm_benchmarks::generic, XcmGeneric]
+		// Bridge pallets
+		[pallet_bridge_grandpa, WestendFinality]
+		[pallet_bridge_parachains, WithinWestend]
+		[pallet_bridge_messages, RococoToWestend]
+		[pallet_bridge_messages, RococoToRococoBulletin]
+		[pallet_bridge_relayers, BridgeRelayersBench::<Runtime>]
+		// Ethereum Bridge
+		[snowbridge_inbound_queue, EthereumInboundQueue]
+		[snowbridge_outbound_queue, EthereumOutboundQueue]
+		[snowbridge_system, EthereumSystem]
 	);
 }
 
