@@ -17465,7 +17465,7 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-runtime-test-common"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "assets-common",
  "cumulus-pallet-aura-ext",
