@@ -2069,7 +2069,7 @@ dependencies = [
  "snowbridge-rococo-common",
  "snowbridge-router-primitives",
  "snowbridge-runtime-common",
- "snowbridge-runtime-tests",
+ "snowbridge-runtime-test-common",
  "snowbridge-system",
  "snowbridge-system-runtime-api",
  "sp-api",
@@ -17464,7 +17464,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-runtime-tests"
+name = "snowbridge-runtime-test-common"
 version = "0.1.0"
 dependencies = [
  "assets-common",
