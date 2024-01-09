@@ -128,6 +128,7 @@ bridge-runtime-common = { path = "../../../../../bridges/bin/runtime-common", fe
 	"integrity-test",
 ] }
 sp-keyring = { path = "../../../../../substrate/primitives/keyring" }
+snowbridge-runtime-tests = { path = "../../../../../../parachain/runtime/tests" }
 
 [features]
 default = ["std"]
@@ -261,6 +262,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
+	"snowbridge-runtime-tests/runtime-benchmarks",
 ]
 
 try-runtime = [
