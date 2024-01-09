@@ -128,7 +128,7 @@ bridge-runtime-common = { path = "../../../../../bridges/bin/runtime-common", fe
 	"integrity-test",
 ] }
 sp-keyring = { path = "../../../../../substrate/primitives/keyring" }
-snowbridge-runtime-tests = { path = "../../../../../../parachain/runtime/tests" }
+snowbridge-runtime-test-common = { path = "../../../../../../parachain/runtime/test-common" }
 
 [features]
 default = ["std"]
@@ -258,7 +258,7 @@ runtime-benchmarks = [
 	"snowbridge-rococo-common/runtime-benchmarks",
 	"snowbridge-router-primitives/runtime-benchmarks",
 	"snowbridge-runtime-common/runtime-benchmarks",
-	"snowbridge-runtime-tests/runtime-benchmarks",
+	"snowbridge-runtime-test-common/runtime-benchmarks",
 	"snowbridge-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
