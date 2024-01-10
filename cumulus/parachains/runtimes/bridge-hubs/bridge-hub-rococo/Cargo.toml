@@ -112,7 +112,7 @@ snowbridge-system = { path = "../../../../../../parachain/pallets/system", defau
 snowbridge-system-runtime-api = { path = "../../../../../../parachain/pallets/system/runtime-api", default-features = false }
 snowbridge-core = { path = "../../../../../../parachain/primitives/core", default-features = false }
 snowbridge-ethereum-client-pallet = { path = "../../../../../../parachain/pallets/ethereum-client", default-features = false }
-snowbridge-inbound-queue = { path = "../../../../../../parachain/pallets/inbound-queue", default-features = false }
+snowbridge-inbound-queue-pallet = { path = "../../../../../../parachain/pallets/inbound-queue", default-features = false }
 snowbridge-outbound-queue = { path = "../../../../../../parachain/pallets/outbound-queue", default-features = false }
 snowbridge-outbound-queue-runtime-api = { path = "../../../../../../parachain/pallets/outbound-queue/runtime-api", default-features = false }
 snowbridge-router-primitives = { path = "../../../../../../parachain/primitives/router", default-features = false }
@@ -194,7 +194,7 @@ std = [
 	"snowbridge-beacon-primitives/std",
 	"snowbridge-core/std",
 	"snowbridge-ethereum-client-pallet/std",
-	"snowbridge-inbound-queue/std",
+	"snowbridge-inbound-queue-pallet/std",
 	"snowbridge-outbound-queue-runtime-api/std",
 	"snowbridge-outbound-queue/std",
 	"snowbridge-rococo-common/std",
@@ -253,7 +253,7 @@ runtime-benchmarks = [
 	"polkadot-runtime-common/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-ethereum-client-pallet/runtime-benchmarks",
-	"snowbridge-inbound-queue/runtime-benchmarks",
+	"snowbridge-inbound-queue-pallet/runtime-benchmarks",
 	"snowbridge-outbound-queue/runtime-benchmarks",
 	"snowbridge-rococo-common/runtime-benchmarks",
 	"snowbridge-router-primitives/runtime-benchmarks",
@@ -293,7 +293,7 @@ try-runtime = [
 	"parachain-info/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"snowbridge-ethereum-client-pallet/try-runtime",
-	"snowbridge-inbound-queue/try-runtime",
+	"snowbridge-inbound-queue-pallet/try-runtime",
 	"snowbridge-outbound-queue/try-runtime",
 	"snowbridge-system/try-runtime",
 	"sp-runtime/try-runtime",

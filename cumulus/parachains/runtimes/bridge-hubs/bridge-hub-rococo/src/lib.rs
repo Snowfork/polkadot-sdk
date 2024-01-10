@@ -515,7 +515,7 @@ pub mod benchmark_helpers {
 	use crate::{EthereumBeaconClient, Runtime, RuntimeOrigin};
 	use codec::Encode;
 	use snowbridge_beacon_primitives::CompactExecutionHeader;
-	use snowbridge_inbound_queue::BenchmarkHelper;
+	use snowbridge_inbound_queue_pallet::BenchmarkHelper;
 	use sp_core::H256;
 	use xcm::latest::{MultiAssets, MultiLocation, SendError, SendResult, SendXcm, Xcm, XcmHash};
 
@@ -548,7 +548,7 @@ pub mod benchmark_helpers {
 	}
 }
 
-impl snowbridge_inbound_queue::Config for Runtime {
+impl snowbridge_inbound_queue_pallet::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = snowbridge_ethereum_client_pallet::Pallet<Runtime>;
 	type Token = Balances;
@@ -570,7 +570,7 @@ impl snowbridge_inbound_queue::Config for Runtime {
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type MaxMessageSize = ConstU32<2048>;
-	type WeightInfo = weights::snowbridge_inbound_queue::WeightInfo<Runtime>;
+	type WeightInfo = weights::snowbridge_inbound_queue_pallet::WeightInfo<Runtime>;
 	type PricingParameters = EthereumSystem;
 	type AssetTransactor = <xcm_config::XcmConfig as xcm_executor::Config>::AssetTransactor;
 }
@@ -718,7 +718,7 @@ construct_runtime!(
 		// With-Rococo Bulletin bridge hub pallet.
 		XcmOverPolkadotBulletin: pallet_xcm_bridge_hub::<Instance2>::{Pallet} = 62,
 
-		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 80,
+		EthereumInboundQueue: snowbridge_inbound_queue_pallet::{Pallet, Call, Storage, Event<T>} = 80,
 		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 81,
 		EthereumBeaconClient: snowbridge_ethereum_client_pallet::{Pallet, Call, Storage, Event<T>} = 82,
 		EthereumSystem: snowbridge_system::{Pallet, Call, Storage, Config<T>, Event<T>} = 83,
@@ -773,7 +773,7 @@ mod benches {
 		[pallet_bridge_messages, RococoToRococoBulletin]
 		[pallet_bridge_relayers, BridgeRelayersBench::<Runtime>]
 		// Ethereum Bridge
-		[snowbridge_inbound_queue, EthereumInboundQueue]
+		[snowbridge_inbound_queue_pallet, EthereumInboundQueue]
 		[snowbridge_outbound_queue, EthereumOutboundQueue]
 		[snowbridge_system, EthereumSystem]
 		[snowbridge_ethereum_client_pallet, EthereumBeaconClient]

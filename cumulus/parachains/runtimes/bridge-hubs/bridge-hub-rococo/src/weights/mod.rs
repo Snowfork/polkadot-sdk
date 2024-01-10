@@ -41,7 +41,7 @@ pub mod pallet_xcm;
 pub mod paritydb_weights;
 pub mod rocksdb_weights;
 pub mod snowbridge_ethereum_client_pallet;
-pub mod snowbridge_inbound_queue;
+pub mod snowbridge_inbound_queue_pallet;
 pub mod snowbridge_outbound_queue;
 pub mod snowbridge_system;
 pub mod xcm;

@@ -1951,7 +1951,7 @@ dependencies = [
  "parachains-common",
  "serde_json",
  "snowbridge-core",
- "snowbridge-inbound-queue",
+ "snowbridge-inbound-queue-pallet",
  "snowbridge-outbound-queue",
  "snowbridge-router-primitives",
  "snowbridge-system",
@@ -1985,7 +1985,7 @@ dependencies = [
  "rococo-westend-system-emulated-network",
  "scale-info",
  "snowbridge-core",
- "snowbridge-inbound-queue",
+ "snowbridge-inbound-queue-pallet",
  "snowbridge-outbound-queue",
  "snowbridge-rococo-common",
  "snowbridge-router-primitives",
@@ -2063,7 +2063,7 @@ dependencies = [
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum-client-pallet",
- "snowbridge-inbound-queue",
+ "snowbridge-inbound-queue-pallet",
  "snowbridge-outbound-queue",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-rococo-common",
@@ -17343,7 +17343,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-inbound-queue"
+name = "snowbridge-inbound-queue-pallet"
 version = "0.9.0"
 dependencies = [
  "alloy-primitives",
@@ -17511,7 +17511,7 @@ dependencies = [
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum-client-pallet",
- "snowbridge-inbound-queue",
+ "snowbridge-inbound-queue-pallet",
  "snowbridge-outbound-queue",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
