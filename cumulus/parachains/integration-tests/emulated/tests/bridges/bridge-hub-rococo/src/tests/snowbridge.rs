@@ -22,7 +22,7 @@ use snowbridge_rococo_common::EthereumNetwork;
 use snowbridge_router_primitives::inbound::{
 	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
 };
-use snowbridge_system;
+use snowbridge_system_pallet;
 use sp_core::H256;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
@@ -484,7 +484,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
-				RuntimeEvent::EthereumOutboundQueue(snowbridge_outbound_queue::Event::MessageQueued {..}) => {},
+				RuntimeEvent::EthereumOutboundQueue(snowbridge_outbound_queue_pallet::Event::MessageQueued {..}) => {},
 			]
 		);
 		let events = BridgeHubRococo::events();
