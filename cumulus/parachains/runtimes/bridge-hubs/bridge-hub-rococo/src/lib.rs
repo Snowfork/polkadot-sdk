@@ -519,7 +519,7 @@ pub mod benchmark_helpers {
 	use sp_core::H256;
 	use xcm::latest::{MultiAssets, MultiLocation, SendError, SendResult, SendXcm, Xcm, XcmHash};
 
-	impl<T: snowbridge_ethereum_beacon_client::Config> BenchmarkHelper<T> for Runtime {
+	impl<T: snowbridge_ethereum_client_pallet::Config> BenchmarkHelper<T> for Runtime {
 		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader) {
 			EthereumBeaconClient::store_execution_header(block_hash, header, 0, H256::default())
 		}
@@ -550,7 +550,7 @@ pub mod benchmark_helpers {
 
 impl snowbridge_inbound_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Verifier = snowbridge_ethereum_beacon_client::Pallet<Runtime>;
+	type Verifier = snowbridge_ethereum_client_pallet::Pallet<Runtime>;
 	type Token = Balances;
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmSender = XcmRouter;
@@ -638,11 +638,11 @@ parameter_types! {
 	pub const MaxExecutionHeadersToKeep: u32 = prod_or_fast!(8192 * 2, 1000);
 }
 
-impl snowbridge_ethereum_beacon_client::Config for Runtime {
+impl snowbridge_ethereum_client_pallet::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
 	type MaxExecutionHeadersToKeep = MaxExecutionHeadersToKeep;
-	type WeightInfo = weights::snowbridge_ethereum_beacon_client::WeightInfo<Runtime>;
+	type WeightInfo = weights::snowbridge_ethereum_client_pallet::WeightInfo<Runtime>;
 }
 
 impl snowbridge_system::Config for Runtime {
@@ -720,7 +720,7 @@ construct_runtime!(
 
 		EthereumInboundQueue: snowbridge_inbound_queue::{Pallet, Call, Storage, Event<T>} = 80,
 		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 81,
-		EthereumBeaconClient: snowbridge_ethereum_beacon_client::{Pallet, Call, Storage, Event<T>} = 82,
+		EthereumBeaconClient: snowbridge_ethereum_client_pallet::{Pallet, Call, Storage, Event<T>} = 82,
 		EthereumSystem: snowbridge_system::{Pallet, Call, Storage, Config<T>, Event<T>} = 83,
 
 		// Message Queue. Importantly, is registered last so that messages are processed after
@@ -776,7 +776,7 @@ mod benches {
 		[snowbridge_inbound_queue, EthereumInboundQueue]
 		[snowbridge_outbound_queue, EthereumOutboundQueue]
 		[snowbridge_system, EthereumSystem]
-		[snowbridge_ethereum_beacon_client, EthereumBeaconClient]
+		[snowbridge_ethereum_client_pallet, EthereumBeaconClient]
 	);
 }
 
