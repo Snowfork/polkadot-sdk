@@ -18,7 +18,7 @@ use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use snowbridge_core::outbound::OperatingMode;
-use snowbridge_rococo_common::EthereumNetwork;
+use parachains_common::rococo::snowbridge::EthereumNetwork;
 use snowbridge_router_primitives::inbound::{
 	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
 };

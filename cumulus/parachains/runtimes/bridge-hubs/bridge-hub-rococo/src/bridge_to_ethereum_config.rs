@@ -15,7 +15,7 @@
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{xcm_config::UniversalLocation, Runtime};
-use snowbridge_rococo_common::EthereumNetwork;
+use parachains_common::rococo::snowbridge::EthereumNetwork;
 use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 
 /// Exports message to the Ethereum Gateway contract.
