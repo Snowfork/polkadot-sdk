@@ -248,7 +248,7 @@ impl<Config: config::Config> ExecuteXcm<Config::RuntimeCall> for XcmExecutor<Con
 			for asset in fees.inner() {
 				Config::AssetTransactor::withdraw_asset(&asset, &origin, None)?;
 			}
-			Config::FeeManager::handle_fee(fees, None, FeeReason::ChargeFees);
+			Config::FeeManager::handle_fee(fees, None, FeeReason::ChargeFees)?;
 		}
 		Ok(())
 	}
@@ -968,8 +968,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 		} else {
 			self.holding.try_take(fee.into()).map_err(|_| XcmError::NotHoldingFees)?.into()
 		};
-		Config::FeeManager::handle_fee(paid, Some(&self.context), reason);
-		Ok(())
+		Config::FeeManager::handle_fee(paid, Some(&self.context), reason)
 	}
 
 	/// Calculates what `local_querier` would be from the perspective of `destination`.

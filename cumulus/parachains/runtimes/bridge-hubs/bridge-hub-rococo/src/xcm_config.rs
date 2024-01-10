@@ -416,7 +416,7 @@ impl<
 		fee: MultiAssets,
 		maybe_context: Option<&XcmContext>,
 		reason: FeeReason,
-	) -> MultiAssets {
+	) -> Result<MultiAssets, XcmError> {
 		if matches!(reason, FeeReason::Export { network: bridged_network, destination }
 				if bridged_network == DestNetwork::get() &&
 					destination == X1(Parachain(DestParaId::get().into())))
@@ -472,10 +472,10 @@ impl<
 				}
 			}
 
-			return MultiAssets::new()
+			return Ok(MultiAssets::new())
 		}
 
-		fee
+		Ok(fee)
 	}
 }
 
@@ -493,8 +493,9 @@ impl<WaivedLocations: Contains<MultiLocation>, FeeHandler: HandleFee> FeeManager
 		WaivedLocations::contains(loc)
 	}
 
-	fn handle_fee(fee: MultiAssets, context: Option<&XcmContext>, reason: FeeReason) {
-		FeeHandler::handle_fee(fee, context, reason);
+	fn handle_fee(fee: MultiAssets, context: Option<&XcmContext>, reason: FeeReason) -> XcmResult {
+		FeeHandler::handle_fee(fee, context, reason)?;
+		Ok(())
 	}
 }
 

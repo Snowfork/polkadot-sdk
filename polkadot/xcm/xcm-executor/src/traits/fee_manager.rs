@@ -21,9 +21,8 @@ pub trait FeeManager {
 	/// Determine if a fee should be waived.
 	fn is_waived(origin: Option<&MultiLocation>, r: FeeReason) -> bool;
 
-	/// Do something with the fee which has been paid. Doing nothing here silently burns the
-	/// fees.
-	fn handle_fee(fee: MultiAssets, context: Option<&XcmContext>, r: FeeReason);
+	/// Do something with the fee which has been paid.
+	fn handle_fee(fee: MultiAssets, context: Option<&XcmContext>, r: FeeReason) -> XcmResult;
 }
 
 /// Context under which a fee is paid.
@@ -56,5 +55,7 @@ impl FeeManager for () {
 		false
 	}
 
-	fn handle_fee(_: MultiAssets, _: Option<&XcmContext>, _: FeeReason) {}
+	fn handle_fee(_: MultiAssets, _: Option<&XcmContext>, _: FeeReason) -> XcmResult {
+		Ok(())
+	}
 }

@@ -21,18 +21,23 @@ use xcm_executor::traits::{FeeManager, FeeReason, TransactAsset};
 
 /// Handles the fees that are taken by certain XCM instructions.
 pub trait HandleFee {
-	/// Do something with the fee which has been paid. Doing nothing here silently burns the
-	/// fees.
-	///
+	/// Do something with the fee which has been paid.
 	/// Returns any part of the fee that wasn't consumed.
-	fn handle_fee(fee: MultiAssets, context: Option<&XcmContext>, reason: FeeReason)
-		-> MultiAssets;
+	fn handle_fee(
+		fee: MultiAssets,
+		context: Option<&XcmContext>,
+		reason: FeeReason,
+	) -> Result<MultiAssets, XcmError>;
 }
 
 // Default `HandleFee` implementation that just burns the fee.
 impl HandleFee for () {
-	fn handle_fee(_: MultiAssets, _: Option<&XcmContext>, _: FeeReason) -> MultiAssets {
-		MultiAssets::new()
+	fn handle_fee(
+		_: MultiAssets,
+		_: Option<&XcmContext>,
+		_: FeeReason,
+	) -> Result<MultiAssets, XcmError> {
+		Ok(MultiAssets::new())
 	}
 }
 
@@ -42,16 +47,16 @@ impl HandleFee for Tuple {
 		fee: MultiAssets,
 		context: Option<&XcmContext>,
 		reason: FeeReason,
-	) -> MultiAssets {
+	) -> Result<MultiAssets, XcmError> {
 		let mut unconsumed_fee = fee;
 		for_tuples!( #(
-			unconsumed_fee = Tuple::handle_fee(unconsumed_fee, context, reason);
+			unconsumed_fee = Tuple::handle_fee(unconsumed_fee, context, reason)?;
 			if unconsumed_fee.is_none() {
-				return unconsumed_fee;
+				return Ok(unconsumed_fee);
 			}
 		)* );
 
-		unconsumed_fee
+		Ok(unconsumed_fee)
 	}
 }
 
@@ -68,8 +73,9 @@ impl<WaivedLocations: Contains<MultiLocation>, FeeHandler: HandleFee> FeeManager
 		WaivedLocations::contains(loc)
 	}
 
-	fn handle_fee(fee: MultiAssets, context: Option<&XcmContext>, reason: FeeReason) {
-		FeeHandler::handle_fee(fee, context, reason);
+	fn handle_fee(fee: MultiAssets, context: Option<&XcmContext>, reason: FeeReason) -> XcmResult {
+		FeeHandler::handle_fee(fee, context, reason)?;
+		Ok(())
 	}
 }
 
@@ -113,9 +119,9 @@ impl<
 		fee: MultiAssets,
 		context: Option<&XcmContext>,
 		_reason: FeeReason,
-	) -> MultiAssets {
+	) -> Result<MultiAssets, XcmError> {
 		deposit_or_burn_fee::<AssetTransactor, _>(fee, context, ReceiverAccount::get());
 
-		MultiAssets::new()
+		Ok(MultiAssets::new())
 	}
 }

@@ -20,15 +20,17 @@ use bridge_hub_rococo_runtime::{
 	xcm_config::XcmConfig, MessageQueueServiceWeight, Runtime, RuntimeEvent, SessionKeys,
 };
 use codec::Decode;
-use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
+use cumulus_primitives_core::XcmError::{FailedToTransactAsset, FeesNotMet, NotHoldingFees};
 use frame_support::parameter_types;
 use parachains_common::{AccountId, AuraId, Balance};
 use snowbridge_ethereum_beacon_client::WeightInfo;
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
+use xcm::prelude::XcmError;
 
 parameter_types! {
 		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+		pub const InsufficientBridgeHubEthereumBaseFee: Balance = 1_000_000_000;
 }
 
 fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime> {
@@ -69,7 +71,7 @@ pub fn unpaid_transfer_token_to_ethereum_fails_with_barrier() {
 }
 
 #[test]
-pub fn transfer_token_to_ethereum_fee_not_enough() {
+pub fn transfer_token_to_ethereum_not_holding_fees() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
 		collator_session_keys(),
 		1013,
@@ -78,18 +80,19 @@ pub fn transfer_token_to_ethereum_fee_not_enough() {
 		H160::random(),
 		H160::random(),
 		// fee not enough
-		1_000_000_000,
+		InsufficientBridgeHubEthereumBaseFee::get(),
 		NotHoldingFees,
 	)
 }
 
 #[test]
-pub fn transfer_token_to_ethereum_insufficient_fund() {
+pub fn transfer_token_to_ethereum_failed_to_transact_asset() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
 		collator_session_keys(),
 		1013,
 		1000,
-		1_000_000_000,
+		// initial fund not enough
+		InsufficientBridgeHubEthereumBaseFee::get(),
 		H160::random(),
 		H160::random(),
 		DefaultBridgeHubEthereumBaseFee::get(),
@@ -106,4 +109,22 @@ fn max_message_queue_service_weight_is_more_than_beacon_extrinsic_weights() {
 		<Runtime as snowbridge_ethereum_beacon_client::Config>::WeightInfo::submit();
 	max_message_queue_weight.all_gt(force_checkpoint);
 	max_message_queue_weight.all_gt(submit_checkpoint);
+}
+
+#[test]
+pub fn transfer_token_to_ethereum_fees_not_met() {
+	snowbridge_runtime_test_common::send_transfer_token_message_failure_with_invalid_fee_params::<
+		Runtime,
+		XcmConfig,
+	>(
+		collator_session_keys(),
+		1013,
+		1000,
+		DefaultBridgeHubEthereumBaseFee::get() + 1_000_000_000,
+		H160::random(),
+		H160::random(),
+		// fee not enough
+		InsufficientBridgeHubEthereumBaseFee::get(),
+		FeesNotMet,
+	)
 }

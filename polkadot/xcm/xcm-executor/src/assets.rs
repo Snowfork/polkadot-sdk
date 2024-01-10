@@ -400,7 +400,7 @@ impl Assets {
 			.expect("general_take never results in error when saturating")
 	}
 
-	/// Mutates `self` to its original value less `mask` and returns `true` iff it contains at least
+	/// Mutates `self` to its original value less `mask` and returns `true` if it contains at least
 	/// `mask`.
 	///
 	/// Returns `Ok` with the non-wildcard equivalence of `asset` taken and mutates `self` to its
