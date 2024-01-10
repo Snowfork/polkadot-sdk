@@ -94,7 +94,7 @@ fn create_agent() {
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
-				RuntimeEvent::EthereumSystem(snowbridge_system::Event::CreateAgent {
+				RuntimeEvent::EthereumSystem(snowbridge_system_pallet::Event::CreateAgent {
 					..
 				}) => {},
 			]
@@ -168,7 +168,7 @@ fn create_channel() {
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
-				RuntimeEvent::EthereumSystem(snowbridge_system::Event::CreateChannel {
+				RuntimeEvent::EthereumSystem(snowbridge_system_pallet::Event::CreateChannel {
 					..
 				}) => {},
 			]
