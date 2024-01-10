@@ -108,12 +108,12 @@ bridge-runtime-common = { path = "../../../../../bridges/bin/runtime-common", de
 
 # Ethereum Bridge (Snowbridge)
 snowbridge-beacon-primitives = { path = "../../../../../../parachain/primitives/beacon", default-features = false }
-snowbridge-system = { path = "../../../../../../parachain/pallets/system", default-features = false }
+snowbridge-system-pallet = { path = "../../../../../../parachain/pallets/system", default-features = false }
 snowbridge-system-runtime-api = { path = "../../../../../../parachain/pallets/system/runtime-api", default-features = false }
 snowbridge-core = { path = "../../../../../../parachain/primitives/core", default-features = false }
 snowbridge-ethereum-client-pallet = { path = "../../../../../../parachain/pallets/ethereum-client", default-features = false }
 snowbridge-inbound-queue-pallet = { path = "../../../../../../parachain/pallets/inbound-queue", default-features = false }
-snowbridge-outbound-queue = { path = "../../../../../../parachain/pallets/outbound-queue", default-features = false }
+snowbridge-outbound-queue-pallet = { path = "../../../../../../parachain/pallets/outbound-queue", default-features = false }
 snowbridge-outbound-queue-runtime-api = { path = "../../../../../../parachain/pallets/outbound-queue/runtime-api", default-features = false }
 snowbridge-router-primitives = { path = "../../../../../../parachain/primitives/router", default-features = false }
 snowbridge-runtime-common = { path = "../../../../../../parachain/runtime/runtime-common", default-features = false }
@@ -196,12 +196,12 @@ std = [
 	"snowbridge-ethereum-client-pallet/std",
 	"snowbridge-inbound-queue-pallet/std",
 	"snowbridge-outbound-queue-runtime-api/std",
-	"snowbridge-outbound-queue/std",
+	"snowbridge-outbound-queue-pallet/std",
 	"snowbridge-rococo-common/std",
 	"snowbridge-router-primitives/std",
 	"snowbridge-runtime-common/std",
 	"snowbridge-system-runtime-api/std",
-	"snowbridge-system/std",
+	"snowbridge-system-pallet/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
@@ -254,12 +254,12 @@ runtime-benchmarks = [
 	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-ethereum-client-pallet/runtime-benchmarks",
 	"snowbridge-inbound-queue-pallet/runtime-benchmarks",
-	"snowbridge-outbound-queue/runtime-benchmarks",
+	"snowbridge-outbound-queue-pallet/runtime-benchmarks",
 	"snowbridge-rococo-common/runtime-benchmarks",
 	"snowbridge-router-primitives/runtime-benchmarks",
 	"snowbridge-runtime-common/runtime-benchmarks",
 	"snowbridge-runtime-test-common/runtime-benchmarks",
-	"snowbridge-system/runtime-benchmarks",
+	"snowbridge-system-pallet/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
@@ -294,8 +294,8 @@ try-runtime = [
 	"polkadot-runtime-common/try-runtime",
 	"snowbridge-ethereum-client-pallet/try-runtime",
 	"snowbridge-inbound-queue-pallet/try-runtime",
-	"snowbridge-outbound-queue/try-runtime",
-	"snowbridge-system/try-runtime",
+	"snowbridge-outbound-queue-pallet/try-runtime",
+	"snowbridge-system-pallet/try-runtime",
 	"sp-runtime/try-runtime",
 ]
 

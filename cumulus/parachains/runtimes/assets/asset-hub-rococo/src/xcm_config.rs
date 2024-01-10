@@ -822,7 +822,7 @@ pub mod bridging {
 				1,
 				X2(
 					Parachain(SiblingBridgeHubParaId::get()),
-					PalletInstance(snowbridge_rococo_common::INBOUND_QUEUE_MESSAGES_PALLET_INDEX)
+					PalletInstance(snowbridge_rococo_common::INBOUND_QUEUE_PALLET_INDEX)
 				)
 			);
 

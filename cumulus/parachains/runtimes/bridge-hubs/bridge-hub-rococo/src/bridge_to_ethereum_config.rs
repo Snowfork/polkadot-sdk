@@ -22,6 +22,6 @@ use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 pub type SnowbridgeExporter = EthereumBlobExporter<
 	UniversalLocation,
 	EthereumNetwork,
-	snowbridge_outbound_queue::Pallet<Runtime>,
+	snowbridge_outbound_queue_pallet::Pallet<Runtime>,
 	snowbridge_core::AgentIdOf,
 >;

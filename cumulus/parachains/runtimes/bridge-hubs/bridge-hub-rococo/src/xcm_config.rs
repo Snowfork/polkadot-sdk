@@ -226,7 +226,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				) | RuntimeCall::EthereumInboundQueue(
 				snowbridge_inbound_queue_pallet::Call::set_operating_mode { .. },
 			) | RuntimeCall::EthereumOutboundQueue(
-				snowbridge_outbound_queue::Call::set_operating_mode { .. },
+				snowbridge_outbound_queue_pallet::Call::set_operating_mode { .. },
 			) | RuntimeCall::EthereumSystem(..)
 		)
 	}

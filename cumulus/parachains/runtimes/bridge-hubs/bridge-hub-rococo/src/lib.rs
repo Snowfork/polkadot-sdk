@@ -144,7 +144,7 @@ pub type Migrations = (
 	InitStorageVersions,
 	cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
 	// unreleased
-	snowbridge_system::migration::v0::InitializeOnUpgrade<
+	snowbridge_system_pallet::migration::v0::InitializeOnUpgrade<
 		Runtime,
 		ConstU32<BRIDGE_HUB_ID>,
 		ConstU32<ASSET_HUB_ID>,
@@ -502,7 +502,7 @@ parameter_types! {
 parameter_types! {
 	pub const CreateAssetCall: [u8;2] = [53, 0];
 	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
-	pub const InboundQueuePalletInstance: u8 = snowbridge_rococo_common::INBOUND_QUEUE_MESSAGES_PALLET_INDEX;
+	pub const InboundQueuePalletInstance: u8 = snowbridge_rococo_common::INBOUND_QUEUE_PALLET_INDEX;
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
 		fee_per_gas: gwei(20),
@@ -541,7 +541,7 @@ pub mod benchmark_helpers {
 		}
 	}
 
-	impl snowbridge_system::BenchmarkHelper<RuntimeOrigin> for () {
+	impl snowbridge_system_pallet::BenchmarkHelper<RuntimeOrigin> for () {
 		fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
 			RuntimeOrigin::from(pallet_xcm::Origin::Xcm(location))
 		}
@@ -575,7 +575,7 @@ impl snowbridge_inbound_queue_pallet::Config for Runtime {
 	type AssetTransactor = <xcm_config::XcmConfig as xcm_executor::Config>::AssetTransactor;
 }
 
-impl snowbridge_outbound_queue::Config for Runtime {
+impl snowbridge_outbound_queue_pallet::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
 	type MessageQueue = MessageQueue;
@@ -585,7 +585,7 @@ impl snowbridge_outbound_queue::Config for Runtime {
 	type GasMeter = snowbridge_core::outbound::ConstantGasMeter;
 	type Balance = Balance;
 	type WeightToFee = WeightToFee;
-	type WeightInfo = weights::snowbridge_outbound_queue::WeightInfo<Runtime>;
+	type WeightInfo = weights::snowbridge_outbound_queue_pallet::WeightInfo<Runtime>;
 	type PricingParameters = EthereumSystem;
 	type Channels = EthereumSystem;
 }
@@ -645,14 +645,14 @@ impl snowbridge_ethereum_client_pallet::Config for Runtime {
 	type WeightInfo = weights::snowbridge_ethereum_client_pallet::WeightInfo<Runtime>;
 }
 
-impl snowbridge_system::Config for Runtime {
+impl snowbridge_system_pallet::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OutboundQueue = EthereumOutboundQueue;
 	type SiblingOrigin = EnsureXcm<AllowSiblingsOnly>;
 	type AgentIdOf = snowbridge_core::AgentIdOf;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
-	type WeightInfo = weights::snowbridge_system::WeightInfo<Runtime>;
+	type WeightInfo = weights::snowbridge_system_pallet::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 	type DefaultPricingParameters = Parameters;
@@ -719,9 +719,9 @@ construct_runtime!(
 		XcmOverPolkadotBulletin: pallet_xcm_bridge_hub::<Instance2>::{Pallet} = 62,
 
 		EthereumInboundQueue: snowbridge_inbound_queue_pallet::{Pallet, Call, Storage, Event<T>} = 80,
-		EthereumOutboundQueue: snowbridge_outbound_queue::{Pallet, Call, Storage, Event<T>} = 81,
+		EthereumOutboundQueue: snowbridge_outbound_queue_pallet::{Pallet, Call, Storage, Event<T>} = 81,
 		EthereumBeaconClient: snowbridge_ethereum_client_pallet::{Pallet, Call, Storage, Event<T>} = 82,
-		EthereumSystem: snowbridge_system::{Pallet, Call, Storage, Config<T>, Event<T>} = 83,
+		EthereumSystem: snowbridge_system_pallet::{Pallet, Call, Storage, Config<T>, Event<T>} = 83,
 
 		// Message Queue. Importantly, is registered last so that messages are processed after
 		// the `on_initialize` hooks of bridging pallets.
@@ -774,8 +774,8 @@ mod benches {
 		[pallet_bridge_relayers, BridgeRelayersBench::<Runtime>]
 		// Ethereum Bridge
 		[snowbridge_inbound_queue_pallet, EthereumInboundQueue]
-		[snowbridge_outbound_queue, EthereumOutboundQueue]
-		[snowbridge_system, EthereumSystem]
+		[snowbridge_outbound_queue_pallet, EthereumOutboundQueue]
+		[snowbridge_system_pallet, EthereumSystem]
 		[snowbridge_ethereum_client_pallet, EthereumBeaconClient]
 	);
 }
@@ -1006,18 +1006,18 @@ impl_runtime_apis! {
 	}
 
 	impl snowbridge_outbound_queue_runtime_api::OutboundQueueApi<Block, Balance> for Runtime {
-		fn prove_message(leaf_index: u64) -> Option<snowbridge_outbound_queue::MerkleProof> {
-			snowbridge_outbound_queue::api::prove_message::<Runtime>(leaf_index)
+		fn prove_message(leaf_index: u64) -> Option<snowbridge_outbound_queue_pallet::MerkleProof> {
+			snowbridge_outbound_queue_pallet::api::prove_message::<Runtime>(leaf_index)
 		}
 
 		fn calculate_fee(message: Message) -> Option<Balance> {
-			snowbridge_outbound_queue::api::calculate_fee::<Runtime>(message)
+			snowbridge_outbound_queue_pallet::api::calculate_fee::<Runtime>(message)
 		}
 	}
 
 	impl snowbridge_system_runtime_api::ControlApi<Block> for Runtime {
 		fn agent_id(location: VersionedMultiLocation) -> Option<AgentId> {
-			snowbridge_system::api::agent_id::<Runtime>(location)
+			snowbridge_system_pallet::api::agent_id::<Runtime>(location)
 		}
 	}
 

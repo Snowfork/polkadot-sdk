@@ -1952,9 +1952,9 @@ dependencies = [
  "serde_json",
  "snowbridge-core",
  "snowbridge-inbound-queue-pallet",
- "snowbridge-outbound-queue",
+ "snowbridge-outbound-queue-pallet",
  "snowbridge-router-primitives",
- "snowbridge-system",
+ "snowbridge-system-pallet",
  "sp-core",
  "sp-runtime",
 ]
@@ -1986,10 +1986,10 @@ dependencies = [
  "scale-info",
  "snowbridge-core",
  "snowbridge-inbound-queue-pallet",
- "snowbridge-outbound-queue",
+ "snowbridge-outbound-queue-pallet",
  "snowbridge-rococo-common",
  "snowbridge-router-primitives",
- "snowbridge-system",
+ "snowbridge-system-pallet",
  "sp-core",
  "sp-runtime",
  "staging-xcm",
@@ -2064,13 +2064,13 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-ethereum-client-pallet",
  "snowbridge-inbound-queue-pallet",
- "snowbridge-outbound-queue",
+ "snowbridge-outbound-queue-pallet",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-rococo-common",
  "snowbridge-router-primitives",
  "snowbridge-runtime-common",
  "snowbridge-runtime-test-common",
- "snowbridge-system",
+ "snowbridge-system-pallet",
  "snowbridge-system-runtime-api",
  "sp-api",
  "sp-block-builder",
@@ -17373,7 +17373,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-outbound-queue"
+name = "snowbridge-outbound-queue-merkle-tree"
+version = "0.9.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "snowbridge-outbound-queue-pallet"
 version = "0.9.0"
 dependencies = [
  "bridge-hub-common",
@@ -17393,16 +17403,6 @@ dependencies = [
  "sp-runtime",
  "sp-std 8.0.0",
  "staging-xcm",
-]
-
-[[package]]
-name = "snowbridge-outbound-queue-merkle-tree"
-version = "0.9.0"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-runtime",
 ]
 
 [[package]]
@@ -17512,10 +17512,10 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-ethereum-client-pallet",
  "snowbridge-inbound-queue-pallet",
- "snowbridge-outbound-queue",
+ "snowbridge-outbound-queue-pallet",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-router-primitives",
- "snowbridge-system",
+ "snowbridge-system-pallet",
  "snowbridge-system-runtime-api",
  "sp-api",
  "sp-block-builder",
@@ -17538,7 +17538,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-system"
+name = "snowbridge-system-pallet"
 version = "0.9.0"
 dependencies = [
  "ethabi-decode",
