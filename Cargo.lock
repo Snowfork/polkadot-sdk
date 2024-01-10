@@ -1955,7 +1955,7 @@ dependencies = [
  "snowbridge-pallet-outbound-queue",
  "snowbridge-pallet-system",
  "snowbridge-router-primitives",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-runtime",
 ]
 
@@ -1989,7 +1989,7 @@ dependencies = [
  "snowbridge-pallet-outbound-queue",
  "snowbridge-pallet-system",
  "snowbridge-router-primitives",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-runtime",
  "staging-xcm",
  "staging-xcm-executor",
@@ -17345,7 +17345,7 @@ version = "0.9.0"
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-runtime",
 ]
 
@@ -17358,7 +17358,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
  "sp-api",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-std 8.0.0",
  "staging-xcm",
 ]
@@ -17456,7 +17456,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "snowbridge-core",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-io",
  "sp-runtime",
  "sp-std 8.0.0",
@@ -17557,7 +17557,7 @@ dependencies = [
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
- "sp-core",
+ "sp-core 21.0.0",
  "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
