@@ -221,12 +221,12 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 					WithRococoBulletinMessagesInstance,
 				>::set_operating_mode { .. }) |
 				RuntimeCall::EthereumBeaconClient(
-					snowbridge_ethereum_client_pallet::Call::force_checkpoint { .. } |
-						snowbridge_ethereum_client_pallet::Call::set_operating_mode { .. },
+					snowbridge_pallet_ethereum_client::Call::force_checkpoint { .. } |
+						snowbridge_pallet_ethereum_client::Call::set_operating_mode { .. },
 				) | RuntimeCall::EthereumInboundQueue(
-				snowbridge_inbound_queue_pallet::Call::set_operating_mode { .. },
+				snowbridge_pallet_inbound_queue::Call::set_operating_mode { .. },
 			) | RuntimeCall::EthereumOutboundQueue(
-				snowbridge_outbound_queue_pallet::Call::set_operating_mode { .. },
+				snowbridge_pallet_outbound_queue::Call::set_operating_mode { .. },
 			) | RuntimeCall::EthereumSystem(..)
 		)
 	}
