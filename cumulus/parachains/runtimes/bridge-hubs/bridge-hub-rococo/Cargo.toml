@@ -111,7 +111,7 @@ snowbridge-beacon-primitives = { path = "../../../../../../parachain/primitives/
 snowbridge-system = { path = "../../../../../../parachain/pallets/system", default-features = false }
 snowbridge-system-runtime-api = { path = "../../../../../../parachain/pallets/system/runtime-api", default-features = false }
 snowbridge-core = { path = "../../../../../../parachain/primitives/core", default-features = false }
-snowbridge-ethereum-beacon-client = { path = "../../../../../../parachain/pallets/ethereum-beacon-client", default-features = false }
+snowbridge-ethereum-client-pallet = { path = "../../../../../../parachain/pallets/ethereum-client", default-features = false }
 snowbridge-inbound-queue = { path = "../../../../../../parachain/pallets/inbound-queue", default-features = false }
 snowbridge-outbound-queue = { path = "../../../../../../parachain/pallets/outbound-queue", default-features = false }
 snowbridge-outbound-queue-runtime-api = { path = "../../../../../../parachain/pallets/outbound-queue/runtime-api", default-features = false }
@@ -193,7 +193,7 @@ std = [
 	"serde",
 	"snowbridge-beacon-primitives/std",
 	"snowbridge-core/std",
-	"snowbridge-ethereum-beacon-client/std",
+	"snowbridge-ethereum-client-pallet/std",
 	"snowbridge-inbound-queue/std",
 	"snowbridge-outbound-queue-runtime-api/std",
 	"snowbridge-outbound-queue/std",
@@ -252,7 +252,7 @@ runtime-benchmarks = [
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"polkadot-runtime-common/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
-	"snowbridge-ethereum-beacon-client/runtime-benchmarks",
+	"snowbridge-ethereum-client-pallet/runtime-benchmarks",
 	"snowbridge-inbound-queue/runtime-benchmarks",
 	"snowbridge-outbound-queue/runtime-benchmarks",
 	"snowbridge-rococo-common/runtime-benchmarks",
@@ -292,7 +292,7 @@ try-runtime = [
 	"pallet-xcm/try-runtime",
 	"parachain-info/try-runtime",
 	"polkadot-runtime-common/try-runtime",
-	"snowbridge-ethereum-beacon-client/try-runtime",
+	"snowbridge-ethereum-client-pallet/try-runtime",
 	"snowbridge-inbound-queue/try-runtime",
 	"snowbridge-outbound-queue/try-runtime",
 	"snowbridge-system/try-runtime",
@@ -301,7 +301,7 @@ try-runtime = [
 
 experimental = ["pallet-aura/experimental"]
 fast-runtime = [
-	"snowbridge-ethereum-beacon-client/beacon-spec-minimal",
+	"snowbridge-ethereum-client-pallet/beacon-spec-minimal",
 ]
 
 # A feature that should be enabled when the runtime should be built for on-chain
