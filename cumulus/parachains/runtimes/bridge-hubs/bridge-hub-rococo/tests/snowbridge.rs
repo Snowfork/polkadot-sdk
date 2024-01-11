@@ -21,12 +21,17 @@ use bridge_hub_rococo_runtime::{
 };
 use codec::Decode;
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, FeesNotMet, NotHoldingFees};
-use frame_support::parameter_types;
+use frame_support::{parameter_types, traits::fungible::Inspect};
 use parachains_common::{AccountId, AuraId, Balance};
+use snowbridge_core::{PricingParameters, Rewards};
 use snowbridge_pallet_ethereum_client::WeightInfo;
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
-use xcm::prelude::XcmError;
+use sp_runtime::FixedU128;
+
+type TokenBalanceOf<Runtime> = <<Runtime as snowbridge_pallet_system::Config>::Token as Inspect<
+	<Runtime as frame_system::Config>::AccountId,
+>>::Balance;
 
 parameter_types! {
 		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
@@ -113,6 +118,11 @@ fn max_message_queue_service_weight_is_more_than_beacon_extrinsic_weights() {
 
 #[test]
 pub fn transfer_token_to_ethereum_fees_not_met() {
+	let illegal_params: PricingParameters<TokenBalanceOf<Runtime>> = PricingParameters {
+		exchange_rate: FixedU128::from_rational(1, 1),
+		fee_per_gas: 1_u32.into(),
+		rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
+	};
 	snowbridge_runtime_test_common::send_transfer_token_message_failure_with_invalid_fee_params::<
 		Runtime,
 		XcmConfig,
@@ -125,6 +135,7 @@ pub fn transfer_token_to_ethereum_fees_not_met() {
 		H160::random(),
 		// fee not enough
 		InsufficientBridgeHubEthereumBaseFee::get(),
+		illegal_params,
 		FeesNotMet,
 	)
 }
