@@ -39,15 +39,15 @@ use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
 use parachains_common::{
 	impls::ToStakingPot,
+	rococo::snowbridge::EthereumNetwork,
 	xcm_config::{
 		AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
 		RelayOrOtherSystemParachains,
 	},
-	TREASURY_PALLET_ID,
+	Balance, TREASURY_PALLET_ID,
 };
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
-use parachains_common::rococo::snowbridge::EthereumNetwork;
 use snowbridge_runtime_common::XcmExportFeeToSibling;
 use sp_core::Get;
 use sp_runtime::traits::AccountIdConversion;
@@ -312,7 +312,7 @@ impl xcm_executor::Config for XcmConfig {
 				crate::bridge_to_westend_config::AssetHubRococoToAssetHubWestendMessagesLane,
 			>,
 			XcmExportFeeToSibling<
-				bp_rococo::Balance,
+				Balance,
 				AccountId,
 				TokenLocation,
 				EthereumNetwork,

@@ -17465,6 +17465,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "parity-scale-codec",
  "snowbridge-core",
  "sp-arithmetic",
  "staging-xcm",
