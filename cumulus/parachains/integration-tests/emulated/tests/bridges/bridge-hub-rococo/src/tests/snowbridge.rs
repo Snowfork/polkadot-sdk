@@ -60,7 +60,7 @@ fn create_agent() {
 	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
 	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
-	// Construct XCMs to create an agent for para 1001
+	// Construct XCM to create an agent for para 1001
 	let remote_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(origin_para))),
@@ -117,7 +117,7 @@ fn create_channel() {
 		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
 	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
-	// Construct XCMs to create an agent for para 1001
+	// Construct XCM to create an agent for para 1001
 	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(origin_para))),
@@ -130,7 +130,7 @@ fn create_channel() {
 
 	let create_channel_call =
 		SnowbridgeControl::Control(ControlCall::CreateChannel { mode: OperatingMode::Normal });
-	// Construct XCMs to create a channel for para 1001
+	// Construct XCM to create a channel for para 1001
 	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(origin_para))),
