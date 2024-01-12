@@ -500,7 +500,6 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub const CreateAssetCall: [u8;2] = [53, 0];
 	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
 	pub const InboundQueuePalletInstance: u8 = parachains_common::rococo::snowbridge::INBOUND_QUEUE_PALLET_INDEX;
 	pub Parameters: PricingParameters<u128> = PricingParameters {
@@ -560,13 +559,8 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 	type GatewayAddress = EthereumGatewayAddress;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
-	type MessageConverter = MessageToXcm<
-		CreateAssetCall,
-		CreateAssetDeposit,
-		InboundQueuePalletInstance,
-		AccountId,
-		Balance,
-	>;
+	type MessageConverter =
+		MessageToXcm<CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type MaxMessageSize = ConstU32<2048>;
