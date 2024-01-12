@@ -53,14 +53,14 @@ pub enum SnowbridgeControl {
 #[test]
 fn create_agent() {
 	let origin_para: u32 = 1001;
-	// Fund AssetHub sovereign account so that it can pay execution fees.
+	// Fund the origin parachain sovereign account so that it can pay execution fees.
 	BridgeHubRococo::fund_para_sovereign(origin_para.into(), INITIAL_FUND);
 
 	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
 	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
 	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
-	// Create Agent XCM call
+	// Construct XCMs to create an agent for para 1001
 	let remote_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(origin_para))),
@@ -92,7 +92,7 @@ fn create_agent() {
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-		// Check that the Agent was created
+		// Check that a message was sent to Ethereum to create the agent
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
@@ -104,7 +104,8 @@ fn create_agent() {
 	});
 }
 
-/// Create a channel for an agent. A channel is like a lane, specifically used by one agent.
+/// Create a channel for a consensus system. A channel is a bidirectional messaging channel
+/// between BridgeHub and Ethereum.
 #[test]
 fn create_channel() {
 	let origin_para: u32 = 1001;
@@ -116,7 +117,7 @@ fn create_channel() {
 		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
 	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
-	// Create Channel XCM call
+	// Construct XCMs to create an agent for para 1001
 	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(origin_para))),
@@ -129,7 +130,7 @@ fn create_channel() {
 
 	let create_channel_call =
 		SnowbridgeControl::Control(ControlCall::CreateChannel { mode: OperatingMode::Normal });
-
+	// Construct XCMs to create a channel for para 1001
 	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(X1(Parachain(origin_para))),
@@ -253,7 +254,7 @@ fn send_token_from_ethereum_to_penpal() {
 			.unwrap();
 	AssetHubRococo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
 
-	// Create asset on AssetHub, since that is where the asset reserve is located (u
+	// Create asset on AssetHub, since that is where the asset reserve is located
 	AssetHubRococo::execute_with(|| {
 		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::create(
 			pallet_xcm::Origin::Xcm(origin_location).into(),
