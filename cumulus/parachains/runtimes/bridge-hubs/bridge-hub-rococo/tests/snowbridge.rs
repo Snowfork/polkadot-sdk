@@ -27,7 +27,7 @@ use codec::{Encode, Decode};
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
 use frame_support::parameter_types;
 use parachains_common::{AccountId, AuraId, Balance};
-use snowbridge_pallet_ethereum_client::WeightInfo;
+use snowbridge_pallet_ethereum_client::{ExecutionHeaderBuffer, WeightInfo};
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
 use sp_runtime::{
@@ -117,8 +117,17 @@ fn max_message_queue_service_weight_is_more_than_beacon_extrinsic_weights() {
 }
 
 #[test]
-fn ethereum_client_extrinsics() {
+fn ethereum_client_consensus_extrinsics_work() {
 	snowbridge_runtime_test_common::ethereum_extrinsic(
+		collator_session_keys(),
+		1013,
+		construct_and_apply_extrinsic,
+	);
+}
+
+#[test]
+fn ethereum_to_polkadot_message_extrinsics_work() {
+	snowbridge_runtime_test_common::ethereum_to_polkadot_message_extrinsics_work(
 		collator_session_keys(),
 		1013,
 		construct_and_apply_extrinsic,
