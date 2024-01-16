@@ -17,13 +17,14 @@ use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
-use snowbridge_core::outbound::OperatingMode;
 use parachains_common::rococo::snowbridge::EthereumNetwork;
+use snowbridge_core::outbound::OperatingMode;
+use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
 	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
 };
-use snowbridge_pallet_system;
 use sp_core::H256;
+use sp_runtime::{ArithmeticError::Underflow, DispatchError::Arithmetic};
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 const CHAIN_ID: u64 = 11155111;
@@ -190,6 +191,11 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
+		assert_ok!(EthereumInboundQueue::refund_relayer(
+			AssetHubRococo::para_id(),
+			AssetHubRococoReceiver::get(),
+			message.encode().len() as u32,
+		));
 		let (xcm, fee) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 
 		assert_ok!(EthereumInboundQueue::burn_fees(AssetHubRococo::para_id().into(), fee));
@@ -338,6 +344,11 @@ fn send_token_from_ethereum_to_asset_hub() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
+		assert_ok!(EthereumInboundQueue::refund_relayer(
+			AssetHubRococo::para_id(),
+			AssetHubRococoReceiver::get(),
+			message.encode().len() as u32,
+		));
 		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 		let message = VersionedMessage::V1(MessageV1 {
@@ -503,6 +514,127 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 					if *who == assethub_sovereign && *amount == 2680000000000,
 			)),
 			"AssetHub sovereign takes remote fee."
+		);
+	});
+}
+
+#[test]
+fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
+	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
+
+	let message_id_: H256 = [1; 32].into();
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type EthereumInboundQueue =
+			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			// Insufficient fee
+			command: Command::RegisterToken { token: WETH.into(), fee: 1_000 },
+		});
+		let (xcm, fee) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+
+		assert_ok!(EthereumInboundQueue::burn_fees(AssetHubRococo::para_id().into(), fee));
+
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:false, .. }) => {},
+			]
+		);
+	});
+}
+
+#[test]
+fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
+	// Insufficient fund
+	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), 1_000);
+
+	BridgeHubRococo::execute_with(|| {
+		type EthereumInboundQueue =
+			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
+		});
+		assert_err!(
+			EthereumInboundQueue::refund_relayer(
+				AssetHubRococo::para_id(),
+				AssetHubRococoReceiver::get(),
+				message.encode().len() as u32,
+			),
+			Arithmetic(Underflow)
+		);
+	});
+}
+
+#[test]
+fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fee() {
+	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
+
+	// Fund ethereum sovereign in asset hub
+	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
+
+	let message_id_: H256 = [1; 32].into();
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type EthereumInboundQueue =
+			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
+		});
+		assert_ok!(EthereumInboundQueue::refund_relayer(
+			AssetHubRococo::para_id(),
+			AssetHubRococoReceiver::get(),
+			message.encode().len() as u32,
+		));
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendToken {
+				token: WETH.into(),
+				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
+				amount: 1_000_000_000,
+				// Insufficient fee
+				fee: 1_000,
+			},
+		});
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:false, .. }) => {},
+			]
 		);
 	});
 }
