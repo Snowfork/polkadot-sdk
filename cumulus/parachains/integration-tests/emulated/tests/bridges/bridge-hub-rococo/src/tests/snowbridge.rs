@@ -203,7 +203,7 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 			AssetHubRococoReceiver::get(),
 			message.encode().len() as u32,
 		));
-		let (xcm, fee) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, fee) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 
 		assert_ok!(EthereumInboundQueue::burn_fees(AssetHubRococo::para_id().into(), fee));
 
@@ -243,7 +243,7 @@ fn send_token_from_ethereum_to_penpal() {
 	// Fund PenPal sender and receiver
 	PenpalA::fund_accounts(vec![
 		(PenpalAReceiver::get(), INITIAL_FUND), // for receiving the sent asset on PenPal
-		(PenpalASender::get(), INITIAL_FUND), // for creating the asset on PenPal
+		(PenpalASender::get(), INITIAL_FUND),   // for creating the asset on PenPal
 	]);
 
 	// The Weth asset location, identified by the contract address on Ethereum
@@ -368,7 +368,7 @@ fn send_token_from_ethereum_to_asset_hub() {
 			AssetHubRococoReceiver::get(),
 			message.encode().len() as u32,
 		));
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
 		// Construct SendToken message
@@ -448,7 +448,8 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
 		// Converts the versioned message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_register_token, message).unwrap();
+		let (xcm, _) =
+			EthereumInboundQueue::do_convert(message_id_register_token, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
 		// Check that the register token message was sent using xcm
