@@ -500,8 +500,6 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub const CreateAssetCall: [u8;2] = [53, 0];
-	pub const CreateAssetDeposit: u128 = (UNITS / 10) + EXISTENTIAL_DEPOSIT;
 	pub const InboundQueuePalletInstance: u8 = parachains_common::rococo::snowbridge::INBOUND_QUEUE_PALLET_INDEX;
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
@@ -561,8 +559,7 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = Runtime;
 	type MessageConverter = MessageToXcm<
-		CreateAssetCall,
-		CreateAssetDeposit,
+		parachains_common::rococo::snowbridge::CreateAssetCall,
 		InboundQueuePalletInstance,
 		AccountId,
 		Balance,

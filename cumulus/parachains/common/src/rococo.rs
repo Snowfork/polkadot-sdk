@@ -119,7 +119,9 @@ pub mod consensus {
 }
 
 pub mod snowbridge {
-	use frame_support::parameter_types;
+	use crate::rococo::currency::{EXISTENTIAL_DEPOSIT, UNITS};
+	use frame_support::{parameter_types, weights::Weight};
+	use snowbridge_router_primitives::inbound::CreateAssetCallInfo;
 	use xcm::opaque::lts::NetworkId;
 
 	/// The pallet index of the Ethereum inbound queue pallet in the bridge hub runtime.
@@ -128,5 +130,11 @@ pub mod snowbridge {
 	parameter_types! {
 		/// Network and location for the Ethereum chain.
 		pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
+		pub const CreateAssetCall: CreateAssetCallInfo = CreateAssetCallInfo {
+			call_index: [53,0],
+			asset_deposit: (UNITS / 10) + EXISTENTIAL_DEPOSIT,
+			min_balance: 1,
+			transact_weight_at_most: Weight::from_parts(400_000_000, 8_000)
+		};
 	}
 }
