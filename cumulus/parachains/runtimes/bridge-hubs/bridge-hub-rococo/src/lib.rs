@@ -532,10 +532,10 @@ pub mod benchmark_helpers {
 		type Ticket = Xcm<()>;
 
 		fn validate(
-			_dest: &mut Option<MultiLocation>,
+			_dest: &mut Option<Location>,
 			xcm: &mut Option<Xcm<()>>,
 		) -> SendResult<Self::Ticket> {
-			Ok((xcm.clone().unwrap(), MultiAssets::new()))
+			Ok((xcm.clone().unwrap(), Assets::new()))
 		}
 		fn deliver(xcm: Xcm<()>) -> Result<XcmHash, SendError> {
 			let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
@@ -544,7 +544,7 @@ pub mod benchmark_helpers {
 	}
 
 	impl snowbridge_pallet_system::BenchmarkHelper<RuntimeOrigin> for () {
-		fn make_xcm_origin(location: MultiLocation) -> RuntimeOrigin {
+		fn make_xcm_origin(location: Location) -> RuntimeOrigin {
 			RuntimeOrigin::from(pallet_xcm::Origin::Xcm(location))
 		}
 	}
