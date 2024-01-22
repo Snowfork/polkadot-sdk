@@ -6395,7 +6395,7 @@ checksum = "848e9c511092e0daa0a35a63e8e6e475a3e8f870741448b9f6028d69b142f18e"
 dependencies = [
  "arbitrary",
  "lazy_static",
- "memmap2",
+ "memmap2 0.5.10",
  "rustc_version 0.4.0",
 ]
 
@@ -7999,6 +7999,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "memmap2"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45fd3a57831bf88bc63f8cebc0cf956116276e97fef3966103e96416209f7c92"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "memoffset"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9594,7 +9603,7 @@ dependencies = [
  "sp-tracing 10.0.0",
  "staging-xcm",
  "staging-xcm-builder",
- "wasm-instrument 0.4.0",
+ "wasm-instrument",
  "wasmi",
  "wat",
 ]
@@ -11427,7 +11436,7 @@ dependencies = [
  "libc",
  "log",
  "lz4",
- "memmap2",
+ "memmap2 0.5.10",
  "parking_lot 0.12.1",
  "rand 0.8.5",
  "siphasher",
@@ -15426,7 +15435,7 @@ dependencies = [
  "array-bytes 6.1.0",
  "docify",
  "log",
- "memmap2",
+ "memmap2 0.9.3",
  "parity-scale-codec",
  "sc-chain-spec-derive",
  "sc-client-api",
@@ -15972,7 +15981,7 @@ dependencies = [
  "sp-maybe-compressed-blob",
  "sp-wasm-interface 14.0.0",
  "thiserror",
- "wasm-instrument 0.3.0",
+ "wasm-instrument",
 ]
 
 [[package]]
@@ -19752,7 +19761,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "167a4ffd7c35c143fd1030aa3c2caf76ba42220bd5a6b5f4781896434723b8c3"
 dependencies = [
  "debugid",
- "memmap2",
+ "memmap2 0.5.10",
  "stable_deref_trait",
  "uuid",
 ]
@@ -21047,15 +21056,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41763f20eafed1399fff1afb466496d3a959f58241436cfdc17e3f5ca954de16"
 dependencies = [
  "leb128",
-]
-
-[[package]]
-name = "wasm-instrument"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa1dafb3e60065305741e83db35c6c2584bb3725b692b5b66148a38d72ace6cd"
-dependencies = [
- "parity-wasm",
 ]
 
 [[package]]
