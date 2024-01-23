@@ -50,4 +50,5 @@ snowbridge-core = { path = "../../../../../../../../parachain/primitives/core", 
 snowbridge-router-primitives = { path = "../../../../../../../../parachain/primitives/router", default-features = false }
 snowbridge-pallet-system = { path = "../../../../../../../../parachain/pallets/system", default-features = false }
 snowbridge-pallet-outbound-queue = { path = "../../../../../../../../parachain/pallets/outbound-queue", default-features = false }
-snowbridge-pallet-inbound-queue = { path = "../../../../../../../../parachain/pallets/inbound-queue", features = ["test-helpers"] }
+snowbridge-pallet-inbound-queue = { path = "../../../../../../../../parachain/pallets/inbound-queue", default-features = false }
+snowbridge-pallet-inbound-queue-fixtures = { path = "../../../../../../../../parachain/pallets/inbound-queue/fixtures" }

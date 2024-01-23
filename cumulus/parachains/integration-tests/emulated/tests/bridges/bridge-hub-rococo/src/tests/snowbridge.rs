@@ -21,7 +21,7 @@ use hex_literal::hex;
 use parachains_common::rococo::snowbridge::EthereumNetwork;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::outbound::OperatingMode;
-use snowbridge_pallet_inbound_queue::fixtures::make_create_message;
+use snowbridge_pallet_inbound_queue_fixtures::make_register_asset_message;
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
 	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
@@ -190,15 +190,13 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 	// Fund AssetHub sovereign account so that it can pay execution fees.
 	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
 
-	let message_id: H256 = [1; 32].into();
-
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 		type RuntimeOrigin = <BridgeHubRococo as Chain>::RuntimeOrigin;
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
 
-		let create_message = make_create_message();
+		let create_message = make_register_asset_message();
 
 		EthereumBeaconClient::store_execution_header(
 			create_message.message.proof.block_hash,
@@ -446,7 +444,8 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
 		// Converts the versioned message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_register_token, message).unwrap();
+		let (xcm, _) =
+			EthereumInboundQueue::do_convert(message_id_register_token, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
 		// Check that the register token message was sent using xcm
