@@ -17680,7 +17680,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-core",
- "sp-crypto-hashing",
  "sp-runtime",
 ]
 
