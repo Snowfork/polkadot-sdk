@@ -197,7 +197,7 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 			chain_id: CHAIN_ID,
 			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
-		let (xcm, fee) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
+		let (xcm, fee) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 
 		assert_ok!(EthereumInboundQueue::burn_fees(AssetHubRococo::para_id().into(), fee));
 
@@ -280,7 +280,7 @@ fn send_token_from_ethereum_to_penpal() {
 		assert!(<PenpalA as PenpalAPallet>::ForeignAssets::asset_exists(weth_asset_id));
 	});
 
-	let message_id_: H256 = [1; 32].into();
+	let message_id: H256 = [1; 32].into();
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
