@@ -17716,6 +17716,7 @@ dependencies = [
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "snowbridge-ethereum",
+ "snowbridge-pallet-ethereum-client-fixtures",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -17723,6 +17724,20 @@ dependencies = [
  "ssz_rs",
  "ssz_rs_derive",
  "static_assertions",
+]
+
+[[package]]
+name = "snowbridge-pallet-ethereum-client-fixtures"
+version = "0.9.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "snowbridge-beacon-primitives",
+ "snowbridge-core",
+ "sp-core",
+ "sp-std 8.0.0",
 ]
 
 [[package]]
@@ -17828,8 +17843,10 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "parity-scale-codec",
  "snowbridge-core",
  "sp-arithmetic",
+ "sp-std 8.0.0",
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
@@ -17883,6 +17900,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-pallet-ethereum-client",
+ "snowbridge-pallet-ethereum-client-fixtures",
  "snowbridge-pallet-inbound-queue",
  "snowbridge-pallet-outbound-queue",
  "snowbridge-pallet-system",
