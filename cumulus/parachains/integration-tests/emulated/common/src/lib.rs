@@ -32,7 +32,6 @@ use sp_runtime::{
 // Polakdot
 use parachains_common::BlockNumber;
 use polkadot_runtime_parachains::configuration::HostConfiguration;
-use xcm;
 
 // Cumulus
 use parachains_common::{AccountId, AssetHubPolkadotAuraId, AuraId};
@@ -41,6 +40,7 @@ use polkadot_service::chain_spec::get_authority_keys_from_seed_no_beefy;
 
 pub const XCM_V2: u32 = 2;
 pub const XCM_V3: u32 = 3;
+pub const XCM_V4: u32 = 4;
 pub const REF_TIME_THRESHOLD: u64 = 33;
 pub const PROOF_SIZE_THRESHOLD: u64 = 33;
 
@@ -100,7 +100,7 @@ pub mod accounts {
 	pub const CHARLIE: &str = "Charlie";
 	pub const DAVE: &str = "Dave";
 	pub const EVE: &str = "Eve";
-	pub const FERDIE: &str = "Ferdei";
+	pub const FERDIE: &str = "Ferdie";
 	pub const ALICE_STASH: &str = "Alice//stash";
 	pub const BOB_STASH: &str = "Bob//stash";
 	pub const CHARLIE_STASH: &str = "Charlie//stash";

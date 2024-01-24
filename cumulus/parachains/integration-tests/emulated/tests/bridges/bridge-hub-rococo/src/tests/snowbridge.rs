@@ -13,12 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::*;
+use bridge_hub_rococo_runtime::EthereumBeaconClient;
 use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use parachains_common::rococo::snowbridge::EthereumNetwork;
+use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::outbound::OperatingMode;
+use snowbridge_pallet_inbound_queue_fixtures::{
+	register_token::make_register_token_message, send_token::make_send_token_message,
+};
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
 	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
@@ -64,7 +69,7 @@ fn create_agent() {
 	// Construct XCM to create an agent for para 1001
 	let remote_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		DescendOrigin(X1(Parachain(origin_para))),
+		DescendOrigin(Parachain(origin_para).into()),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
@@ -114,14 +119,14 @@ fn create_channel() {
 	BridgeHubRococo::fund_para_sovereign(origin_para.into(), INITIAL_FUND);
 
 	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
-	let destination: VersionedMultiLocation =
+	let destination: VersionedLocation =
 		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
 	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
 	// Construct XCM to create an agent for para 1001
 	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		DescendOrigin(X1(Parachain(origin_para))),
+		DescendOrigin(Parachain(origin_para).into()),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
@@ -134,7 +139,7 @@ fn create_channel() {
 	// Construct XCM to create a channel for para 1001
 	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		DescendOrigin(X1(Parachain(origin_para))),
+		DescendOrigin(Parachain(origin_para).into()),
 		Transact {
 			require_weight_at_most: 3000000000.into(),
 			origin_kind: OriginKind::Xcm,
@@ -188,26 +193,26 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 	// Fund AssetHub sovereign account so that it can pay execution fees.
 	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
 
-	let message_id: H256 = [1; 32].into();
-
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <BridgeHubRococo as Chain>::RuntimeOrigin;
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
-		});
-		assert_ok!(EthereumInboundQueue::refund_relayer(
-			AssetHubRococo::para_id(),
-			AssetHubRococoReceiver::get(),
-			message.encode().len() as u32,
-		));
-		let (xcm, fee) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 
-		assert_ok!(EthereumInboundQueue::burn_fees(AssetHubRococo::para_id().into(), fee));
+		let register_asset_message = make_register_token_message();
 
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+		EthereumBeaconClient::store_execution_header(
+			register_asset_message.message.proof.block_hash,
+			register_asset_message.execution_header,
+			0,
+			H256::default(),
+		);
+
+		EthereumInboundQueue::submit(
+			RuntimeOrigin::signed(BridgeHubRococoSender::get()),
+			register_asset_message.message,
+		)
+		.unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
@@ -233,24 +238,24 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 /// still located on AssetHub.
 #[test]
 fn send_token_from_ethereum_to_penpal() {
-	let asset_hub_sovereign = BridgeHubRococo::sovereign_account_id_of(MultiLocation {
-		parents: 1,
-		interior: X1(Parachain(AssetHubRococo::para_id().into())),
-	});
+	let asset_hub_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
+		1,
+		[Parachain(AssetHubRococo::para_id().into())],
+	));
 	// Fund AssetHub sovereign account so it can pay execution fees for the asset transfer
 	BridgeHubRococo::fund_accounts(vec![(asset_hub_sovereign.clone(), INITIAL_FUND)]);
 
 	// Fund PenPal sender and receiver
 	PenpalA::fund_accounts(vec![
-		(PenpalAReceiver::get(), INITIAL_FUND), // for receiving the sent asset on PenPal
-		(PenpalASender::get(), INITIAL_FUND),   // for creating the asset on PenPal
+		(PenpalAReceiver::get(), INITIAL_FUND),
+		(PenpalASender::get(), INITIAL_FUND),
 	]);
 
 	// The Weth asset location, identified by the contract address on Ethereum
-	let weth_asset_location: MultiLocation =
+	let weth_asset_location: Location =
 		(Parent, Parent, EthereumNetwork::get(), AccountKey20 { network: None, key: WETH }).into();
 	// Converts the Weth asset location into an asset ID
-	let weth_asset_id = weth_asset_location.into();
+	let weth_asset_id: v3::Location = weth_asset_location.try_into().unwrap();
 
 	let origin_location = (Parent, Parent, EthereumNetwork::get()).into();
 
@@ -352,39 +357,42 @@ fn send_token_from_ethereum_to_asset_hub() {
 	// Fund ethereum sovereign on AssetHub
 	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
 
-	let message_id: H256 = [1; 32].into();
-
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <BridgeHubRococo as Chain>::RuntimeOrigin;
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
-		// Construct RegisterToken message
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
-		});
-		assert_ok!(EthereumInboundQueue::refund_relayer(
-			AssetHubRococo::para_id(),
-			AssetHubRococoReceiver::get(),
-			message.encode().len() as u32,
-		));
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		let register_asset_message = make_register_token_message();
+
+		EthereumBeaconClient::store_execution_header(
+			register_asset_message.message.proof.block_hash,
+			register_asset_message.execution_header,
+			0,
+			H256::default(),
+		);
+
+		EthereumInboundQueue::submit(
+			RuntimeOrigin::signed(BridgeHubRococoSender::get()),
+			register_asset_message.message,
+		)
+		.unwrap();
 
 		// Construct SendToken message
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::SendToken {
-				token: WETH.into(),
-				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
-				amount: 1_000_000_000,
-				fee: XCM_FEE,
-			},
-		});
-		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
-		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+		let send_token_message = make_send_token_message();
+
+		EthereumBeaconClient::store_execution_header(
+			send_token_message.message.proof.block_hash,
+			send_token_message.execution_header,
+			0,
+			H256::default(),
+		);
+
+		EthereumInboundQueue::submit(
+			RuntimeOrigin::signed(BridgeHubRococoSender::get()),
+			send_token_message.message,
+		)
+		.unwrap();
 
 		// Check that the message was sent
 		assert_expected_events!(
@@ -415,18 +423,15 @@ fn send_token_from_ethereum_to_asset_hub() {
 #[test]
 fn send_weth_asset_from_asset_hub_to_ethereum() {
 	use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubEthereumBaseFee;
-	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(MultiLocation {
-		parents: 1,
-		interior: X1(Parachain(AssetHubRococo::para_id().into())),
-	});
+	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
+		1,
+		[Parachain(AssetHubRococo::para_id().into())],
+	));
 
 	AssetHubRococo::force_default_xcm_version(Some(XCM_VERSION));
 	BridgeHubRococo::force_default_xcm_version(Some(XCM_VERSION));
 	AssetHubRococo::force_xcm_version(
-		MultiLocation {
-			parents: 2,
-			interior: X1(GlobalConsensus(Ethereum { chain_id: CHAIN_ID })),
-		},
+		Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]),
 		XCM_VERSION,
 	);
 
@@ -494,27 +499,27 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
 			]
 		);
-		let assets = vec![MultiAsset {
-			id: Concrete(MultiLocation {
-				parents: 2,
-				interior: X2(
+		let assets = vec![Asset {
+			id: AssetId(Location::new(
+				2,
+				[
 					GlobalConsensus(Ethereum { chain_id: CHAIN_ID }),
 					AccountKey20 { network: None, key: WETH },
-				),
-			}),
+				],
+			)),
 			fun: Fungible(WETH_AMOUNT),
 		}];
-		let multi_assets = VersionedMultiAssets::V3(MultiAssets::from(assets));
+		let multi_assets = VersionedAssets::V4(Assets::from(assets));
 
-		let destination = VersionedMultiLocation::V3(MultiLocation {
-			parents: 2,
-			interior: X1(GlobalConsensus(Ethereum { chain_id: CHAIN_ID })),
-		});
+		let destination = VersionedLocation::V4(Location::new(
+			2,
+			[GlobalConsensus(Ethereum { chain_id: CHAIN_ID })],
+		));
 
-		let beneficiary = VersionedMultiLocation::V3(MultiLocation {
-			parents: 0,
-			interior: X1(AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }),
-		});
+		let beneficiary = VersionedLocation::V4(Location::new(
+			0,
+			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
+		));
 
 		let free_balance_before = <AssetHubRococo as AssetHubRococoPallet>::Balances::free_balance(
 			AssetHubRococoReceiver::get(),
