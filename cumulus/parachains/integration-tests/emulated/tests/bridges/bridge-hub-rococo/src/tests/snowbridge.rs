@@ -22,7 +22,7 @@ use parachains_common::rococo::snowbridge::EthereumNetwork;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::outbound::OperatingMode;
 use snowbridge_pallet_inbound_queue_fixtures::{
-	register_asset::make_register_asset_message, send_token::make_send_token_message,
+	register_token::make_register_token_message, send_token::make_send_token_message,
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
@@ -198,7 +198,7 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
 
-		let register_asset_message = make_register_asset_message();
+		let register_asset_message = make_register_token_message();
 
 		EthereumBeaconClient::store_execution_header(
 			register_asset_message.message.proof.block_hash,
@@ -362,7 +362,7 @@ fn send_token_from_ethereum_to_asset_hub() {
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
 
-		let register_asset_message = make_register_asset_message();
+		let register_asset_message = make_register_token_message();
 
 		EthereumBeaconClient::store_execution_header(
 			register_asset_message.message.proof.block_hash,
