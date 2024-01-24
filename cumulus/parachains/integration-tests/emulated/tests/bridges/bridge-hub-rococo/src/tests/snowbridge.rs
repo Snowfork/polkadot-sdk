@@ -21,7 +21,7 @@ use hex_literal::hex;
 use parachains_common::rococo::snowbridge::EthereumNetwork;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::outbound::OperatingMode;
-use snowbridge_pallet_inbound_queue_fixtures::make_register_asset_message;
+use snowbridge_pallet_inbound_queue_fixtures::register_asset::make_register_asset_message;
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
 	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
@@ -196,18 +196,18 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
 
-		let create_message = make_register_asset_message();
+		let register_asset_message = make_register_asset_message();
 
 		EthereumBeaconClient::store_execution_header(
-			create_message.message.proof.block_hash,
-			create_message.execution_header,
+			register_asset_message.message.proof.block_hash,
+			register_asset_message.execution_header,
 			0,
 			H256::default(),
 		);
 
 		EthereumInboundQueue::submit(
 			RuntimeOrigin::signed(BridgeHubRococoSender::get()),
-			create_message.message,
+			register_asset_message.message,
 		)
 		.unwrap();
 
@@ -358,17 +358,24 @@ fn send_token_from_ethereum_to_asset_hub() {
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <BridgeHubRococo as Chain>::RuntimeOrigin;
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
-		// Construct RegisterToken message
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
-		});
-		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
-		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		let register_asset_message = make_register_asset_message();
+
+		EthereumBeaconClient::store_execution_header(
+			register_asset_message.message.proof.block_hash,
+			register_asset_message.execution_header,
+			0,
+			H256::default(),
+		);
+
+		EthereumInboundQueue::submit(
+			RuntimeOrigin::signed(BridgeHubRococoSender::get()),
+			register_asset_message.message,
+		)
+		.unwrap();
 
 		// Construct SendToken message
 		let message = VersionedMessage::V1(MessageV1 {
