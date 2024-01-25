@@ -232,7 +232,7 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
 		});
 		let delivery_fee = EthereumInboundQueue::calculate_delivery_cost(
-			register_token_message.encode().len() as u32,
+			register_token_message.message.encode().len() as u32,
 		);
 		let (_, xcm_fee) = EthereumInboundQueue::do_convert([1; 32].into(), message).unwrap();
 		let total_fee = delivery_fee + xcm_fee;
