@@ -20,7 +20,7 @@ use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use parachains_common::rococo::snowbridge::EthereumNetwork;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
-use snowbridge_core::outbound::OperatingMode;
+use snowbridge_core::{derive_channel_id_for_sibling, outbound::OperatingMode, ChannelId};
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message, send_token::make_send_token_message,
 	InboundQueueFixture,
@@ -212,9 +212,12 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type Runtime = <BridgeHubRococo as Chain>::Runtime;
+		type Balances = <BridgeHubRococo as BridgeHubRococoPallet>::Balances;
 
 		// Construct RegisterToken message and sent to inbound queue
-		send_inbound_message(make_register_token_message()).unwrap();
+		let register_token_message = make_register_token_message();
+		send_inbound_message(register_token_message.clone()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
@@ -222,6 +225,29 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
 			]
 		);
+
+		// Assert fees charged from sovereign account of AH as expected
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
+		});
+		let delivery_fee = EthereumInboundQueue::calculate_delivery_cost(
+			register_token_message.encode().len() as u32,
+		);
+		let (_, xcm_fee) = EthereumInboundQueue::do_convert([1; 32].into(), message).unwrap();
+		let total_fee = delivery_fee + xcm_fee;
+		let asset_hub_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
+			1,
+			[Parachain(AssetHubRococo::para_id().into())],
+		));
+		let free_balance_after = Balances::free_balance(asset_hub_sovereign);
+		let diff = INITIAL_FUND - free_balance_after;
+		assert_eq!(diff >= total_fee, true);
+
+		// Assert nonce incremented
+		let channel_id: ChannelId = derive_channel_id_for_sibling(AssetHubRococo::para_id());
+		let nonce = snowbridge_pallet_inbound_queue::Nonce::<Runtime>::get(channel_id);
+		assert_eq!(nonce, 1);
 	});
 
 	AssetHubRococo::execute_with(|| {
@@ -533,8 +559,7 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-		type EthereumInboundQueue =
-			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			// Insufficient fee
@@ -585,8 +610,7 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fee() {
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-		type EthereumInboundQueue =
-			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+
 		// Construct RegisterToken message and sent to inbound queue
 		send_inbound_message(make_register_token_message()).unwrap();
 
