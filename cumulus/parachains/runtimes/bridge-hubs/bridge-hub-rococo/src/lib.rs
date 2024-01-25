@@ -592,7 +592,7 @@ impl snowbridge_pallet_outbound_queue::Config for Runtime {
 	type Channels = EthereumSystem;
 }
 
-#[cfg(any(test, feature = "fast-runtime", feature = "runtime-benchmarks"))]
+#[cfg(any(feature = "std", feature = "fast-runtime", feature = "runtime-benchmarks", test))]
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
 		genesis: Fork {
@@ -618,7 +618,7 @@ parameter_types! {
 	};
 }
 
-#[cfg(all(not(test), not(feature = "fast-runtime"), not(feature = "runtime-benchmarks")))]
+#[cfg(not(any(feature = "std", feature = "fast-runtime", feature = "runtime-benchmarks", test)))]
 parameter_types! {
 	pub const ChainForkVersions: ForkVersions = ForkVersions {
 		genesis: Fork {
