@@ -18,16 +18,17 @@
 
 use bp_polkadot_core::Signature;
 use bridge_hub_rococo_runtime::{
-	xcm_config::XcmConfig, Executive, MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent,
-	SessionKeys, SignedExtra, UncheckedExtrinsic, BridgeRejectObsoleteHeadersAndMessages
+	bridge_to_bulletin_config::OnBridgeHubRococoRefundRococoBulletinMessages,
+	bridge_to_westend_config::OnBridgeHubRococoRefundBridgeHubWestendMessages,
+	xcm_config::XcmConfig, AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages,
+	Executive, MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, SessionKeys,
+	SignedExtra, UncheckedExtrinsic,
 };
-use bridge_hub_rococo_runtime::bridge_to_westend_config::OnBridgeHubRococoRefundBridgeHubWestendMessages;
-use bridge_hub_rococo_runtime::bridge_to_bulletin_config::OnBridgeHubRococoRefundRococoBulletinMessages;
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
 use frame_support::parameter_types;
 use parachains_common::{AccountId, AuraId, Balance};
-use snowbridge_pallet_ethereum_client::{ExecutionHeaderBuffer, WeightInfo};
+use snowbridge_pallet_ethereum_client::WeightInfo;
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
 use sp_runtime::{
@@ -49,7 +50,11 @@ fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime
 
 #[test]
 pub fn transfer_token_to_ethereum_works() {
-	snowbridge_runtime_test_common::send_transfer_token_message_success::<Runtime, XcmConfig>(
+	snowbridge_runtime_test_common::send_transfer_token_message_success::<
+		Runtime,
+		XcmConfig,
+		AllPalletsWithoutSystem,
+	>(
 		collator_session_keys(),
 		1013,
 		1000,
