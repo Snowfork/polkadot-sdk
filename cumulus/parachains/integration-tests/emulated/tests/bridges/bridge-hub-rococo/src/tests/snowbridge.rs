@@ -411,12 +411,9 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
 
 	const WETH_AMOUNT: u128 = 1_000_000_000;
-	let message_id_send_token: H256 = [2; 32].into();
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-		type EthereumInboundQueue =
-			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
 
 		// Construct RegisterToken message and sent to inbound queue
 		send_inbound_message(make_register_token_message()).unwrap();
@@ -429,19 +426,8 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			]
 		);
 
-		// Send ERC-20 token to AssetHub
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::SendToken {
-				token: WETH.into(),
-				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
-				amount: WETH_AMOUNT,
-				fee: XCM_FEE,
-			},
-		});
-		// Converts the versioned message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_send_token, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+		// Construct SendToken message and sent to inbound queue
+		send_inbound_message(make_send_token_message()).unwrap();
 
 		// Check that the send token message was sent using xcm
 		assert_expected_events!(
@@ -552,9 +538,7 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 			// Insufficient fee
 			command: Command::RegisterToken { token: WETH.into(), fee: 1_000 },
 		});
-		let (xcm, fee) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
-
-		assert_ok!(EthereumInboundQueue::burn_fees(AssetHubRococo::para_id().into(), fee));
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
 
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
@@ -601,17 +585,9 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fee() {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
-		});
-		assert_ok!(EthereumInboundQueue::refund_relayer(
-			AssetHubRococo::para_id(),
-			AssetHubRococoReceiver::get(),
-			message.encode().len() as u32,
-		));
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id_, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+		// Construct RegisterToken message and sent to inbound queue
+		send_inbound_message(make_register_token_message()).unwrap();
+
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::SendToken {
