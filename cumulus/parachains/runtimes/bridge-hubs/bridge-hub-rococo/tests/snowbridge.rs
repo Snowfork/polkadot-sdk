@@ -20,9 +20,9 @@ use bp_polkadot_core::Signature;
 use bridge_hub_rococo_runtime::{
 	bridge_to_bulletin_config::OnBridgeHubRococoRefundRococoBulletinMessages,
 	bridge_to_westend_config::OnBridgeHubRococoRefundBridgeHubWestendMessages,
-	xcm_config::XcmConfig, AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages,
-	Executive, MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, SessionKeys,
-	SignedExtra, UncheckedExtrinsic,
+	xcm_config::XcmConfig, BridgeRejectObsoleteHeadersAndMessages, Executive,
+	MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra,
+	UncheckedExtrinsic,
 };
 use codec::{Decode, Encode};
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
@@ -50,11 +50,7 @@ fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime
 
 #[test]
 pub fn transfer_token_to_ethereum_works() {
-	snowbridge_runtime_test_common::send_transfer_token_message_success::<
-		Runtime,
-		XcmConfig,
-		AllPalletsWithoutSystem,
-	>(
+	snowbridge_runtime_test_common::send_transfer_token_message_success::<Runtime, XcmConfig>(
 		collator_session_keys(),
 		1013,
 		1000,
