@@ -34,7 +34,7 @@ use polkadot_parachain_primitives::primitives::{
 };
 use sp_consensus_aura::{SlotDuration, AURA_ENGINE_ID};
 use sp_core::{Encode, U256};
-use sp_runtime::{traits::Header, BuildStorage, Digest, DigestItem};
+use sp_runtime::{traits::Header, BuildStorage, Digest, DigestItem, SaturatedConversion};
 use xcm::{
 	latest::{Asset, Location, XcmContext, XcmHash},
 	prelude::*,
@@ -325,7 +325,7 @@ where
 
 			let parent_head = HeadData(header.encode());
 			let sproof_builder = RelayStateSproofBuilder {
-				para_id: 1013.into(),
+				para_id: <Runtime>::SelfParaId::get(),
 				included_para_head: parent_head.clone().into(),
 				..Default::default()
 			};
@@ -335,9 +335,9 @@ where
 			let inherent_data = ParachainInherentData {
 				validation_data: PersistedValidationData {
 					parent_head,
-					relay_parent_number: 10,
+					relay_parent_number: (block_number.saturated_into::<u32>() * 2 + 1).into(),
 					relay_parent_storage_root,
-					max_pov_size: 10000,
+					max_pov_size: 100_000_000,
 				},
 				relay_chain_state,
 				downward_messages: Default::default(),
