@@ -24,7 +24,8 @@ use snowbridge_core::{derive_channel_id_for_sibling, outbound::OperatingMode, Ch
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message,
 	register_token_with_insufficient_fee::make_register_token_with_infufficient_fee_message,
-	send_token::make_send_token_message, InboundQueueFixture,
+	send_token::make_send_token_message, send_token_to_penpal::make_send_token_to_penpal_message,
+	InboundQueueFixture,
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
@@ -294,20 +295,6 @@ fn send_token_from_ethereum_to_penpal() {
 			.unwrap();
 	AssetHubRococo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
 
-	// Create asset on AssetHub, since that is where the asset reserve is located
-	AssetHubRococo::execute_with(|| {
-		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::create(
-			pallet_xcm::Origin::Xcm(origin_location).into(),
-			weth_asset_id,
-			asset_hub_sovereign.clone().into(),
-			1000,
-		));
-
-		assert!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::asset_exists(
-			weth_asset_id
-		));
-	});
-
 	// Create asset on the Penpal parachain.
 	PenpalA::execute_with(|| {
 		assert_ok!(<PenpalA as PenpalAPallet>::ForeignAssets::create(
@@ -324,26 +311,12 @@ fn send_token_from_ethereum_to_penpal() {
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-		type EthereumInboundQueue =
-			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
-		// Construct SendToken message
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::SendToken {
-				token: WETH.into(),
-				destination: Destination::ForeignAccountId32 {
-					para_id: 2000,
-					id: PenpalAReceiver::get().into(),
-					fee: XCM_FEE,
-				},
-				amount: 1_000_000_000,
-				fee: XCM_FEE,
-			},
-		});
-		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
-		// Send the XCM
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		// Construct RegisterToken message and sent to inbound queue
+		send_inbound_message(make_register_token_message()).unwrap();
+
+		// Construct SendToken message and sent to inbound queue
+		send_inbound_message(make_send_token_to_penpal_message()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
