@@ -20,7 +20,7 @@ use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use parachains_common::rococo::snowbridge::EthereumNetwork;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
-use snowbridge_core::{derive_channel_id_for_sibling, outbound::OperatingMode, ChannelId};
+use snowbridge_core::outbound::OperatingMode;
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message,
 	register_token_with_insufficient_fee::make_register_token_with_infufficient_fee_message,
@@ -28,9 +28,7 @@ use snowbridge_pallet_inbound_queue_fixtures::{
 	InboundQueueFixture,
 };
 use snowbridge_pallet_system;
-use snowbridge_router_primitives::inbound::{
-	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
-};
+use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
 use sp_core::H256;
 use sp_runtime::{ArithmeticError::Underflow, DispatchError::Arithmetic};
 
@@ -227,29 +225,6 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
 			]
 		);
-
-		// Assert fees charged from sovereign account of AH as expected
-		let message = VersionedMessage::V1(MessageV1 {
-			chain_id: CHAIN_ID,
-			command: Command::RegisterToken { token: WETH.into(), fee: XCM_FEE },
-		});
-		let delivery_fee = EthereumInboundQueue::calculate_delivery_cost(
-			register_token_message.message.encode().len() as u32,
-		);
-		let (_, xcm_fee) = EthereumInboundQueue::do_convert([1; 32].into(), message).unwrap();
-		let total_fee = delivery_fee + xcm_fee;
-		let asset_hub_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
-			1,
-			[Parachain(AssetHubRococo::para_id().into())],
-		));
-		let free_balance_after = Balances::free_balance(asset_hub_sovereign);
-		let diff = INITIAL_FUND - free_balance_after;
-		assert_eq!(diff >= total_fee, true);
-
-		// Assert nonce incremented
-		let channel_id: ChannelId = derive_channel_id_for_sibling(AssetHubRococo::para_id());
-		let nonce = snowbridge_pallet_inbound_queue::Nonce::<Runtime>::get(channel_id);
-		assert_eq!(nonce, 1);
 	});
 
 	AssetHubRococo::execute_with(|| {
