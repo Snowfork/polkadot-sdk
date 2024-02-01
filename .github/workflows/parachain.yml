@@ -56,6 +56,7 @@ jobs:
           tar -I zstd -xf rust-rve-nightly-2024-01-05-x86_64-unknown-linux-gnu.tar.zst
           mv rve-nightly ~/.rustup/toolchains/
           rustup toolchain install nightly
+          rustup component add rustfmt --toolchain nightly
           rustup show
       - name: cargo check
         run: cargo check --workspace --all-features
