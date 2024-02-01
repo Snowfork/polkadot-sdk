@@ -51,7 +51,9 @@ jobs:
           registry-url: "https://npm.pkg.github.com"
           scope: "@paritytech"
       - name: setup rust toolchain
-        run: rustup show
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup show
       - name: cargo check
         run: cargo check --workspace --all-features
       - name: clippy
