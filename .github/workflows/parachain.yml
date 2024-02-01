@@ -61,10 +61,7 @@ jobs:
       - name: clippy
         run: cargo clippy --all-features -- -D warnings
       - name: format
-        run: |
-          rustup install --profile minimal $RUST_NIGHTLY_VERSION
-          rustup component add --toolchain $RUST_NIGHTLY_VERSION rustfmt
-          cargo +$RUST_NIGHTLY_VERSION fmt --check
+        run: cargo +nightly fmt --all -- --check
       - name: install taplo
         run: |
           cargo install taplo-cli --locked

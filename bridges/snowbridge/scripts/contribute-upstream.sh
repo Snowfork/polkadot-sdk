@@ -65,7 +65,7 @@ rm -rf $SNOWBRIDGE_FOLDER/.gitignore
 rm -rf $SNOWBRIDGE_FOLDER/templates
 rm -rf $SNOWBRIDGE_FOLDER/pallets/ethereum-client/fuzz
 
-cd $SNOWBRIDGE_FOLDER
+pushd $SNOWBRIDGE_FOLDER
 
 # let's test if everything we need compiles
 cargo check -p snowbridge-pallet-ethereum-client
@@ -81,16 +81,20 @@ cargo check -p snowbridge-pallet-system
 cargo check -p snowbridge-pallet-system --features runtime-benchmarks
 cargo check -p snowbridge-pallet-system --features try-runtime
 
-cd -
-
 # we're removing lock file after all checks are done. Otherwise we may use different
 # Substrate/Polkadot/Cumulus commits and our checks will fail
 rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.toml
 rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.lock
 
 # Revert Parity's Github Actions
-cd ../../..
+pushd ../../..
 
 pwd
+rm -rf .github
+git remote -v | grep -w foo || git remote add parity https://github.com/paritytech/polkadot-sdk
+git checkout parity/master -- .github
+
+popd
+popd
 
 echo "OK"
