@@ -52,8 +52,7 @@ jobs:
       - name: setup rust toolchain
         run: |
           rustup target add wasm32-unknown-unknown
-          tar --zstd -xf rust-rve-nightly-2023-04-05-aarch64-apple-darwin.tar.zst
-          mv rve-nightly ~/.rustup/toolchains/
+
           rustup show
       - name: cargo check
         run: cargo check --workspace --all-features
