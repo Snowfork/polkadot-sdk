@@ -29,7 +29,6 @@ jobs:
       RUSTFLAGS: -C debuginfo=1
       SKIP_WASM_BUILD: 1
       RUST_NIGHTLY_VERSION: nightly-2023-05-23
-      RUSTUP_TOOLCHAIN: "nightly"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -53,6 +52,8 @@ jobs:
       - name: setup rust toolchain
         run: |
           rustup target add wasm32-unknown-unknown
+          tar --zstd -xf rust-rve-nightly-2023-04-05-aarch64-apple-darwin.tar.zst
+          mv rve-nightly ~/.rustup/toolchains/
           rustup show
       - name: cargo check
         run: cargo check --workspace --all-features
