@@ -11,7 +11,7 @@ on:
   pull_request:
     paths:
       - "bridges/snowbridge/**"
-      - "!parachbridges/snowbridgeain/README.md"
+      - "!bridges/snowbridge/README.md"
       - "!bridges/snowbridge/LICENSE"
   workflow_dispatch:
 
