@@ -56,6 +56,7 @@ trap revert_to_clean_state EXIT
 SNOWBRIDGE_FOLDER="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/../.."
 
 # remove everything we think is not required for our needs
+rm -rf rust-toolchain.toml
 rm -rf $SNOWBRIDGE_FOLDER/.cargo
 rm -rf $SNOWBRIDGE_FOLDER/.config
 rm -rf $SNOWBRIDGE_FOLDER/.github
