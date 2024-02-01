@@ -29,6 +29,7 @@ jobs:
       RUSTFLAGS: -C debuginfo=1
       SKIP_WASM_BUILD: 1
       RUST_NIGHTLY_VERSION: nightly-2023-05-23
+      RUSTUP_TOOLCHAIN: "nightly"
     steps:
       - uses: actions/checkout@v2
         with:
