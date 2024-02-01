@@ -52,7 +52,8 @@ jobs:
       - name: setup rust toolchain
         run: |
           rustup target add wasm32-unknown-unknown
-
+          tar --zstd -xf rust-rve-nightly-2024-01-05-x86_64-unknown-linux-gnu.tar.zst
+          mv rve-nightly ~/.rustup/toolchains/
           rustup show
       - name: cargo check
         run: cargo check --workspace --all-features
