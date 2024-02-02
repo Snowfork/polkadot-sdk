@@ -105,7 +105,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: setup rust toolchain
-        run: rustup show
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup show
       # Increase stack limit for beacon light client tests
       - run: sudo prlimit --pid $$ --stack=32768
       # Run tests for runtime-benchmarks feature
