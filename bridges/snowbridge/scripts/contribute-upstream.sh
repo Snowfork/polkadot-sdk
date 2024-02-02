@@ -51,26 +51,25 @@ rm -rf $SNOWBRIDGE_FOLDER/pallets/ethereum-client/fuzz
 pushd $SNOWBRIDGE_FOLDER
 
 # let's test if everything we need compiles
-#cargo check -p snowbridge-pallet-ethereum-client
-#cargo check -p snowbridge-pallet-ethereum-client --features runtime-benchmarks
-#cargo check -p snowbridge-pallet-ethereum-client --features try-runtime
-#cargo check -p snowbridge-pallet-inbound-queue
-#cargo check -p snowbridge-pallet-inbound-queue --features runtime-benchmarks
-#cargo check -p snowbridge-pallet-inbound-queue --features try-runtime
-#cargo check -p snowbridge-pallet-outbound-queue
-#cargo check -p snowbridge-pallet-outbound-queue --features runtime-benchmarks
-#cargo check -p snowbridge-pallet-outbound-queue --features try-runtime
-#cargo check -p snowbridge-pallet-system
-#cargo check -p snowbridge-pallet-system --features runtime-benchmarks
-#cargo check -p snowbridge-pallet-system --features try-runtime
+cargo check -p snowbridge-pallet-ethereum-client
+cargo check -p snowbridge-pallet-ethereum-client --features runtime-benchmarks
+cargo check -p snowbridge-pallet-ethereum-client --features try-runtime
+cargo check -p snowbridge-pallet-inbound-queue
+cargo check -p snowbridge-pallet-inbound-queue --features runtime-benchmarks
+cargo check -p snowbridge-pallet-inbound-queue --features try-runtime
+cargo check -p snowbridge-pallet-outbound-queue
+cargo check -p snowbridge-pallet-outbound-queue --features runtime-benchmarks
+cargo check -p snowbridge-pallet-outbound-queue --features try-runtime
+cargo check -p snowbridge-pallet-system
+cargo check -p snowbridge-pallet-system --features runtime-benchmarks
+cargo check -p snowbridge-pallet-system --features try-runtime
 
 # we're removing lock file after all checks are done. Otherwise we may use different
 # Substrate/Polkadot/Cumulus commits and our checks will fail
-rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.toml
-rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.lock
+rm -f $SNOWBRIDGE_FOLDER/Cargo.toml
+rm -f $SNOWBRIDGE_FOLDER/Cargo.lock
 
 popd
-pwd
 
 # Replace Parity's CI files, that we have overwritten in our fork, to run our own CI
 rm -rf .github
