@@ -1,2 +1,1 @@
-*.sol @snowfork/snowbridge-solidity-code-owners
-*.rs @snowfork/snowbridge-rust-code-owners
+bridges/snowbridge/*.rs @snowfork/snowbridge-devs
