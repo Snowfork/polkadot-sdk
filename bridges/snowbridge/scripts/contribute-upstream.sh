@@ -34,8 +34,9 @@ if [ "$current_branch" = "$branch_name" ]; then
     echo "Already on requested branch, not creating."
 else
     git branch "$branch_name"
-    git checkout "$branch_name"
 fi
+
+git checkout "$branch_name"
 
 # remove everything we think is not required for our needs
 rm -rf rust-toolchain.toml
