@@ -25,13 +25,13 @@ set -eux
 # let's avoid any restrictions on where this script can be called for - snowbridge repo may be
 # plugged into any other repo folder. So the script (and other stuff that needs to be removed)
 # may be located either in call dir, or one of it subdirs.
-SNOWBRIDGE_FOLDER="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/../.."
+SNOWBRIDGE_FOLDER="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/../"
 
 # Get the current Git branch name
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 
-if [ "$current_branch" = "$branch_name" ]; then
-    echo "Already on requested branch, not creating."
+if [ "$current_branch" = "$branch_name" ] || git branch | grep -q "$branch_name"; then
+    echo "Already on requested branch or branch exists, not creating."
 else
     git branch "$branch_name"
 fi
@@ -69,7 +69,8 @@ pushd $SNOWBRIDGE_FOLDER
 rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.toml
 rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.lock
 
-pushd ..
+popd
+pwd
 
 # Replace Parity's CI files, that we have overwritten in our fork, to run our own CI
 rm -rf .github
@@ -77,8 +78,5 @@ git remote -v | grep -w parity || git remote add parity https://github.com/parit
 git fetch parity master
 git checkout parity/master -- .github
 git add -- .github
-
-popd
-popd
 
 echo "OK"
