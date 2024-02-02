@@ -81,7 +81,7 @@ jobs:
           markdownlint --config .config/.markdownlint.yaml --ignore target
 
   test:
-    # needs: check
+    needs: check
     runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
