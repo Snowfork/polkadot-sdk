@@ -6,7 +6,7 @@
 # - readme
 # - license
 
-set -eu
+set -e
 
 # show CLI help
 function show_help() {
@@ -14,7 +14,7 @@ function show_help() {
   echo " "
   echo Error: $1
   echo "Usage:"
-  echo "  ./bridges/snowbridge/scripts/contribute-upstream.sh          Exit with code 0 if pallets code is well decoupled from the other code in the repo"
+  echo "  ./bridges/snowbridge/scripts/contribute-upstream.sh <branchname>         Exit with code 0 if pallets code is well decoupled from the other code in the repo"
   echo "Options:"
   echo "  --no-revert                                Leaves only runtime code on exit"
   echo "  --ignore-git-state                         Ignores git actual state"
@@ -41,6 +41,15 @@ do
 	esac
 done
 
+if [[ -z "$1" ]]; then
+    echo "Please provide a branch name you would like your upstream branch to be named"
+    exit 1
+fi
+
+branchname=$1
+
+set -eu
+
 # the script is able to work only on clean git copy, unless we want to ignore this check
 [[ ! -z "${IGNORE_GIT_STATE}" ]] || [[ -z "$(git status --porcelain)" ]] || { echo >&2 "The git copy must be clean"; exit 1; }
 
@@ -54,6 +63,9 @@ trap revert_to_clean_state EXIT
 # plugged into any other repo folder. So the script (and other stuff that needs to be removed)
 # may be located either in call dir, or one of it subdirs.
 SNOWBRIDGE_FOLDER="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/../.."
+
+git branch "$branchname"
+git checkout "$branchname"
 
 # remove everything we think is not required for our needs
 rm -rf rust-toolchain.toml
