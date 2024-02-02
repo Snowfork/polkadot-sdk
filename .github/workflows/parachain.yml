@@ -81,12 +81,13 @@ jobs:
           markdownlint --config .config/.markdownlint.yaml --ignore target
 
   test:
-    needs: check
+    # needs: check
     runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
       RUSTFLAGS: -C debuginfo=1
+      SKIP_WASM_BUILD: 1
       RUST_MIN_STACK: 8388608
     steps:
       - uses: actions/checkout@v2
@@ -105,19 +106,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - name: setup rust toolchain
-        run: |
-          rustup target add wasm32-unknown-unknown
-          rustup show
+        run: rustup show
       # Increase stack limit for beacon light client tests
       - run: sudo prlimit --pid $$ --stack=32768
       # Run tests for runtime-benchmarks feature
       - name: Tests for runtime-benchmarks
+        working-directory: bridges/snowbridge
         run: >
           cargo test
           --workspace
           --features runtime-benchmarks
       # Run tests for all features
       - name: Tests for all features
+        working-directory: bridges/snowbridge
         run: >
           cargo test
           --workspace
