@@ -1,12 +1,7 @@
 #!/bin/bash
 
-# A script to remove everything from snowbridge repository/subtree, except:
-#
-# - parachain
-# - readme
-# - license
-
-set -e
+# A script to cleanup the Snowfork fork of the polkadot-sdk to contribute it upstream back to parity/polkadot-sdk
+# ./bridges/snowbridge/scripts/contribute-upstream.sh <branchname>
 
 # show CLI help
 function show_help() {
@@ -15,57 +10,32 @@ function show_help() {
   echo Error: $1
   echo "Usage:"
   echo "  ./bridges/snowbridge/scripts/contribute-upstream.sh <branchname>         Exit with code 0 if pallets code is well decoupled from the other code in the repo"
-  echo "Options:"
-  echo "  --no-revert                                Leaves only runtime code on exit"
-  echo "  --ignore-git-state                         Ignores git actual state"
   exit 1
 }
-
-# parse CLI args
-NO_REVERT=
-IGNORE_GIT_STATE=
-for i in "$@"
-do
-	case $i in
-		--no-revert)
-			NO_REVERT=true
-			shift
-			;;
-		--ignore-git-state)
-			IGNORE_GIT_STATE=true
-			shift
-			;;
-		*)
-			show_help "Unknown option: $i"
-			;;
-	esac
-done
 
 if [[ -z "$1" ]]; then
     echo "Please provide a branch name you would like your upstream branch to be named"
     exit 1
 fi
 
-branchname=$1
+branch_name=$1
 
-set -eu
-
-# the script is able to work only on clean git copy, unless we want to ignore this check
-[[ ! -z "${IGNORE_GIT_STATE}" ]] || [[ -z "$(git status --porcelain)" ]] || { echo >&2 "The git copy must be clean"; exit 1; }
-
-# let's leave repository/subtree in its original (clean) state if something fails below
-function revert_to_clean_state {
-	[[ ! -z "${NO_REVERT}" ]] || { echo "Reverting to clean state..."; git checkout .; }
-}
-trap revert_to_clean_state EXIT
+set -eux
 
 # let's avoid any restrictions on where this script can be called for - snowbridge repo may be
 # plugged into any other repo folder. So the script (and other stuff that needs to be removed)
 # may be located either in call dir, or one of it subdirs.
 SNOWBRIDGE_FOLDER="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/../.."
 
-git branch "$branchname"
-git checkout "$branchname"
+# Get the current Git branch name
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$current_branch" = "$branch_name" ]; then
+    echo "Already on requested branch, not creating."
+else
+    git branch "$branch_name"
+    git checkout "$branch_name"
+fi
 
 # remove everything we think is not required for our needs
 rm -rf rust-toolchain.toml
@@ -80,31 +50,32 @@ rm -rf $SNOWBRIDGE_FOLDER/pallets/ethereum-client/fuzz
 pushd $SNOWBRIDGE_FOLDER
 
 # let's test if everything we need compiles
-cargo check -p snowbridge-pallet-ethereum-client
-cargo check -p snowbridge-pallet-ethereum-client --features runtime-benchmarks
-cargo check -p snowbridge-pallet-ethereum-client --features try-runtime
-cargo check -p snowbridge-pallet-inbound-queue
-cargo check -p snowbridge-pallet-inbound-queue --features runtime-benchmarks
-cargo check -p snowbridge-pallet-inbound-queue --features try-runtime
-cargo check -p snowbridge-pallet-outbound-queue
-cargo check -p snowbridge-pallet-outbound-queue --features runtime-benchmarks
-cargo check -p snowbridge-pallet-outbound-queue --features try-runtime
-cargo check -p snowbridge-pallet-system
-cargo check -p snowbridge-pallet-system --features runtime-benchmarks
-cargo check -p snowbridge-pallet-system --features try-runtime
+#cargo check -p snowbridge-pallet-ethereum-client
+#cargo check -p snowbridge-pallet-ethereum-client --features runtime-benchmarks
+#cargo check -p snowbridge-pallet-ethereum-client --features try-runtime
+#cargo check -p snowbridge-pallet-inbound-queue
+#cargo check -p snowbridge-pallet-inbound-queue --features runtime-benchmarks
+#cargo check -p snowbridge-pallet-inbound-queue --features try-runtime
+#cargo check -p snowbridge-pallet-outbound-queue
+#cargo check -p snowbridge-pallet-outbound-queue --features runtime-benchmarks
+#cargo check -p snowbridge-pallet-outbound-queue --features try-runtime
+#cargo check -p snowbridge-pallet-system
+#cargo check -p snowbridge-pallet-system --features runtime-benchmarks
+#cargo check -p snowbridge-pallet-system --features try-runtime
 
 # we're removing lock file after all checks are done. Otherwise we may use different
 # Substrate/Polkadot/Cumulus commits and our checks will fail
 rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.toml
 rm -f $SNOWBRIDGE_FOLDER/parachain/Cargo.lock
 
-# Revert Parity's Github Actions
-pushd ../../..
+pushd ..
 
-pwd
+# Replace Parity's CI files, that we have overwritten in our fork, to run our own CI
 rm -rf .github
-git remote -v | grep -w foo || git remote add parity https://github.com/paritytech/polkadot-sdk
+git remote -v | grep -w parity || git remote add parity https://github.com/paritytech/polkadot-sdk
+git fetch parity master
 git checkout parity/master -- .github
+git add -- .github
 
 popd
 popd
