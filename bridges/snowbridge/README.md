@@ -20,21 +20,21 @@ Polkadot parachain and our pallets. See [README.md](https://github.com/Snowfork/
 
 ### Contracts
 
-Ethereum contracts and unit tests. See [https://github.com/Snowfork/snowbridge/contracts/README.md](https://github.com/Snowfork/snowbridge/blob/main/contracts/README.md)
+Ethereum contracts and unit tests. See [Snowfork/snowbridge/contracts/README.md](https://github.com/Snowfork/snowbridge/blob/main/contracts/README.md)
 
 ### Relayer
 
 Off-chain relayer services for relaying messages between Polkadot and Ethereum. See
-[relayer/README.md](https://github.com/Snowfork/snowbridge/blob/main/relayer/README.md)
+[Snowfork/snowbridge/relayer/README.md](https://github.com/Snowfork/snowbridge/blob/main/relayer/README.md)
 
 ### Local Testnet
 
 Scripts to provision a local testnet, running the above services to bridge between local deployments of Polkadot and
-Ethereum. See [web/packages/test/README.md](https://github.com/Snowfork/snowbridge/blob/main/web/packages/test/README.md).
+Ethereum. See [Snowfork/snowbridge/web/packages/test/README.md](https://github.com/Snowfork/snowbridge/blob/main/web/packages/test/README.md).
 
 ### Smoke Tests
 
-Integration tests for our local testnet. See [smoketest/README.md](https://github.com/Snowfork/snowbridge/blob/main/smoketest/README.md).
+Integration tests for our local testnet. See [Snowfork/snowbridge/smoketest/README.md](https://github.com/Snowfork/snowbridge/blob/main/smoketest/README.md).
 
 ## Development
 
