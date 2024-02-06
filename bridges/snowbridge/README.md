@@ -1,19 +1,27 @@
 # Snowbridge &middot;
-[![codecov](https://codecov.io/gh/Snowfork/snowbridge/branch/main/graph/badge.svg?token=9hvgSws4rN)]
-(https://codecov.io/gh/Snowfork/snowbridge)
+[![codecov](https://codecov.io/gh/Snowfork/polkadot-sdk/branch/snowbridge/graph/badge.svg?token=9hvgSws4rN)]
+(https://codecov.io/gh/Snowfork/polkadot-sdk)
 ![GitHub](https://img.shields.io/github/license/Snowfork/snowbridge)
 
 Snowbridge is a trustless bridge between Polkadot and Ethereum. For documentation, visit https://docs.snowbridge.network.
 
 ## Components
 
+The Snowbridge project lives in two repositories:
+
+- [Snowfork/polkadot-sdk](https://github.com/Snowfork/polkadot-sdk): The Snowbridge parachain and pallets live in 
+a fork of the polkadot-sdk. Changes are eventually contributed back to
+[paritytech/polkadot-sdk](https://github.com/paritytech/polkadot-sdk)
+- [Snowfork/snowbridge](https://github.com/Snowfork/snowbridge): The rest of the Snowbridge components, like contracts,
+off-chain relayer, end-to-end tests and test-net setup code.
+
 ### Parachain
 
-Polkadot parachain and our pallets. See [parachain/README.md](https://github.com/Snowfork/snowbridge/blob/main/parachain/README.md).
+Polkadot parachain and our pallets. See [README.md](https://github.com/Snowfork/polkadot-sdk/blob/snowbridge/bridges/snowbridge/README.md).
 
 ### Contracts
 
-Ethereum contracts and unit tests. See [contracts/README.md](https://github.com/Snowfork/snowbridge/blob/main/contracts/README.md)
+Ethereum contracts and unit tests. See [https://github.com/Snowfork/snowbridge/contracts/README.md](https://github.com/Snowfork/snowbridge/blob/main/contracts/README.md)
 
 ### Relayer
 
@@ -84,7 +92,7 @@ direnv allow
 
 ### Upgrading the Rust toolchain
 
-Sometimes we would like to upgrade rust toolchain. First update `parachain/rust-toolchain.toml` as required and then
+Sometimes we would like to upgrade rust toolchain. First update `rust-toolchain.toml` as required and then
 update `flake.lock` running
 ```sh
 nix flake lock --update-input rust-overlay

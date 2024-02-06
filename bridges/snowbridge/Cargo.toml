@@ -1,7 +1,7 @@
 [workspace.package]
 authors = ["Snowfork <contact@snowfork.com>"]
 edition = "2021"
-repository = "https://github.com/snowfork/snowbridge.git"
+repository = "https://github.com/snowfork/polkadot-sdk.git"
 
 [workspace]
 resolver = "2"
