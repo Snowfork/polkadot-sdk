@@ -1,5 +1,5 @@
 # Snowbridge &middot;
-[![codecov](https://codecov.io/gh/Snowfork/polkadot-sdk/branch/snowbridge/graph/badge.svg?token=9hvgSws4rN)]
+[![codecov](https://codecov.io/gh/Snowfork/polkadot-sdk/branch/local-dev-env/graph/badge.svg?token=9hvgSws4rN)]
 (https://codecov.io/gh/Snowfork/polkadot-sdk)
 ![GitHub](https://img.shields.io/github/license/Snowfork/snowbridge)
 
