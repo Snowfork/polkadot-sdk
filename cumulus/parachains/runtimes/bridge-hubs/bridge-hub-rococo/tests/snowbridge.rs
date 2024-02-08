@@ -135,6 +135,11 @@ fn ethereum_to_polkadot_message_extrinsics_work() {
 	);
 }
 
+#[test]
+fn adds_pallet_order_test() {
+
+}
+
 fn construct_extrinsic(
 	sender: sp_keyring::AccountKeyring,
 	call: RuntimeCall,
