@@ -136,9 +136,7 @@ fn ethereum_to_polkadot_message_extrinsics_work() {
 }
 
 #[test]
-fn test_pallet_order() {
-
-}
+fn test_pallet_order() {}
 
 fn construct_extrinsic(
 	sender: sp_keyring::AccountKeyring,
