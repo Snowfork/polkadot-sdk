@@ -26,10 +26,3 @@ cumulus-primitives-core = { path = "../../../../../../../primitives/core", defau
 emulated-integration-tests-common = { path = "../../../../common", default-features = false }
 bridge-hub-rococo-runtime = { path = "../../../../../../runtimes/bridge-hubs/bridge-hub-rococo" }
 bridge-hub-common = { path = "../../../../../../runtimes/bridge-hubs/common", default-features = false }
-
-# Snowbridge
-snowbridge-core = { path = "../../../../../../../../../parachain/primitives/core", default-features = false }
-snowbridge-router-primitives = { path = "../../../../../../../../../parachain/primitives/router", default-features = false }
-snowbridge-pallet-system = { path = "../../../../../../../../../parachain/pallets/system", default-features = false }
-snowbridge-pallet-inbound-queue = { path = "../../../../../../../../../parachain/pallets/inbound-queue", default-features = false }
-snowbridge-pallet-outbound-queue = { path = "../../../../../../../../../parachain/pallets/outbound-queue", default-features = false }
