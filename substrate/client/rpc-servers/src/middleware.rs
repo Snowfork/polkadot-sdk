@@ -19,7 +19,7 @@
 //! RPC middleware to collect prometheus metrics on RPC calls.
 
 use jsonrpsee::server::logger::{
-	HttpRequest, Logger, MethodKind, Params, SuccessOrError, TransportProtocol,
+	HttpRequest, Logger, MethodKind, Paras, SuccessOrError, TransportProtocol,
 };
 use prometheus_endpoint::{
 	register, Counter, CounterVec, HistogramOpts, HistogramVec, Opts, PrometheusError, Registry,
