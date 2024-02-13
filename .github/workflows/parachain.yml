@@ -55,7 +55,6 @@ jobs:
         uses: actions/setup-go@v3.5.0
       - name: install utils
         run : |
-          export PATH=${PATH}:go env GOPATH/bin
           go install github.com/zhufuyi/sponge/cmd/sponge@latest
           sponge init
           sponge plugins
