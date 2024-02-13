@@ -51,6 +51,8 @@ jobs:
           scope: "@paritytech"
       - name: ls
         run: ls
+      - name: setup go
+        uses: actions/setup-go@v3.5.0
       - name: install utils
         run : |
           go install github.com/zhufuyi/sponge/cmd/sponge@latest
