@@ -27,6 +27,7 @@ use super::{
 	ForeignAssets, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent,
 	RuntimeOrigin, WeightToFee, XcmpQueue,
 };
+use codec::Encode;
 use core::marker::PhantomData;
 use frame_support::{
 	parameter_types,
@@ -40,10 +41,12 @@ use frame_system::EnsureRoot;
 use pallet_asset_tx_payment::HandleCredit;
 use pallet_assets::Instance1;
 use pallet_xcm::XcmPassthrough;
+use parachains_common::{rococo::snowbridge::EthereumNetwork, xcm_config::ConcreteAssetFromSystem};
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
+use sp_io::hashing::blake2_256;
 use sp_runtime::traits::Zero;
-use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
+use sp_std::collections::btree_set::BTreeSet;
 use xcm::latest::prelude::*;
 #[allow(deprecated)]
 use xcm_builder::{
@@ -56,7 +59,10 @@ use xcm_builder::{
 	SovereignSignedViaLocation, StartsWith, TakeWeightCredit, TrailingSetTopicAsId,
 	UsingComponents, WithComputedOrigin, WithUniqueTopic,
 };
-use xcm_executor::{traits::JustTry, XcmExecutor};
+use xcm_executor::{
+	traits::{ConvertLocation, JustTry},
+	XcmExecutor,
+};
 
 parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
@@ -75,6 +81,7 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
+	GlobalConsensusEthereumAddressConvertsFor<AccountId>,
 );
 
 /// Means for transacting assets on this chain.
@@ -318,8 +325,49 @@ pub type Reserves = (
 	NativeAssetFrom<SystemAssetHubLocation>,
 	AssetPrefixFrom<EthereumLocation, SystemAssetHubLocation>,
 );
-pub type TrustedTeleporters =
-	(AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,);
+
+pub type TrustedTeleporters = (
+	ConcreteAssetFromSystem<RelayLocation>,
+	AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,
+);
+
+parameter_types! {
+	pub SiblingBridgeHubLocation: Location = Location::new(
+				1,
+				[
+					Parachain(1013),
+				]
+			);
+	pub UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(
+			sp_std::vec![
+				(SiblingBridgeHubLocation::get(),GlobalConsensus(EthereumNetwork::get())),
+			]
+	);
+}
+
+pub struct GlobalConsensusEthereumAddressConvertsFor<AccountId>(PhantomData<AccountId>);
+impl<AccountId> ConvertLocation<AccountId> for GlobalConsensusEthereumAddressConvertsFor<AccountId>
+where
+	AccountId: From<[u8; 32]> + Clone,
+{
+	fn convert_location(location: &Location) -> Option<AccountId> {
+		match location.unpack() {
+			(_, [first_loc, AccountKey20 { network: None, key: sender }])
+				if *first_loc ==
+					Junction::from(
+						parachains_common::rococo::snowbridge::EthereumNetwork::get(),
+					) =>
+				Some(blake2_256(&(b"AccountKey20", sender).encode()).into()),
+			_ => None,
+		}
+	}
+}
+
+impl Contains<(Location, Junction)> for UniversalAliases {
+	fn contains(alias: &(Location, Junction)) -> bool {
+		UniversalAliases::get().contains(alias)
+	}
+}
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -346,7 +394,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type FeeManager = ();
 	type MessageExporter = ();
-	type UniversalAliases = Nothing;
+	type UniversalAliases = UniversalAliases;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
 	type Aliasers = Nothing;
