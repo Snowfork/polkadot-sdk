@@ -28,7 +28,9 @@ use snowbridge_pallet_inbound_queue_fixtures::{
 	InboundQueueFixture,
 };
 use snowbridge_pallet_system;
-use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
+use snowbridge_router_primitives::inbound::{
+	Command, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
+};
 use sp_core::H256;
 use sp_runtime::{ArithmeticError::Underflow, DispatchError::Arithmetic};
 
@@ -38,7 +40,7 @@ const TREASURY_ACCOUNT: [u8; 32] =
 	hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
-const XCM_FEE: u128 = 4_000_000_000;
+const XCM_FEE: u128 = 40_000_000_000;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
@@ -320,6 +322,51 @@ fn send_token_from_ethereum_to_penpal() {
 			PenpalA,
 			vec![
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+			]
+		);
+	});
+}
+
+#[test]
+fn transact_from_ethereum_to_penpal() {
+	// Fund AssetHub sovereign account so that it can pay execution fees.
+	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+
+		let message_id: H256 = [1; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::Transact {
+				sender: hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into(),
+				fee: XCM_FEE,
+				weight_ref_time: 40_000_000,
+				weight_proof_size: 8_000,
+				origin_kind: OriginKind::SovereignAccount,
+				payload: hex!("00071468656c6c6f").to_vec(),
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	PenpalA::execute_with(|| {
+		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
+		// Check that system event remarked on PenPal
+		assert_expected_events!(
+			PenpalA,
+			vec![
+				RuntimeEvent::System(frame_system::Event::Remarked { .. }) => {},
 			]
 		);
 	});
