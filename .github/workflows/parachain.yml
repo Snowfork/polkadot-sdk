@@ -42,7 +42,7 @@ jobs:
             ${{ runner.os }}-cargo-
       - uses: actions/checkout@v2
         with:
-          name: snowfork/snowbridge
+          repository: snowfork/snowbridge
           ref: main
       - uses: actions/setup-node@v4.0.0
         with:
