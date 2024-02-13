@@ -51,6 +51,11 @@ jobs:
           scope: "@paritytech"
       - name: ls
         run: ls
+      - uses: cachix/install-nix-action@v22
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nix build
+      - run: nix flake check
       - name: setup go
         uses: actions/setup-go@v3.5.0
       - name: install utils
