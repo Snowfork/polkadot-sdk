@@ -52,7 +52,7 @@ jobs:
       - name: ls
         run: ls
       - name: run e2e stack
-        working-directory: snowbridge/web/packages/test
+        working-directory: web/packages/test
         run: ./scripts/start-services.sh
 #  check:
 #    runs-on: snowbridge-runner
