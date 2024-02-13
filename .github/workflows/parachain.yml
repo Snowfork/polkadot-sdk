@@ -51,6 +51,9 @@ jobs:
           scope: "@paritytech"
       - name: ls
         run: ls
+      - name: install utils
+        run : |
+          apt-get install moreutils
       - name: run e2e stack
         working-directory: web/packages/test
         run: ./scripts/start-services.sh
