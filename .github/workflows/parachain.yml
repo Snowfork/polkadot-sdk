@@ -46,7 +46,7 @@ jobs:
           ref: smoketests-ci
           submodules: "true"
       - run: ls
-      - run: cd polkadot-sdk
+      - run: cd polkadot-sdk && ls
       - run: ls
       - uses: cachix/install-nix-action@v22
         with:
