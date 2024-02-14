@@ -47,6 +47,7 @@ jobs:
           ref: smoketests-ci
           submodules: "true"
       - run: ls
+      - run: cd polkadot-sdk && ls
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
