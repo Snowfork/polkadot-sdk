@@ -32,6 +32,7 @@ jobs:
           ref: smoketests-ci
           submodules: "true"
       - run: ls
+      - run: cd polkadot-sdk && ls
       - uses: actions/checkout@v2
         with:
           path: polkadot-sdk
