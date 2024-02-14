@@ -331,7 +331,7 @@ where
 
 		let xcm: Xcm<()> = vec![
 			// Teleport required fees.
-			ReceiveTeleportedAsset(xcm_fee.clone().into()),
+			WithdrawAsset(xcm_fee.clone().into()),
 			// Pay for execution.
 			BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
 			// Change origin to the bridge.

@@ -325,8 +325,8 @@ fn send_token_from_ethereum_to_penpal() {
 
 #[test]
 fn transact_from_ethereum_to_penpal() {
-	// Fund AssetHub sovereign account so that it can pay execution fees.
-	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
+	// Fund BridgeHub sovereign account on penpal so that it can pay execution fees.
+	PenpalA::fund_para_sovereign(BridgeHubRococo::para_id().into(), INITIAL_FUND);
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
@@ -344,7 +344,7 @@ fn transact_from_ethereum_to_penpal() {
 			},
 		});
 		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let (xcm, _, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 		// Send the XCM
 		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
 

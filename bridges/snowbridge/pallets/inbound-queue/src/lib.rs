@@ -64,9 +64,8 @@ use snowbridge_core::{
 	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, PricingParameters,
 	StaticLookup,
 };
-use snowbridge_router_primitives::{
-	inbound,
-	inbound::{ConvertMessage, ConvertMessageError},
+use snowbridge_router_primitives::inbound::{
+	Command, ConvertMessage, ConvertMessageError, MessageV1, VersionedMessage,
 };
 use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
@@ -139,6 +138,9 @@ pub mod pallet {
 
 		/// To withdraw and deposit an asset.
 		type AssetTransactor: TransactAsset;
+
+		/// Returns the parachain ID we are running with.
+		type SelfParaId: Get<ParaId>;
 	}
 
 	#[pallet::hooks]
@@ -268,8 +270,8 @@ pub mod pallet {
 			T::Token::transfer(&sovereign_account, &who, delivery_cost, Preservation::Preserve)?;
 
 			// Decode message into XCM
-			let (xcm, fee) =
-				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+			let (xcm, fee, message) =
+				match VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
 					Ok(message) => Self::do_convert(envelope.message_id, message)?,
 					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 				};
@@ -281,8 +283,13 @@ pub mod pallet {
 				fee
 			);
 
-			// Burning fees for teleport
-			Self::burn_fees(channel.para_id, fee)?;
+			let _ = match message {
+				// Transfer fees to BH for transact
+				VersionedMessage::V1(MessageV1 { command: Command::Transact { .. }, .. }) =>
+					Self::transfer_fees(channel.para_id, fee),
+				// Burning fees for teleport
+				_ => Self::burn_fees(channel.para_id, fee),
+			}?;
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;
@@ -314,13 +321,13 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn do_convert(
 			message_id: H256,
-			message: inbound::VersionedMessage,
-		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
-			let (mut xcm, fee) =
-				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
+			message: VersionedMessage,
+		) -> Result<(Xcm<()>, BalanceOf<T>, VersionedMessage), Error<T>> {
+			let (mut xcm, fee) = T::MessageConverter::convert(message.clone())
+				.map_err(|e| Error::<T>::ConvertMessage(e))?;
 			// Append the message id as an XCM topic
 			xcm.inner_mut().extend(vec![SetTopic(message_id.into())]);
-			Ok((xcm, fee))
+			Ok((xcm, fee, message))
 		}
 
 		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {
@@ -358,6 +365,24 @@ pub mod pallet {
 				);
 				TokenError::FundsUnavailable
 			})?;
+			Ok(())
+		}
+
+		pub fn transfer_fees(para_id: ParaId, fee: BalanceOf<T>) -> DispatchResult {
+			let dummy_context =
+				XcmContext { origin: None, message_id: Default::default(), topic: None };
+			let from = Location::new(1, [Parachain(para_id.into())]);
+			let to = Location::new(1, [Parachain(T::SelfParaId::get().into())]);
+			let fees = (Location::parent(), fee.saturated_into::<u128>()).into();
+			T::AssetTransactor::transfer_asset(&fees, &from, &to, &dummy_context).map_err(
+				|error| {
+					log::error!(
+						target: LOG_TARGET,
+						"XCM asset transfer failed with error {:?}", error
+					);
+					TokenError::FundsUnavailable
+				},
+			)?;
 			Ok(())
 		}
 	}
