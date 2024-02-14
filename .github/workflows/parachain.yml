@@ -44,6 +44,9 @@ jobs:
         with:
           repository: snowfork/snowbridge
           ref: smoketests-ci
+          submodules: "true"
+      - run: cd lodestar
+      - run: ls
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
