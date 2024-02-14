@@ -54,12 +54,12 @@ jobs:
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nix develop
+      - run: nix develop -c sponge -v
       - run : sponge -v
       - name: run e2e stack
         working-directory: web/packages/test
         run: |
-          ./scripts/start-services.sh
+          nix develop -c ./scripts/start-services.sh
 #  check:
 #    runs-on: snowbridge-runner
 #    env:
