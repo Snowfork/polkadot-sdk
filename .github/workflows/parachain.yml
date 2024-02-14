@@ -32,14 +32,10 @@ jobs:
           ref: smoketests-ci
           path: snowbridge
           submodules: "true"
-      - run: ls
-      - run: cd snowbridge && ls
-      - run: cd polkadot-sdk && ls
       - uses: actions/checkout@v2
         with:
-          path: polkadot-sdk
-          submodules: "true"
-      - run: ls
+          path: snowbridge/polkadot-sdk
+      - run: cd snowbridge/polkadot-sdk && ls
       - run: cd polkadot-sdk && ls
       - uses: arduino/setup-protoc@v2
         with:
