@@ -41,12 +41,13 @@ use frame_system::EnsureRoot;
 use pallet_asset_tx_payment::HandleCredit;
 use pallet_assets::Instance1;
 use pallet_xcm::XcmPassthrough;
-use parachains_common::{rococo::snowbridge::EthereumNetwork, xcm_config::ConcreteAssetFromSystem};
+use parachains_common::xcm_config::ConcreteAssetFromSystem;
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::Zero;
 use sp_std::collections::btree_set::BTreeSet;
+use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 use xcm::latest::prelude::*;
 #[allow(deprecated)]
 use xcm_builder::{
@@ -353,10 +354,7 @@ where
 	fn convert_location(location: &Location) -> Option<AccountId> {
 		match location.unpack() {
 			(_, [first_loc, AccountKey20 { network: None, key: sender }])
-				if *first_loc ==
-					Junction::from(
-						parachains_common::rococo::snowbridge::EthereumNetwork::get(),
-					) =>
+				if *first_loc == Junction::from(EthereumNetwork::get()) =>
 				Some(blake2_256(&(b"AccountKey20", sender).encode()).into()),
 			_ => None,
 		}
