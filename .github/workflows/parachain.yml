@@ -38,8 +38,6 @@ jobs:
           repository: snowfork/polkadot-sdk
           ref: smoketests-ci
           path: snowbridge/polkadot-sdk
-      - run: cd snowbridge/polkadot-sdk && ls
-      - run: cd polkadot-sdk && ls
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -57,6 +55,7 @@ jobs:
       - run: nix develop -c ls
       - name: run e2e stack
         run: |
+          cd snowbridge
           nix develop -c sh -c 'cd web/packages/test && ./scripts/start-services.sh'
 #  check:
 #    runs-on: snowbridge-runner
