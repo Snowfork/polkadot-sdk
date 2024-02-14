@@ -30,9 +30,11 @@ jobs:
         with:
           repository: snowfork/snowbridge
           ref: smoketests-ci
+          path: snowbridge
           submodules: "true"
       - run: ls
-      - run: cd polkadot-sdk && ls
+      - run: cd snowbridge && ls
+      - run: cd snowbridge && cd polkadot-sdk && ls
       - uses: actions/checkout@v2
         with:
           path: polkadot-sdk
