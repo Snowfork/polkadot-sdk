@@ -53,7 +53,6 @@ jobs:
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - run: ls
       - name: run e2e stack
         run: |
           cd snowbridge
