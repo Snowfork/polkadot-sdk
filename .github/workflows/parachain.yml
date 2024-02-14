@@ -26,9 +26,6 @@ jobs:
       SKIP_WASM_BUILD: 1
       RUST_NIGHTLY_VERSION: nightly-2023-05-23
     steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: "true"
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -46,6 +43,11 @@ jobs:
           repository: snowfork/snowbridge
           ref: smoketests-ci
           submodules: "true"
+      - uses: actions/checkout@v2
+        with:
+          submodules: "true"
+      - run: ls
+      - run: cd polkadot-sdk && ls
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
