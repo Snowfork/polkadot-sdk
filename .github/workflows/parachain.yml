@@ -49,7 +49,7 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: run e2e stack
         run: |
-          nix develop -c sh -c 'cd web/packages/scripts && ./start-services.sh'
+          nix develop -c 'cd web/packages/scripts && ./start-services.sh'
 #  check:
 #    runs-on: snowbridge-runner
 #    env:
