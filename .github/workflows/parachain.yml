@@ -15,7 +15,6 @@ env:
   FUZZ_MAX_LEN: 10000000000
   FUZZ_MAX_RUNS: 30000
   RUST_NIGHTLY: "2023-05-23"
-  OUTPUT_DIR: "~/work/polkadot-sdk/polkadot-sdk/tmp"
 
 jobs:
   check:
@@ -27,6 +26,9 @@ jobs:
       SKIP_WASM_BUILD: 1
       RUST_NIGHTLY_VERSION: nightly-2023-05-23
     steps:
+      - name: Set build directory environment variable
+        run: echo "OUTPUT_DIR=${GITHUB_WORKSPACE}/tmp" >> $GITHUB_ENV
+      - run: echo "dir is $OUTPUT_DIR"
       - uses: actions/checkout@v2
         with:
           repository: snowfork/snowbridge
