@@ -15,7 +15,7 @@ env:
   FUZZ_MAX_LEN: 10000000000
   FUZZ_MAX_RUNS: 30000
   RUST_NIGHTLY: "2023-05-23"
-  OUTPUT_DIR: tmp
+  OUTPUT_DIR: "~/work/polkadot-sdk/polkadot-sdk/tmp"
 
 jobs:
   check:
