@@ -55,14 +55,7 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - run: nix develop
-      - name: setup go
-        uses: actions/setup-go@v3.5.0
-      - name: install utils
-        run : |
-          go install github.com/zhufuyi/sponge/cmd/sponge@latest
-          sponge init
-          sponge plugins
-          sponge -v
+      - run : sponge -v
       - name: run e2e stack
         working-directory: web/packages/test
         run: |
