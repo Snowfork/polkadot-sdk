@@ -63,9 +63,8 @@ jobs:
         run: |
           cd snowbridge
           nix develop -c sh -c '
+          rustup default stable &&
           rustup target add wasm32-unknown-unknown &&
-          rustup toolchain install nightly &&
-          rustup component add rustfmt --toolchain nightly &&
           rustup show &&
           (cd web && pnpm install) &&
           go install github.com/ferranbt/fastssz/sszgen@v0.1.3 &&
