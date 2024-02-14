@@ -55,6 +55,12 @@ jobs:
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: setup rust toolchain
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup toolchain install nightly
+          rustup component add rustfmt --toolchain nightly
+          rustup show
       - name: run e2e stack
         run: |
           cd snowbridge
