@@ -65,6 +65,7 @@ jobs:
           sszgen version &&
           cd web/packages/test &&
           ./scripts/start-services.sh'
+      - run: ls
 
 #  check:
 #    runs-on: snowbridge-runner
