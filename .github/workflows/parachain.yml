@@ -45,7 +45,8 @@ jobs:
           repository: snowfork/snowbridge
           ref: smoketests-ci
           submodules: "true"
-      - run: cd lodestar
+      - run: ls
+      - run: cd polkadot-sdk
       - run: ls
       - uses: cachix/install-nix-action@v22
         with:
