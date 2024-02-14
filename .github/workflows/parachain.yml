@@ -50,7 +50,7 @@ jobs:
       - run: nix develop -c ls
       - name: run e2e stack
         run: |
-          nix develop -c sh -c 'cd web/packages/test && pwd'
+          nix develop -c sh -c 'cd web/packages/test && ./scripts/start-services.sh'
 #  check:
 #    runs-on: snowbridge-runner
 #    env:
