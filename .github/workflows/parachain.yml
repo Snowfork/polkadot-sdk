@@ -53,10 +53,6 @@ jobs:
       - uses: cachix/install-nix-action@v22
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: check rust toolchain
-        run: |
-          cd snowbridge
-          nix develop -c sh -c 'rustup show'
       - name: run e2e stack
         run: |
           cd snowbridge
