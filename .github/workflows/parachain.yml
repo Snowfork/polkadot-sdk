@@ -69,6 +69,7 @@ jobs:
           sszgen version &&
           cd web/packages/test &&
           ./scripts/start-services.sh'
+      - run: ls
       - name: Upload log file as an artifact
         uses: actions/upload-artifact@v3
         with:
