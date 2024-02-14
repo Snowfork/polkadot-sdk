@@ -34,7 +34,7 @@ jobs:
           submodules: "true"
       - run: ls
       - run: cd snowbridge && ls
-      - run: cd snowbridge && cd polkadot-sdk && ls
+      - run: cd polkadot-sdk && ls
       - uses: actions/checkout@v2
         with:
           path: polkadot-sdk
