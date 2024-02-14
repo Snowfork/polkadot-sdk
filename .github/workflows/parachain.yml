@@ -69,6 +69,11 @@ jobs:
           sszgen version &&
           cd web/packages/test &&
           ./scripts/start-services.sh'
+      - name: Upload log file as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: lodestar.log
+          path: $OUTPUT_DIR
 #  check:
 #    runs-on: snowbridge-runner
 #    env:
