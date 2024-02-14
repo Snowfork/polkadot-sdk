@@ -38,6 +38,8 @@ jobs:
           repository: snowfork/polkadot-sdk
           ref: smoketests-ci
           path: snowbridge/polkadot-sdk
+      - name: pnpm install
+        run: (cd snowbridge/web && pnpm install)
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
