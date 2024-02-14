@@ -41,7 +41,6 @@ use frame_system::EnsureRoot;
 use pallet_asset_tx_payment::HandleCredit;
 use pallet_assets::Instance1;
 use pallet_xcm::XcmPassthrough;
-use parachains_common::xcm_config::ConcreteAssetFromSystem;
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_io::hashing::blake2_256;
@@ -327,8 +326,24 @@ pub type Reserves = (
 	AssetPrefixFrom<EthereumLocation, SystemAssetHubLocation>,
 );
 
+pub struct ConcreteAssetFromBridgeHub<AssetLocation>(PhantomData<AssetLocation>);
+impl<AssetLocation: Get<Location>> ContainsPair<Asset, Location>
+	for ConcreteAssetFromBridgeHub<AssetLocation>
+{
+	fn contains(asset: &Asset, origin: &Location) -> bool {
+		log::trace!(target: "xcm::contains", "ConcreteAssetFromBridgeHub asset: {:?}, origin: {:?}", asset, origin);
+		let is_from_bh = match origin.unpack() {
+			// System parachain
+			(1, [Parachain(id)]) => *id == 1013,
+			// Others
+			_ => false,
+		};
+		asset.id.0 == AssetLocation::get() && is_from_bh
+	}
+}
+
 pub type TrustedTeleporters = (
-	ConcreteAssetFromSystem<RelayLocation>,
+	ConcreteAssetFromBridgeHub<RelayLocation>,
 	AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,
 );
 
