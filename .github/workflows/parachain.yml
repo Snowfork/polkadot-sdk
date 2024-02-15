@@ -86,7 +86,6 @@ jobs:
 #     - run: echo "E2E tests failed"
 #     - name: Fail the workflow
 #       run: exit 1
-
 #  check:
 #    runs-on: snowbridge-runner
 #    env:
