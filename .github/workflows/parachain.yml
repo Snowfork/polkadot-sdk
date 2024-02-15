@@ -67,6 +67,7 @@ jobs:
           sleep 10 &&
           ./scripts/check-relayer.sh &&
           ./scripts/run-smoketests.sh'
+      - run: ls
 
 #  check:
 #    runs-on: snowbridge-runner
