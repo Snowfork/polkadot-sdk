@@ -17,12 +17,14 @@ env:
   RUST_NIGHTLY: "2023-05-23"
 
 jobs:
-  check:
+  e2e_run:
     runs-on: snowbridge-runner
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
       RUSTFLAGS: -C debuginfo=1
+    outputs:
+      success: ${{ steps.run_e2e_stack.outcome == 'success' }}
     steps:
       - name: Set build directory environment variable
         run: echo "OUTPUT_DIR=${GITHUB_WORKSPACE}/tmp" >> $GITHUB_ENV
@@ -54,6 +56,7 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: run e2e stack
+        id: run_e2e_stack
         run: |
           cd snowbridge
           nix develop -c sh -c '
@@ -68,12 +71,20 @@ jobs:
           ./scripts/check-relayer.sh &&
           ./scripts/run-smoketests.sh'
         continue-on-error: true
+
       - name: Save start-services log file
         uses: actions/upload-artifact@v3
         with:
           name: start-services.log
-          path: $OUTPUT_DIR
-
+          path: $OUTPUT_DIR/start-services.log
+  e2e_status:
+    needs: e2e_run
+    runs-on: snowbridge-runner
+    if: needs.e2e_run.outputs.success != 'true'
+    steps:
+      - run: echo "E2E tests failed"
+      - name: Fail the workflow
+        run: exit 1
 #  check:
 #    runs-on: snowbridge-runner
 #    env:
