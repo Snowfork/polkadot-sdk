@@ -67,7 +67,12 @@ jobs:
           sleep 10 &&
           ./scripts/check-relayer.sh &&
           ./scripts/run-smoketests.sh'
-      - run: ls
+        continue-on-error: true
+      - name: Save start-services log file
+        uses: actions/upload-artifact@v3
+        with:
+          name: start-services.log
+          path: $OUTPUT_DIR
 
 #  check:
 #    runs-on: snowbridge-runner
