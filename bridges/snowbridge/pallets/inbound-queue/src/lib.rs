@@ -368,6 +368,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Transfer fees to BH to pay the xcm execution on dest chain
 		pub fn transfer_fees(para_id: ParaId, fee: BalanceOf<T>) -> DispatchResult {
 			let dummy_context =
 				XcmContext { origin: None, message_id: Default::default(), topic: None };

@@ -330,7 +330,7 @@ where
 		let xcm_fee: Asset = (Location::parent(), fee).into();
 
 		let xcm: Xcm<()> = vec![
-			// Teleport required fees.
+			// Withdraw fees from BH to pay the xcm execution
 			WithdrawAsset(xcm_fee.clone().into()),
 			// Pay for execution.
 			BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },

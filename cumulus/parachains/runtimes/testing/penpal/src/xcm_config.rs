@@ -326,26 +326,8 @@ pub type Reserves = (
 	AssetPrefixFrom<EthereumLocation, SystemAssetHubLocation>,
 );
 
-pub struct ConcreteAssetFromBridgeHub<AssetLocation>(PhantomData<AssetLocation>);
-impl<AssetLocation: Get<Location>> ContainsPair<Asset, Location>
-	for ConcreteAssetFromBridgeHub<AssetLocation>
-{
-	fn contains(asset: &Asset, origin: &Location) -> bool {
-		log::trace!(target: "xcm::contains", "ConcreteAssetFromBridgeHub asset: {:?}, origin: {:?}", asset, origin);
-		let is_from_bh = match origin.unpack() {
-			// System parachain
-			(1, [Parachain(id)]) => *id == 1013,
-			// Others
-			_ => false,
-		};
-		asset.id.0 == AssetLocation::get() && is_from_bh
-	}
-}
-
-pub type TrustedTeleporters = (
-	ConcreteAssetFromBridgeHub<RelayLocation>,
-	AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,
-);
+pub type TrustedTeleporters =
+	(AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,);
 
 parameter_types! {
 	pub SiblingBridgeHubLocation: Location = Location::new(
