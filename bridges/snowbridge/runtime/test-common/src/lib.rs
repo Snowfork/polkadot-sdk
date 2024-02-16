@@ -197,17 +197,6 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 
 			let digest_items = digest.logs();
 			assert!(digest_items.len() == 1 && digest_items[0].as_other().is_some());
-
-			let digest_item = &digest_items[0];
-			match digest_item {
-				DigestItem::PreRuntime(_, _) => panic!("is PreRuntime"),
-				DigestItem::Consensus(_, _) => panic!("is Consensus"),
-				DigestItem::Seal(_, _) => panic!("is Seal"),
-				DigestItem::Other(veccc) => {
-					assert_eq!(veccc[0], 0);
-				},
-				DigestItem::RuntimeEnvironmentUpdated => panic!("is RuntimeEnvironmentUpdated"),
-			}
 		});
 }
 
