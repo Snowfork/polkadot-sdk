@@ -349,10 +349,13 @@ where
 			// Deposit surplus to sender.
 			DepositAsset {
 				assets: Wild(AllCounted(1u32)),
-				beneficiary: Location{ parents: 1, interior: Junctions::from([
+				beneficiary: Location {
+					parents: 1,
+					interior: Junctions::from([
 						GlobalConsensus(Ethereum { chain_id }),
 						AccountKey20 { network: None, key: sender.into() },
-					]) }
+					]),
+				},
 			},
 		]
 		.into();
