@@ -333,7 +333,7 @@ parameter_types! {
 	pub SiblingBridgeHubLocation: Location = Location::new(
 				1,
 				[
-					Parachain(1013),
+					Parachain(bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID),
 				]
 			);
 	pub UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(

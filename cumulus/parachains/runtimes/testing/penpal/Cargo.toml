@@ -80,11 +80,13 @@ parachain-info = { package = "staging-parachain-info", path = "../../../pallets/
 parachains-common = { path = "../../../common", default-features = false }
 testnet-parachains-constants = { path = "../../constants", default-features = false, features = ["rococo"] }
 assets-common = { path = "../../assets/common", default-features = false }
+bp-bridge-hub-rococo = { path = "../../../../../bridges/primitives/chain-bridge-hub-rococo", default-features = false }
 
 [features]
 default = ["std"]
 std = [
 	"assets-common/std",
+	"bp-bridge-hub-rococo/std",
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-parachain-system/std",
