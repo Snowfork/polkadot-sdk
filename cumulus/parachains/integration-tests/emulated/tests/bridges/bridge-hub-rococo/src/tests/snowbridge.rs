@@ -16,7 +16,7 @@ use crate::*;
 use bridge_hub_rococo_runtime::{EthereumBeaconClient, EthereumInboundQueue, RuntimeOrigin};
 use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
-use frame_support::{__private::hashing::blake2_256, pallet_prelude::TypeInfo};
+use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::outbound::OperatingMode;
@@ -31,6 +31,7 @@ use snowbridge_router_primitives::inbound::{
 	Command, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
 };
 use sp_core::{H160, H256};
+use sp_io::hashing::blake2_256;
 use sp_runtime::{ArithmeticError::Underflow, DispatchError::Arithmetic};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 

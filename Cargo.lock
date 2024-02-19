@@ -1963,6 +1963,7 @@ dependencies = [
  "snowbridge-pallet-system",
  "snowbridge-router-primitives",
  "sp-core",
+ "sp-io",
  "sp-runtime",
  "staging-xcm",
  "staging-xcm-executor",

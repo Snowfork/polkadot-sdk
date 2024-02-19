@@ -24,6 +24,7 @@ pallet-asset-conversion = { path = "../../../../../../../substrate/frame/asset-c
 pallet-balances = { path = "../../../../../../../substrate/frame/balances", default-features = false }
 pallet-message-queue = { path = "../../../../../../../substrate/frame/message-queue" }
 sp-runtime = { path = "../../../../../../../substrate/primitives/runtime", default-features = false }
+sp-io = { path = "../../../../../../../substrate/primitives/io", default-features = false }
 
 # Polkadot
 xcm = { package = "staging-xcm", path = "../../../../../../../polkadot/xcm", default-features = false }
