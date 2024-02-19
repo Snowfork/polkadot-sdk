@@ -284,10 +284,9 @@ pub mod pallet {
 			);
 
 			let _ = match message {
-				// Transfer fees to BH for transact
-				VersionedMessage::V1(MessageV1 { command: Command::Transact { .. }, .. }) =>
-					Self::transfer_fees(channel.para_id, fee),
-				// Burning fees for teleport
+				// For transact do nothing here and leave it to dest chain to pay for fees by sender
+				VersionedMessage::V1(MessageV1 { command: Command::Transact { .. }, .. }) => Ok(()),
+				// For others burning fees for teleport
 				_ => Self::burn_fees(channel.para_id, fee),
 			}?;
 
@@ -365,25 +364,6 @@ pub mod pallet {
 				);
 				TokenError::FundsUnavailable
 			})?;
-			Ok(())
-		}
-
-		/// Transfer fees to BH to pay the xcm execution on dest chain
-		pub fn transfer_fees(para_id: ParaId, fee: BalanceOf<T>) -> DispatchResult {
-			let dummy_context =
-				XcmContext { origin: None, message_id: Default::default(), topic: None };
-			let from = Location::new(1, [Parachain(para_id.into())]);
-			let to = Location::new(1, [Parachain(T::SelfParaId::get().into())]);
-			let fees = (Location::parent(), fee.saturated_into::<u128>()).into();
-			T::AssetTransactor::transfer_asset(&fees, &from, &to, &dummy_context).map_err(
-				|error| {
-					log::error!(
-						target: LOG_TARGET,
-						"XCM asset transfer failed with error {:?}", error
-					);
-					TokenError::FundsUnavailable
-				},
-			)?;
 			Ok(())
 		}
 	}

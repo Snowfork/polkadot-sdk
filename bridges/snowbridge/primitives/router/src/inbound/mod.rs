@@ -330,14 +330,14 @@ where
 		let xcm_fee: Asset = (Location::parent(), fee).into();
 
 		let xcm: Xcm<()> = vec![
-			// Withdraw fees from BH to pay the xcm execution
-			WithdrawAsset(xcm_fee.clone().into()),
-			// Pay for execution.
-			BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
 			// DescendOrigin to the sender.
 			DescendOrigin(AccountKey20 { network: None, key: sender.into() }.into()),
+			// Withdraw fees from sender to pay the xcm execution
+			WithdrawAsset(xcm_fee.clone().into()),
+			// Pay for execution.
+			BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
 			// Transact on dest chain.
 			Transact {
 				origin_kind,
@@ -346,7 +346,7 @@ where
 			},
 			ExpectTransactStatus(MaybeErrorCode::Success),
 			RefundSurplus,
-			// Deposit surplus to sender.
+			// Deposit surplus back to sender.
 			DepositAsset {
 				assets: Wild(AllCounted(1u32)),
 				beneficiary: Location {

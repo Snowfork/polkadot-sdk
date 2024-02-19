@@ -16,7 +16,7 @@ use crate::*;
 use bridge_hub_rococo_runtime::{EthereumBeaconClient, EthereumInboundQueue, RuntimeOrigin};
 use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
-use frame_support::pallet_prelude::TypeInfo;
+use frame_support::{__private::hashing::blake2_256, pallet_prelude::TypeInfo};
 use hex_literal::hex;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::outbound::OperatingMode;
@@ -30,7 +30,7 @@ use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
 	Command, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
 };
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_runtime::{ArithmeticError::Underflow, DispatchError::Arithmetic};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 
@@ -539,8 +539,12 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
 
 #[test]
 fn transact_from_ethereum_to_penpal() {
-	// Fund BridgeHub sovereign account on penpal so that it can pay execution fees.
-	PenpalA::fund_para_sovereign(BridgeHubRococo::para_id().into(), INITIAL_FUND);
+	// Fund sender on penpal so that it can pay execution fees.
+	let sender: H160 = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into();
+	PenpalA::fund_accounts(vec![(
+		blake2_256(&(b"AccountKey20", sender).encode()).into(),
+		INITIAL_FUND,
+	)]);
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
@@ -549,7 +553,7 @@ fn transact_from_ethereum_to_penpal() {
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::Transact {
-				sender: hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into(),
+				sender,
 				fee: XCM_FEE,
 				weight_ref_time: 40_000_000,
 				weight_proof_size: 8_000,
