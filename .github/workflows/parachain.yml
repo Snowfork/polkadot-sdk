@@ -67,7 +67,6 @@ jobs:
           ./scripts/check-relayer.sh &&
           ./scripts/run-smoketests.sh'
         continue-on-error: true
-      - run: ls
       - name: Save start-services log file
         uses: actions/upload-artifact@v3
         with:
