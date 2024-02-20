@@ -563,7 +563,7 @@ fn transact_from_ethereum_to_penpal() {
 			},
 		});
 		// Convert the message to XCM
-		let (xcm, _, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
 		// Send the XCM
 		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
 

@@ -269,12 +269,12 @@ pub mod pallet {
 			let delivery_cost = Self::calculate_delivery_cost(message.encode().len() as u32);
 			T::Token::transfer(&sovereign_account, &who, delivery_cost, Preservation::Preserve)?;
 
-			// Decode message into XCM
-			let (xcm, fee, message) =
-				match VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(message) => Self::do_convert(envelope.message_id, message)?,
-					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-				};
+			// Decode payload into VersionMessage
+			let message = VersionedMessage::decode_all(&mut envelope.payload.as_ref())
+				.map_err(|_| Error::<T>::InvalidPayload)?;
+
+			// Convert VersionMessage to XCM
+			let (xcm, fee) = Self::do_convert(envelope.message_id, message.clone())?;
 
 			log::info!(
 				target: LOG_TARGET,
@@ -321,12 +321,12 @@ pub mod pallet {
 		pub fn do_convert(
 			message_id: H256,
 			message: VersionedMessage,
-		) -> Result<(Xcm<()>, BalanceOf<T>, VersionedMessage), Error<T>> {
-			let (mut xcm, fee) = T::MessageConverter::convert(message.clone())
-				.map_err(|e| Error::<T>::ConvertMessage(e))?;
+		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
+			let (mut xcm, fee) =
+				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
 			// Append the message id as an XCM topic
 			xcm.inner_mut().extend(vec![SetTopic(message_id.into())]);
-			Ok((xcm, fee, message))
+			Ok((xcm, fee))
 		}
 
 		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {

@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use super::*;
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, weights::Weight};
 use hex_literal::hex;
 use snowbridge_core::{inbound::Proof, ChannelId};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::{DispatchError, TokenError};
 use sp_std::convert::From;
+use xcm::prelude::{OriginKind, Transact};
 
 use crate::{Error, Event as InboundQueueEvent};
 
@@ -208,5 +209,37 @@ fn test_set_operating_mode_root_only() {
 			),
 			DispatchError::BadOrigin
 		);
+	});
+}
+
+#[test]
+fn test_convert_transact() {
+	new_tester().execute_with(|| {
+		let message_id: H256 = [1; 32].into();
+		let sender: H160 = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into();
+		let fee: u128 = 40_000_000_000;
+		let weight_at_most = Weight::from_parts(40_000_000, 8_000);
+		let origin_kind = OriginKind::SovereignAccount;
+		let payload = hex!("00071468656c6c6f").to_vec();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: 11155111,
+			command: Command::Transact {
+				sender,
+				fee,
+				weight_ref_time: weight_at_most.ref_time(),
+				weight_proof_size: weight_at_most.proof_size(),
+				origin_kind,
+				payload: payload.clone(),
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, dest_fee) = InboundQueue::do_convert(message_id, message).unwrap();
+		let instructions = xcm.into_inner();
+		assert_eq!(instructions.len(), 9);
+		assert_eq!(dest_fee, fee.into());
+		let transact = instructions.get(4).unwrap().clone();
+		let expected =
+			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() };
+		assert_eq!(transact, expected);
 	});
 }
