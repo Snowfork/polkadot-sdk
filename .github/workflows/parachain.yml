@@ -72,7 +72,6 @@ jobs:
         with:
           name: start-services.log
           path: ./tmp/start-services.log
-      - run: ls
   e2e_status:
     needs: e2e_run
     runs-on: snowbridge-runner
