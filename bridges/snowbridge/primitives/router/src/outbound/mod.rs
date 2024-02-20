@@ -7,14 +7,15 @@ mod tests;
 
 use core::slice::Iter;
 
-use codec::{Decode, Encode};
+use codec::{Decode, DecodeAll, Encode};
 
+use crate::outbound::XcmConverterError::SetTopicExpected;
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{
-	outbound::{AgentExecuteCommand, Command, Message, SendMessage},
+	outbound::{AgentExecuteCommand, Command, Message, SendMessage, TransactInfo},
 	ChannelId, ParaId,
 };
-use sp_core::{H160, H256};
+use sp_core::{hexdisplay::AsBytesRef, H160, H256};
 use sp_std::{iter::Peekable, marker::PhantomData, prelude::*};
 use xcm::prelude::*;
 use xcm_executor::traits::{ConvertLocation, ExportXcm};
@@ -154,6 +155,11 @@ enum XcmConverterError {
 	AssetResolutionFailed,
 	InvalidFeeAsset,
 	SetTopicExpected,
+	TransactDescendOriginExpected,
+	TransactInvalidContract,
+	TransactSovereignAccountExpected,
+	TransactExpected,
+	UnexpectedInstruction,
 }
 
 macro_rules! match_expression {
@@ -175,8 +181,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	}
 
 	fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
-		// Get withdraw/deposit and make native tokens create message.
-		let result = self.native_tokens_unlock_message()?;
+		let result = match self.peek() {
+			Ok(DescendOrigin { .. }) => self.transact_message()?,
+			// Get withdraw/deposit and make native tokens create message.
+			Ok(WithdrawAsset { .. }) => self.native_tokens_unlock_message()?,
+			_ => return Err(XcmConverterError::UnexpectedInstruction),
+		};
 
 		// All xcm instructions must be consumed before exit.
 		if self.next().is_ok() {
@@ -184,6 +194,43 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		}
 
 		Ok(result)
+	}
+
+	fn transact_message(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+		let contract_address = if let DescendOrigin(location) = self.next()? {
+			if let Some(AccountKey20 { key: contract_address, .. }) = location.first() {
+				contract_address
+			} else {
+				return Err(XcmConverterError::TransactInvalidContract)
+			}
+		} else {
+			return Err(XcmConverterError::TransactDescendOriginExpected)
+		};
+
+		let call_data = if let Transact { origin_kind, call, .. } = self.next()? {
+			ensure!(
+				*origin_kind == OriginKind::SovereignAccount,
+				XcmConverterError::TransactSovereignAccountExpected
+			);
+			call
+		} else {
+			return Err(XcmConverterError::TransactExpected)
+		};
+
+		let message =
+			TransactInfo::decode_all(&mut call_data.clone().into_encoded().as_bytes_ref())
+				.map_err(|_| XcmConverterError::TransactExpected)?;
+
+		// Check if there is a SetTopic and skip over it if found.
+		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
+		Ok((
+			AgentExecuteCommand::Transact {
+				target: contract_address.into(),
+				payload: message.call,
+				gas_limit: message.gas_limit,
+			},
+			*topic_id,
+		))
 	}
 
 	fn native_tokens_unlock_message(

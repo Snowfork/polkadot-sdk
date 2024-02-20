@@ -235,12 +235,22 @@ mod v1 {
 			/// The amount of tokens to transfer
 			amount: u128,
 		},
+		/// Execute a contract on the target chain
+		Transact {
+			/// Target contract address
+			target: H160,
+			/// The call data to the contract
+			payload: Vec<u8>,
+			/// The dynamic gas component that needs to be specified when executing the contract
+			gas_limit: u64,
+		},
 	}
 
 	impl AgentExecuteCommand {
 		fn index(&self) -> u8 {
 			match self {
 				AgentExecuteCommand::TransferToken { .. } => 0,
+				AgentExecuteCommand::Transact { .. } => 1,
 			}
 		}
 
@@ -256,6 +266,14 @@ mod v1 {
 							Token::Uint(U256::from(*amount)),
 						])),
 					]),
+				AgentExecuteCommand::Transact { target, payload, gas_limit } => ethabi::encode(&[
+					Token::Uint(self.index().into()),
+					Token::Bytes(ethabi::encode(&[
+						Token::Address(*target),
+						Token::Bytes(payload.clone()),
+						Token::Uint(U256::from(*gas_limit)),
+					])),
+				]),
 			}
 		}
 	}
@@ -386,6 +404,7 @@ impl GasMeter for ConstantGasMeter {
 				// * Assume dest account in ERC20 contract does not yet have a storage slot
 				// * ERC20.transferFrom possibly does other business logic besides updating balances
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
+				AgentExecuteCommand::Transact { gas_limit, .. } => *gas_limit,
 			},
 			Command::Upgrade { initializer, .. } => {
 				let initializer_max_gas = match *initializer {
@@ -411,3 +430,9 @@ impl GasMeter for () {
 }
 
 pub const ETHER_DECIMALS: u8 = 18;
+
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct TransactInfo {
+	pub call: Vec<u8>,
+	pub gas_limit: u64,
+}

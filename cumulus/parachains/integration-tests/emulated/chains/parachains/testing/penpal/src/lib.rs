@@ -49,6 +49,7 @@ decl_test_parachains! {
 			Assets: penpal_runtime::Assets,
 			ForeignAssets: penpal_runtime::ForeignAssets,
 			Balances: penpal_runtime::Balances,
+			TransactHelper: penpal_runtime::TransactHelper,
 		}
 	},
 	pub struct PenpalB {

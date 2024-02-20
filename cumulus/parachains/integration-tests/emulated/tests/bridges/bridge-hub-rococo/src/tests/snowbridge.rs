@@ -535,3 +535,111 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
 		assert_err!(send_inbound_message(make_register_token_message()), Arithmetic(Underflow));
 	});
 }
+
+#[test]
+fn transact_from_penpal_to_ethereum() {
+	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
+
+	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
+	let destination: VersionedLocation =
+		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
+
+	// Construct XCM to create an agent for para 2000
+	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
+		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+		DescendOrigin(Parachain(PenpalA::para_id().into()).into()),
+		Transact {
+			require_weight_at_most: 3000000000.into(),
+			origin_kind: OriginKind::Xcm,
+			call: SnowbridgeControl::Control(ControlCall::CreateAgent {}).encode().into(),
+		},
+	]));
+
+	// Construct XCM to create a channel for para 2000
+	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
+		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+		DescendOrigin(Parachain(PenpalA::para_id().into()).into()),
+		Transact {
+			require_weight_at_most: 3000000000.into(),
+			origin_kind: OriginKind::Xcm,
+			call: SnowbridgeControl::Control(ControlCall::CreateChannel {
+				mode: OperatingMode::Normal,
+			})
+			.encode()
+			.into(),
+		},
+	]));
+
+	// Send XCM message from Relay Chain to create agent/channel for penpal on BH
+	Rococo::execute_with(|| {
+		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
+			sudo_origin.clone(),
+			bx!(destination.clone()),
+			bx!(create_agent_xcm),
+		));
+
+		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
+			sudo_origin,
+			bx!(destination),
+			bx!(create_channel_xcm),
+		));
+
+		type RuntimeEvent = <Rococo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			Rococo,
+			vec![
+				RuntimeEvent::XcmPallet(pallet_xcm::Event::Sent { .. }) => {},
+			]
+		);
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+
+		// Check that the Channel was created
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::CreateChannel {
+					..
+				}) => {},
+			]
+		);
+	});
+
+	PenpalA::execute_with(|| {
+		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <PenpalA as Chain>::RuntimeOrigin;
+		let sender = PenpalASender::get();
+		assert_ok!(<PenpalA as PenpalAPallet>::TransactHelper::transact_to_ethereum(
+			RuntimeOrigin::signed(sender),
+			//contract
+			hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into(),
+			//call
+			hex!("00071468656c6c6f").to_vec(),
+			//fee
+			4_000_000_000,
+			//gas
+			80_000,
+		));
+
+		assert_expected_events!(
+			PenpalA,
+			vec![
+				RuntimeEvent::TransactHelper(penpal_runtime::pallets::transact_helper::Event::SentExportMessage { .. }) => {},
+			]
+		);
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued { .. }) => {},
+			]
+		);
+	});
+}

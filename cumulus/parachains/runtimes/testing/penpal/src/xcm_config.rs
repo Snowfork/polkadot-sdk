@@ -32,17 +32,19 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungibles::{self, Balanced, Credit},
-		ConstU32, Contains, ContainsPair, Everything, Get, Nothing,
+		ConstU32, Contains, ContainsPair, Equals, Everything, Get, Nothing,
 	},
 	weights::Weight,
+	PalletId,
 };
 use frame_system::EnsureRoot;
 use pallet_asset_tx_payment::HandleCredit;
 use pallet_assets::Instance1;
 use pallet_xcm::XcmPassthrough;
+use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use sp_runtime::traits::Zero;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 use xcm::latest::prelude::*;
 #[allow(deprecated)]
@@ -56,13 +58,15 @@ use xcm_builder::{
 	SovereignSignedViaLocation, StartsWith, TakeWeightCredit, TrailingSetTopicAsId,
 	UsingComponents, WithComputedOrigin, WithUniqueTopic,
 };
+use xcm_builder::{SovereignPaidRemoteExporter, XcmFeeManagerFromComponents, XcmFeeToAccount};
 use xcm_executor::{traits::JustTry, XcmExecutor};
 
 parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
-	pub const RelayNetwork: Option<NetworkId> = None;
+	pub const RelayNetwork: NetworkId = NetworkId::Rococo;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
-	pub UniversalLocation: InteriorLocation = [Parachain(ParachainInfo::parachain_id().into())].into();
+	pub UniversalLocation: InteriorLocation =
+		[GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into())].into();
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -298,6 +302,9 @@ parameter_types! {
 		[xcm::v3::Junction::PalletInstance(50), xcm::v3::Junction::GeneralIndex(TELEPORTABLE_ASSET_ID.into())]
 	);
 	pub EthereumLocation: Location = Location::new(2, [GlobalConsensus(EthereumNetwork::get())]);
+	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(18)).into();
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 /// Accepts asset with ID `AssetLocation` and is coming from `Origin` chain.
@@ -320,6 +327,11 @@ pub type Reserves = (
 );
 pub type TrustedTeleporters =
 	(AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,);
+
+pub type WaivedLocations = (
+	RelayOrOtherSystemParachains<AllSiblingSystemParachains, Runtime>,
+	Equals<RelayTreasuryLocation>,
+);
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -344,7 +356,10 @@ impl xcm_executor::Config for XcmConfig {
 	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
 	type AssetLocker = ();
 	type AssetExchanger = ();
-	type FeeManager = ();
+	type FeeManager = XcmFeeManagerFromComponents<
+		WaivedLocations,
+		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
+	>;
 	type MessageExporter = ();
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
@@ -407,4 +422,44 @@ impl pallet_assets::BenchmarkHelper<xcm::v3::Location> for XcmBenchmarkHelper {
 	fn create_asset_id_parameter(id: u32) -> xcm::v3::Location {
 		xcm::v3::Location::new(1, [xcm::v3::Junction::Parachain(id)])
 	}
+}
+
+impl crate::pallets::transact_helper::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type XcmRouter = SovereignPaidRemoteExporter<
+		to_ethereum::EthereumNetworkExportTable,
+		XcmpQueue,
+		UniversalLocation,
+	>;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+}
+
+pub mod to_ethereum {
+	use super::*;
+	use xcm_builder::NetworkExportTableItem;
+
+	parameter_types! {
+		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+		pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
+		pub SiblingBridgeHub: Location = Location::new(1, [Parachain(1013)]);
+
+		pub BridgeTable: Vec<NetworkExportTableItem> = sp_std::vec![
+			NetworkExportTableItem::new(
+				EthereumNetwork::get(),
+				Some(sp_std::vec![Here]),
+				SiblingBridgeHub::get(),
+				Some((
+						RelayLocation::get(),
+						BridgeHubEthereumBaseFee::get(),
+					).into())
+			),
+		];
+
+		pub EthereumBridgeTable: Vec<NetworkExportTableItem> =
+		Vec::new().into_iter()
+		.chain(BridgeTable::get())
+		.collect();
+	}
+
+	pub type EthereumNetworkExportTable = xcm_builder::NetworkExportTable<EthereumBridgeTable>;
 }
