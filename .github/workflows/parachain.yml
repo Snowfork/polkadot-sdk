@@ -62,7 +62,10 @@ jobs:
           nix develop -c sh -c '
           ./scripts/init.sh &&
           cd web/packages/test &&
-          ./scripts/start-services.sh'
+          (./scripts/start-services.sh > "${{ env.OUTPUT_DIR }}/start-services.log" 2>&1 &) &&
+          sleep 10 &&
+          ./scripts/check-relayer.sh &&
+          ./scripts/run-smoketests.sh'
         continue-on-error: true
       - run: ls
       - name: Save start-services log file
