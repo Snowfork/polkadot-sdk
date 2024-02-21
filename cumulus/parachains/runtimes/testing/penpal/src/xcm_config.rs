@@ -45,6 +45,7 @@ use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSyst
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_std::vec::Vec;
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 use xcm::latest::prelude::*;
 #[allow(deprecated)]

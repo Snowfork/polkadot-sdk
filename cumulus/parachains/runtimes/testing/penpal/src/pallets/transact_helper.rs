@@ -21,6 +21,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_core::H160;
+	use sp_std::{vec, vec::Vec};
 	use xcm::prelude::*;
 	use xcm_executor::traits::XcmAssetTransfers;
 
