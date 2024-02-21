@@ -32,7 +32,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungibles::{self, Balanced, Credit},
-		ConstU32, Contains, ContainsPair, Equals, Everything, Get, Nothing,
+		ConstU32, Contains, ContainsPair, Everything, Get, Nothing,
 	},
 	weights::Weight,
 	PalletId,
@@ -41,7 +41,6 @@ use frame_system::EnsureRoot;
 use pallet_asset_tx_payment::HandleCredit;
 use pallet_assets::Instance1;
 use pallet_xcm::XcmPassthrough;
-use parachains_common::xcm_config::{AllSiblingSystemParachains, RelayOrOtherSystemParachains};
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_runtime::traits::{AccountIdConversion, Zero};
@@ -303,7 +302,6 @@ parameter_types! {
 		[xcm::v3::Junction::PalletInstance(50), xcm::v3::Junction::GeneralIndex(TELEPORTABLE_ASSET_ID.into())]
 	);
 	pub EthereumLocation: Location = Location::new(2, [GlobalConsensus(EthereumNetwork::get())]);
-	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(18)).into();
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
@@ -329,11 +327,6 @@ pub type Reserves = (
 pub type TrustedTeleporters =
 	(AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,);
 
-pub type WaivedLocations = (
-	RelayOrOtherSystemParachains<AllSiblingSystemParachains, Runtime>,
-	Equals<RelayTreasuryLocation>,
-);
-
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
@@ -358,7 +351,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetLocker = ();
 	type AssetExchanger = ();
 	type FeeManager = XcmFeeManagerFromComponents<
-		WaivedLocations,
+		Nothing,
 		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 	>;
 	type MessageExporter = ();

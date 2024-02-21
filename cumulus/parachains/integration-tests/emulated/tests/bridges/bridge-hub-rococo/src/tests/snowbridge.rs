@@ -544,7 +544,7 @@ fn transact_from_penpal_to_ethereum() {
 	let destination: VersionedLocation =
 		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
-	// Construct XCM to create an agent for para 2000
+	// Construct XCM to create an agent for penpal
 	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(Parachain(PenpalA::para_id().into()).into()),
@@ -555,7 +555,7 @@ fn transact_from_penpal_to_ethereum() {
 		},
 	]));
 
-	// Construct XCM to create a channel for para 2000
+	// Construct XCM to create a channel for penpal
 	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(Parachain(PenpalA::para_id().into()).into()),
