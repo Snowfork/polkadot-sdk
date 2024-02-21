@@ -631,7 +631,7 @@ fn xcm_converter_with_fees_greater_than_reserve_fails() {
 }
 
 #[test]
-fn xcm_converter_convert_with_empty_xcm_yields_unexpected_end_of_xcm() {
+fn xcm_converter_convert_with_empty_xcm_yields_unexpected_instruction() {
 	let network = BridgedNetwork::get();
 
 	let message: Xcm<()> = vec![].into();
@@ -639,7 +639,7 @@ fn xcm_converter_convert_with_empty_xcm_yields_unexpected_end_of_xcm() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedEndOfXcm));
+	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedInstruction));
 }
 
 #[test]
@@ -675,7 +675,7 @@ fn xcm_converter_convert_with_extra_instructions_yields_end_of_xcm_message_expec
 }
 
 #[test]
-fn xcm_converter_convert_without_withdraw_asset_yields_withdraw_expected() {
+fn xcm_converter_convert_without_withdraw_asset_yields_unexpected_instruction() {
 	let network = BridgedNetwork::get();
 
 	let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
@@ -701,7 +701,7 @@ fn xcm_converter_convert_without_withdraw_asset_yields_withdraw_expected() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::WithdrawAssetExpected));
+	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedInstruction));
 }
 
 #[test]
