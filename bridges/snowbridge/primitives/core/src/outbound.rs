@@ -3,6 +3,7 @@ use frame_support::PalletError;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use sp_core::{RuntimeDebug, H256};
+use sp_std::vec::Vec;
 pub use v1::{AgentExecuteCommand, Command, Initializer, Message, OperatingMode, QueuedMessage};
 
 /// Enqueued outbound messages need to be versioned to prevent data corruption
