@@ -50,6 +50,7 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 	pub struct TransactInfo {
+		pub target: H160,
 		pub call: Vec<u8>,
 		pub gas_limit: u64,
 	}
@@ -66,7 +67,7 @@ pub mod pallet {
 		#[pallet::weight(Weight::from_parts(100_000_000, 0))]
 		pub fn transact_to_ethereum(
 			origin: OriginFor<T>,
-			contract: H160,
+			target: H160,
 			call: Vec<u8>,
 			fee: u128,
 			gas_limit: u64,
@@ -77,18 +78,15 @@ pub mod pallet {
 				parents: 2,
 				interior: Junctions::from([GlobalConsensus(Ethereum { chain_id: 11155111 })]),
 			};
-			let transact = TransactInfo { call, gas_limit };
+			let transact = TransactInfo { target, call, gas_limit };
 
 			let inner_message = Xcm(vec![
-				DescendOrigin(Junctions::from(AccountKey20 {
-					network: None,
-					key: contract.into(),
-				})),
 				Transact {
 					origin_kind: OriginKind::SovereignAccount,
 					require_weight_at_most: Weight::default(),
 					call: transact.encode().into(),
 				},
+				// Optional only for trace
 				SetTopic([0; 32]),
 			]);
 

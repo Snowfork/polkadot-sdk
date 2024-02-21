@@ -2,7 +2,7 @@ use codec::{Decode, Encode};
 use frame_support::PalletError;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
-use sp_core::{RuntimeDebug, H256};
+use sp_core::{RuntimeDebug, H160, H256};
 use sp_std::vec::Vec;
 pub use v1::{AgentExecuteCommand, Command, Initializer, Message, OperatingMode, QueuedMessage};
 
@@ -434,6 +434,7 @@ pub const ETHER_DECIMALS: u8 = 18;
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct TransactInfo {
+	pub target: H160,
 	pub call: Vec<u8>,
 	pub gas_limit: u64,
 }
