@@ -235,9 +235,9 @@ fn test_convert_transact() {
 		// Convert the message to XCM
 		let (xcm, dest_fee) = InboundQueue::do_convert(message_id, message).unwrap();
 		let instructions = xcm.into_inner();
-		assert_eq!(instructions.len(), 9);
+		assert_eq!(instructions.len(), 10);
 		assert_eq!(dest_fee, fee.into());
-		let transact = instructions.get(4).unwrap().clone();
+		let transact = instructions.get(5).unwrap().clone();
 		let expected =
 			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() };
 		assert_eq!(transact, expected);
