@@ -340,24 +340,25 @@ where
 			WithdrawAsset(xcm_fee.clone().into()),
 			// Pay for execution.
 			BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
+			SetAppendix(Xcm(vec![
+				RefundSurplus,
+				// Deposit surplus back to sender.
+				DepositAsset {
+					assets: Wild(AllCounted(1u32)),
+					beneficiary: Location {
+						parents: 1,
+						interior: Junctions::from([
+							GlobalConsensus(Ethereum { chain_id }),
+							AccountKey20 { network: None, key: sender.into() },
+						]),
+					},
+				},
+			])),
 			// Transact on dest chain.
 			Transact {
 				origin_kind,
 				require_weight_at_most: Weight::from_parts(weight_ref_time, weight_proof_size),
 				call: payload.into(),
-			},
-			ExpectTransactStatus(MaybeErrorCode::Success),
-			RefundSurplus,
-			// Deposit surplus back to sender.
-			DepositAsset {
-				assets: Wild(AllCounted(1u32)),
-				beneficiary: Location {
-					parents: 1,
-					interior: Junctions::from([
-						GlobalConsensus(Ethereum { chain_id }),
-						AccountKey20 { network: None, key: sender.into() },
-					]),
-				},
 			},
 		]
 		.into();
