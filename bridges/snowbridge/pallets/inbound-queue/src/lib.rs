@@ -283,12 +283,16 @@ pub mod pallet {
 				fee
 			);
 
-			let _ = match message {
+			match message {
+				// For RegisterToken|SendToken burning fees for teleport
+				VersionedMessage::V1(MessageV1 {
+					command: Command::RegisterToken { .. }, ..
+				}) |
+				VersionedMessage::V1(MessageV1 { command: Command::SendToken { .. }, .. }) =>
+					Self::burn_fees(channel.para_id, fee)?,
 				// For transact do nothing here and leave it to dest chain to pay for fees by sender
-				VersionedMessage::V1(MessageV1 { command: Command::Transact { .. }, .. }) => Ok(()),
-				// For others burning fees for teleport
-				_ => Self::burn_fees(channel.para_id, fee),
-			}?;
+				VersionedMessage::V1(MessageV1 { command: Command::Transact { .. }, .. }) => (),
+			};
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;
