@@ -257,7 +257,6 @@ impl inbound_queue::Config for Test {
 	type LengthToFee = IdentityFee<u128>;
 	type MaxMessageSize = ConstU32<1024>;
 	type AssetTransactor = SuccessfulTransactor;
-	type SelfParaId = OwnParaId;
 }
 
 pub fn last_events(n: usize) -> Vec<RuntimeEvent> {

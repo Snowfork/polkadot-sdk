@@ -138,9 +138,6 @@ pub mod pallet {
 
 		/// To withdraw and deposit an asset.
 		type AssetTransactor: TransactAsset;
-
-		/// Returns the parachain ID we are running with.
-		type SelfParaId: Get<ParaId>;
 	}
 
 	#[pallet::hooks]
