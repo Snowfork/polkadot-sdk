@@ -346,7 +346,7 @@ where
 				DepositAsset {
 					assets: Wild(AllCounted(1u32)),
 					beneficiary: Location {
-						parents: 1,
+						parents: 0,
 						interior: Junctions::from([
 							GlobalConsensus(Ethereum { chain_id }),
 							AccountKey20 { network: None, key: sender.into() },

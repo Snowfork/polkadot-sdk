@@ -351,8 +351,8 @@ where
 {
 	fn convert_location(location: &Location) -> Option<AccountId> {
 		match location.unpack() {
-			(parents, [first_loc, AccountKey20 { network: None, key: sender }])
-				if parents == 1 && *first_loc == Junction::from(EthereumNetwork::get()) =>
+			(_, [first_loc, AccountKey20 { network: None, key: sender }])
+				if *first_loc == Junction::from(EthereumNetwork::get()) =>
 				Some(blake2_256(&(b"AccountKey20", sender).encode()).into()),
 			_ => None,
 		}
