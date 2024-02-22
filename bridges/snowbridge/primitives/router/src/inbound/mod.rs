@@ -330,6 +330,8 @@ where
 		let xcm_fee: Asset = (Location::parent(), fee).into();
 
 		let xcm: Xcm<()> = vec![
+			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
+			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
 			// DescendOrigin to the sender.

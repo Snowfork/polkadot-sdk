@@ -330,15 +330,16 @@ pub type TrustedTeleporters =
 	(AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,);
 
 parameter_types! {
-	pub SiblingBridgeHubLocation: Location = Location::new(
+	pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
 				1,
 				[
 					Parachain(bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID),
+					PalletInstance(testnet_parachains_constants::rococo::snowbridge::INBOUND_QUEUE_PALLET_INDEX)
 				]
 			);
 	pub UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(
 			sp_std::vec![
-				(SiblingBridgeHubLocation::get(),GlobalConsensus(EthereumNetwork::get())),
+				(SiblingBridgeHubWithEthereumInboundQueueInstance::get(),GlobalConsensus(EthereumNetwork::get())),
 			]
 	);
 }
