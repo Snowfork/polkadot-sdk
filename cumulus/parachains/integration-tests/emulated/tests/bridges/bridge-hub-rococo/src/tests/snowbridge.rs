@@ -556,8 +556,7 @@ fn transact_from_ethereum_to_penpal() {
 			command: Command::Transact {
 				sender,
 				fee: XCM_FEE,
-				weight_ref_time: 40_000_000,
-				weight_proof_size: 8_000,
+				weight_at_most: Weight::from_parts(40_000_000, 8_000),
 				origin_kind: OriginKind::SovereignAccount,
 				payload: hex!("00071468656c6c6f").to_vec(),
 			},

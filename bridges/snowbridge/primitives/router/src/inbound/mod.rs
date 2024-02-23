@@ -64,10 +64,8 @@ pub enum Command {
 		origin_kind: OriginKind,
 		/// XCM execution fee on dest chain
 		fee: u128,
-		/// The ref_time part of weight_at_most
-		weight_ref_time: u64,
-		/// The proof_size part of weight_at_most
-		weight_proof_size: u64,
+		/// The weight required at most on dest chain
+		weight_at_most: Weight,
 		/// The payload of the transact
 		payload: Vec<u8>,
 	},
@@ -163,15 +161,13 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
 			V1(MessageV1 {
 				chain_id,
-				command:
-					Transact { sender, origin_kind, fee, weight_ref_time, weight_proof_size, payload },
+				command: Transact { sender, origin_kind, fee, weight_at_most, payload },
 			}) => Ok(Self::convert_transact(
 				chain_id,
 				sender,
 				origin_kind,
 				fee,
-				weight_ref_time,
-				weight_proof_size,
+				weight_at_most,
 				payload,
 			)),
 		}
@@ -323,8 +319,7 @@ where
 		sender: H160,
 		origin_kind: OriginKind,
 		fee: u128,
-		weight_ref_time: u64,
-		weight_proof_size: u64,
+		weight_at_most: Weight,
 		payload: Vec<u8>,
 	) -> (Xcm<()>, Balance) {
 		let xcm_fee: Asset = (Location::parent(), fee).into();
@@ -355,11 +350,7 @@ where
 				},
 			])),
 			// Transact on dest chain.
-			Transact {
-				origin_kind,
-				require_weight_at_most: Weight::from_parts(weight_ref_time, weight_proof_size),
-				call: payload.into(),
-			},
+			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() },
 		]
 		.into();
 

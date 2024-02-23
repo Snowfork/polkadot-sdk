@@ -226,8 +226,7 @@ fn test_convert_transact() {
 			command: Command::Transact {
 				sender,
 				fee,
-				weight_ref_time: weight_at_most.ref_time(),
-				weight_proof_size: weight_at_most.proof_size(),
+				weight_at_most,
 				origin_kind,
 				payload: payload.clone(),
 			},
