@@ -149,6 +149,7 @@ pub fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
 		XcmConfig,
 		AllPalletsWithoutSystem,
 	>(
+		11155111,
 		collator_session_keys(),
 		1013,
 		1000,

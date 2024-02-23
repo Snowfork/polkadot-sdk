@@ -208,6 +208,7 @@ pub fn ethereum_outbound_queue_processes_messages_before_message_queue_works<
 	XcmConfig,
 	AllPalletsWithoutSystem,
 >(
+	ethereum_chain_id: u64,
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
 	assethub_parachain_id: u32,
