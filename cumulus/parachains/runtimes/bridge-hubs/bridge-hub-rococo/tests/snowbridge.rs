@@ -51,6 +51,7 @@ fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime
 #[test]
 pub fn transfer_token_to_ethereum_works() {
 	snowbridge_runtime_test_common::send_transfer_token_message_success::<Runtime, XcmConfig>(
+		11155111,
 		collator_session_keys(),
 		1013,
 		1000,
