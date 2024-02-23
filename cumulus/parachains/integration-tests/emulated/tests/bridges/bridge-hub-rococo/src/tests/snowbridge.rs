@@ -541,11 +541,10 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
 #[test]
 fn transact_from_ethereum_to_penpal() {
 	// Fund sender on penpal so that it can pay execution fees.
-	let sender: H160 = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into();
-	PenpalA::fund_accounts(vec![(
-		blake2_256(&(b"AccountKey20", sender).encode()).into(),
-		INITIAL_FUND,
-	)]);
+	let sender: H160 = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe").into();
+	let sovereign_of_sender = blake2_256(&(b"AccountKey20", sender).encode());
+	println!("sovereign account of the sender: {:#?}", hex::encode(sovereign_of_sender.clone()));
+	PenpalA::fund_accounts(vec![(sovereign_of_sender.into(), INITIAL_FUND)]);
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;

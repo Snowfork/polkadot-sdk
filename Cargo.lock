@@ -1945,6 +1945,7 @@ dependencies = [
  "emulated-integration-tests-common",
  "frame-support",
  "frame-system",
+ "hex",
  "hex-literal",
  "pallet-asset-conversion",
  "pallet-assets",
