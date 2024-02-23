@@ -108,17 +108,11 @@ jobs:
       # Run tests for runtime-benchmarks feature
       - name: Tests for runtime-benchmarks
         working-directory: bridges/snowbridge
-        run: >
-          cargo test
-          --workspace
-          --features runtime-benchmarks
+        run: cargo test --features runtime-benchmarks
       # Run tests for all features
       - name: Tests for all features
         working-directory: bridges/snowbridge
-        run: >
-          cargo test
-          --workspace
-          --all-features
+        run: cargo test --all-features
 
   coverage:
     needs: check
@@ -143,7 +137,6 @@ jobs:
         run: >
           cargo install cargo-tarpaulin@0.27.0 &&
           cargo tarpaulin
-          --workspace
           --engine llvm
           --out xml
       - name: Upload coverage reports to Codecov with GitHub Action
