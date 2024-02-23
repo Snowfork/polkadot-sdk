@@ -108,6 +108,7 @@ where
 }
 
 pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
+	ethereum_chain_id: u64,
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
 	assethub_parachain_id: u32,
@@ -150,6 +151,7 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 			initial_fund::<Runtime>(assethub_parachain_id, 5_000_000_000_000);
 
 			let outcome = send_transfer_token_message::<Runtime, XcmConfig>(
+				ethereum_chain_id,
 				assethub_parachain_id,
 				weth_contract_address,
 				destination_address,
