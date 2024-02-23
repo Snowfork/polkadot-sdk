@@ -40,7 +40,7 @@ where
 }
 
 pub fn send_transfer_token_message<Runtime, XcmConfig>(
-	ethereum_chain_id: u32,
+	ethereum_chain_id: u64,
 	assethub_parachain_id: u32,
 	weth_contract_address: H160,
 	destination_address: H160,
@@ -292,7 +292,7 @@ pub fn ethereum_outbound_queue_processes_messages_before_message_queue_works<
 }
 
 pub fn send_unpaid_transfer_token_message<Runtime, XcmConfig>(
-	ethereum_chain_id: u32,
+	ethereum_chain_id: u64,
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
 	assethub_parachain_id: u32,
@@ -378,7 +378,7 @@ pub fn send_unpaid_transfer_token_message<Runtime, XcmConfig>(
 
 #[allow(clippy::too_many_arguments)]
 pub fn send_transfer_token_message_failure<Runtime, XcmConfig>(
-	ethereum_chain_id: u32,
+	ethereum_chain_id: u64,
 	collator_session_key: CollatorSessionKeys<Runtime>,
 	runtime_para_id: u32,
 	assethub_parachain_id: u32,
