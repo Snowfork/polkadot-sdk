@@ -6,21 +6,21 @@ repository = "https://github.com/snowfork/polkadot-sdk.git"
 [workspace]
 resolver = "2"
 members = [
-    "pallets/ethereum-client",
-    "pallets/ethereum-client/fixtures",
-    "pallets/inbound-queue",
-    "pallets/inbound-queue/fixtures",
-    "pallets/outbound-queue",
-    "pallets/outbound-queue/merkle-tree",
-    "pallets/outbound-queue/runtime-api",
-    "pallets/system",
-    "pallets/system/runtime-api",
-    "primitives/beacon",
-    "primitives/core",
-    "primitives/ethereum",
-    "primitives/router",
-    "runtime/runtime-common",
-    "runtime/test-common",
+	"pallets/ethereum-client",
+	"pallets/ethereum-client/fixtures",
+	"pallets/inbound-queue",
+	"pallets/inbound-queue/fixtures",
+	"pallets/outbound-queue",
+	"pallets/outbound-queue/merkle-tree",
+	"pallets/outbound-queue/runtime-api",
+	"pallets/system",
+	"pallets/system/runtime-api",
+	"primitives/beacon",
+	"primitives/core",
+	"primitives/ethereum",
+	"primitives/router",
+	"runtime/runtime-common",
+	"runtime/test-common",
 ]
 
 
