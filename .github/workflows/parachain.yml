@@ -103,18 +103,22 @@ jobs:
             ${{ runner.os }}-cargo-
       - name: setup rust toolchain
         run: rustup show
-      - name: install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
       # Increase stack limit for beacon light client tests
       - run: sudo prlimit --pid $$ --stack=32768
       # Run tests for runtime-benchmarks feature
       - name: Tests for runtime-benchmarks
         working-directory: bridges/snowbridge
-        run: ./scripts/run-tests-benchmarks.sh
+        run: >
+          cargo test
+          --workspace
+          --features runtime-benchmarks
       # Run tests for all features
       - name: Tests for all features
         working-directory: bridges/snowbridge
-        run: ./scripts/run-tests-all-features.sh
+        run: >
+          cargo test
+          --workspace
+          --all-features
 
   coverage:
     needs: check
