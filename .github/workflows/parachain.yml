@@ -140,14 +140,17 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - name: run coverage test
+        working-directory: bridges/snowbridge
         run: >
           cargo install cargo-tarpaulin@0.27.0 &&
           cargo tarpaulin
+          --workspace
           --engine llvm
           --out xml
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v3
         with:
+          working-directory: bridges/snowbridge
           files: cobertura.xml
           flags: rust
 
