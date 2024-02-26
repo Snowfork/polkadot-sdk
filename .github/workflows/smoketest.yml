@@ -60,16 +60,11 @@ jobs:
           nix develop -c sh -c '
           ./scripts/init.sh &&
           cd web/packages/test &&
-          echo "DIR IS: ${{ env.OUTPUT_DIR }}" &&
           (./scripts/start-services.sh > "${{ env.LOG_DIR }}/start-services.log" 2>&1 &) &&
           sleep 10 &&
           ./scripts/check-relayer.sh &&
           ./scripts/run-smoketests.sh'
         continue-on-error: true
-      - name: Check output dir
-        run: "env | grep LOG_DIR"
-      - name: Check log file exists
-        run: "cd ${{ env.LOG_DIR }} && ls"
       - name: Save start-services log file
         uses: actions/upload-artifact@v3
         with:
