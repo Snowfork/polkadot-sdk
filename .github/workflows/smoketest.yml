@@ -22,11 +22,11 @@ jobs:
       success: ${{ steps.run_e2e_stack.outcome == 'success' }}
     steps:
       - name: Set build directory environment variable
-        run: |
-          echo "OUTPUT_DIR=${GITHUB_WORKSPACE}/tmp" >> $GITHUB_ENV
-          echo "LOG_DIR=${GITHUB_WORKSPACE}/log-tmp" >> $GITHUB_ENV
-          mkdir -p $OUTPUT_DIR
-          mkdir -p $LOG_DIR
+        run: echo "OUTPUT_DIR=${GITHUB_WORKSPACE}/tmp" >> $GITHUB_ENV
+      - name: Set log directory environment variable
+        run: echo "LOG_DIR=${GITHUB_WORKSPACE}/log-tmp" >> $GITHUB_ENV
+      - name: Create directories
+        run: mkdir -p $OUTPUT_DIR &&  mkdir -p $LOG_DIR
       - uses: actions/checkout@v2
         with:
           repository: snowfork/snowbridge
