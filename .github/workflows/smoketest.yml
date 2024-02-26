@@ -63,6 +63,10 @@ jobs:
           ./scripts/check-relayer.sh &&
           ./scripts/run-smoketests.sh'
         continue-on-error: true
+      - name: Check output dir
+        run: "env | grep OUTPUT_DIR"
+      - name: Check log file exists
+        run: "cd ${{ env.OUTPUT_DIR }} && ls"
       - name: Save start-services log file
         uses: actions/upload-artifact@v3
         with:
