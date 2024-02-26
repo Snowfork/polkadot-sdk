@@ -101,7 +101,7 @@ where
 }
 
 /// Hash the location to produce an agent id
-fn agent_id_of<T: Config>(location: &Location) -> Result<H256, DispatchError> {
+pub fn agent_id_of<T: Config>(location: &Location) -> Result<H256, DispatchError> {
 	T::AgentIdOf::convert_location(location).ok_or(Error::<T>::LocationConversionFailed.into())
 }
 
