@@ -22,8 +22,11 @@ jobs:
       success: ${{ steps.run_e2e_stack.outcome == 'success' }}
     steps:
       - name: Set build directory environment variable
-        run: echo "OUTPUT_DIR=${GITHUB_WORKSPACE}/tmp" >> $GITHUB_ENV
-      - run: mkdir -p $OUTPUT_DIR
+        run: |
+          echo "OUTPUT_DIR=${GITHUB_WORKSPACE}/tmp" >> $GITHUB_ENV
+          echo "LOG_DIR=${GITHUB_WORKSPACE}/log-tmp" >> $GITHUB_ENV
+          mkdir -p $OUTPUT_DIR
+          mkdir -p $LOG_DIR
       - uses: actions/checkout@v2
         with:
           repository: snowfork/snowbridge
@@ -58,20 +61,20 @@ jobs:
           ./scripts/init.sh &&
           cd web/packages/test &&
           echo "DIR IS: ${{ env.OUTPUT_DIR }}" &&
-          (./scripts/start-services.sh > "${{ env.OUTPUT_DIR }}/start-services.log" 2>&1 &) &&
+          (./scripts/start-services.sh > "${{ env.LOG_DIR }}/start-services.log" 2>&1 &) &&
           sleep 10 &&
           ./scripts/check-relayer.sh &&
           ./scripts/run-smoketests.sh'
         continue-on-error: true
       - name: Check output dir
-        run: "env | grep OUTPUT_DIR"
+        run: "env | grep LOG_DIR"
       - name: Check log file exists
-        run: "cd ${{ env.OUTPUT_DIR }} && ls"
+        run: "cd ${{ env.LOG_DIR }} && ls"
       - name: Save start-services log file
         uses: actions/upload-artifact@v3
         with:
           name: start-services.log
-          path: "${{ env.OUTPUT_DIR }}/start-services.log"
+          path: "${{ env.LOG_DIR }}/start-services.log"
       - name: check E2E test outcome
         if: ${{ steps.run_e2e_stack.outcome != 'success' }}
         run: |
