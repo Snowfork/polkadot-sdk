@@ -207,3 +207,44 @@ fn test_set_operating_mode_root_only() {
 		);
 	});
 }
+
+#[test]
+fn test_submit_no_funds_to_reward_relayers_and_sovereign_preserve_ed() {
+	new_tester().execute_with(|| {
+		let relayer: AccountId = Keyring::Bob.into();
+		let origin = RuntimeOrigin::signed(relayer);
+
+		// Reset balance of sovereign_account to zero so to trigger the FundsUnavailable error
+		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
+		Balances::set_balance(&sovereign_account, ExistentialDeposit::get() + 1);
+
+		// Submit message
+		let message = Message {
+			event_log: mock_event_log(),
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
+
+		let amount = Balances::balance(&sovereign_account);
+		assert_eq!(amount, ExistentialDeposit::get());
+
+		let mut event_log = mock_event_log();
+		event_log.data[31] = 2;
+		let message = Message {
+			event_log,
+			proof: Proof {
+				block_hash: Default::default(),
+				tx_index: Default::default(),
+				data: Default::default(),
+			},
+		};
+		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
+		// does not change and preserve ED
+		let amount = Balances::balance(&sovereign_account);
+		assert_eq!(amount, ExistentialDeposit::get());
+	});
+}
