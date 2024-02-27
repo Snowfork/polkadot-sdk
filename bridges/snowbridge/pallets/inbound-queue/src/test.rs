@@ -155,7 +155,7 @@ fn test_submit_no_funds_to_reward_relayers_just_ignore() {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
-		// Reset balance of sovereign_account to zero so to trigger the FundsUnavailable error
+		// Reset balance of sovereign_account to zero first
 		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		Balances::set_balance(&sovereign_account, 0);
 
@@ -168,6 +168,7 @@ fn test_submit_no_funds_to_reward_relayers_just_ignore() {
 				data: Default::default(),
 			},
 		};
+		// Check submit successfully in case no funds available
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 	});
 }
@@ -209,16 +210,16 @@ fn test_set_operating_mode_root_only() {
 }
 
 #[test]
-fn test_submit_no_funds_to_reward_relayers_and_sovereign_preserve_ed() {
+fn test_submit_no_funds_to_reward_relayers_and_ed_preserved() {
 	new_tester().execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
 
-		// Reset balance of sovereign_account to zero so to trigger the FundsUnavailable error
+		// Reset balance of sovereign account to (ED+1) first
 		let sovereign_account = sibling_sovereign_account::<Test>(ASSET_HUB_PARAID.into());
 		Balances::set_balance(&sovereign_account, ExistentialDeposit::get() + 1);
 
-		// Submit message
+		// Submit message successfully
 		let message = Message {
 			event_log: mock_event_log(),
 			proof: Proof {
@@ -229,9 +230,11 @@ fn test_submit_no_funds_to_reward_relayers_and_sovereign_preserve_ed() {
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
+		// Check balance of sovereign account to ED
 		let amount = Balances::balance(&sovereign_account);
 		assert_eq!(amount, ExistentialDeposit::get());
 
+		// Submit another message with nonce set as 2
 		let mut event_log = mock_event_log();
 		event_log.data[31] = 2;
 		let message = Message {
@@ -243,7 +246,7 @@ fn test_submit_no_funds_to_reward_relayers_and_sovereign_preserve_ed() {
 			},
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
-		// does not change and preserve ED
+		// Check balance of sovereign account as ED does not change
 		let amount = Balances::balance(&sovereign_account);
 		assert_eq!(amount, ExistentialDeposit::get());
 	});
