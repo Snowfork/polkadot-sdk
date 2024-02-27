@@ -6,7 +6,7 @@ use frame_support::{assert_noop, assert_ok};
 use hex_literal::hex;
 use snowbridge_core::{inbound::Proof, ChannelId};
 use sp_keyring::AccountKeyring as Keyring;
-use sp_runtime::{DispatchError, TokenError};
+use sp_runtime::DispatchError;
 use sp_std::convert::From;
 
 use crate::{Error, Event as InboundQueueEvent};
@@ -150,7 +150,7 @@ fn test_submit_with_invalid_nonce() {
 }
 
 #[test]
-fn test_submit_no_funds_to_reward_relayers() {
+fn test_submit_no_funds_to_reward_relayers_just_ignore() {
 	new_tester().execute_with(|| {
 		let relayer: AccountId = Keyring::Bob.into();
 		let origin = RuntimeOrigin::signed(relayer);
@@ -168,10 +168,7 @@ fn test_submit_no_funds_to_reward_relayers() {
 				data: Default::default(),
 			},
 		};
-		assert_noop!(
-			InboundQueue::submit(origin.clone(), message.clone()),
-			TokenError::FundsUnavailable
-		);
+		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 	});
 }
 
