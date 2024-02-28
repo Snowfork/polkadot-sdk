@@ -262,7 +262,8 @@ pub mod pallet {
 				}
 			})?;
 
-			// Reward relayer from the sovereign account of the destination parachain, only if funds are available
+			// Reward relayer from the sovereign account of the destination parachain, only if funds
+			// are available
 			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
 			let delivery_cost = Self::calculate_delivery_cost(message.encode().len() as u32);
 			let amount = T::Token::reducible_balance(
