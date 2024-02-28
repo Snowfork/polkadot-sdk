@@ -51,6 +51,7 @@ fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime
 #[test]
 pub fn transfer_token_to_ethereum_works() {
 	snowbridge_runtime_test_common::send_transfer_token_message_success::<Runtime, XcmConfig>(
+		11155111,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -69,6 +70,7 @@ pub fn transfer_token_to_ethereum_works() {
 #[test]
 pub fn unpaid_transfer_token_to_ethereum_fails_with_barrier() {
 	snowbridge_runtime_test_common::send_unpaid_transfer_token_message::<Runtime, XcmConfig>(
+		11155111,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -80,6 +82,7 @@ pub fn unpaid_transfer_token_to_ethereum_fails_with_barrier() {
 #[test]
 pub fn transfer_token_to_ethereum_fee_not_enough() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
+		11155111,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -95,6 +98,7 @@ pub fn transfer_token_to_ethereum_fee_not_enough() {
 #[test]
 pub fn transfer_token_to_ethereum_insufficient_fund() {
 	snowbridge_runtime_test_common::send_transfer_token_message_failure::<Runtime, XcmConfig>(
+		11155111,
 		collator_session_keys(),
 		1013,
 		1000,
@@ -102,7 +106,7 @@ pub fn transfer_token_to_ethereum_insufficient_fund() {
 		H160::random(),
 		H160::random(),
 		DefaultBridgeHubEthereumBaseFee::get(),
-		FailedToTransactAsset("InsufficientBalance"),
+		FailedToTransactAsset("Funds are unavailable"),
 	)
 }
 
@@ -135,13 +139,18 @@ fn ethereum_to_polkadot_message_extrinsics_work() {
 	);
 }
 
+/// Tests that the digest items are as expected when a Ethereum Outbound message is received.
+/// If the MessageQueue pallet is configured before (i.e. the MessageQueue pallet is listed before
+/// the EthereumOutboundQueue in the construct_runtime macro) the EthereumOutboundQueue, this test
+/// will fail.
 #[test]
-pub fn test_pallet_order_works() {
-	snowbridge_runtime_test_common::test_pallet_order_works::<
+pub fn ethereum_outbound_queue_processes_messages_before_message_queue_works() {
+	snowbridge_runtime_test_common::ethereum_outbound_queue_processes_messages_before_message_queue_works::<
 		Runtime,
 		XcmConfig,
 		AllPalletsWithoutSystem,
 	>(
+		11155111,
 		collator_session_keys(),
 		1013,
 		1000,
