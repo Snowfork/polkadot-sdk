@@ -639,7 +639,7 @@ fn xcm_converter_convert_with_empty_xcm_yields_unexpected_instruction() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedInstruction));
+	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedEndOfXcm));
 }
 
 #[test]

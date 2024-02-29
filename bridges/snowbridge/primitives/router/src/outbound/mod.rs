@@ -181,11 +181,12 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 	fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
 		let result = match self.peek() {
-			Ok(Transact { .. }) => self.transact_message()?,
+			Ok(Transact { .. }) => self.transact_message(),
 			// Get withdraw/deposit and make native tokens create message.
-			Ok(WithdrawAsset { .. }) => self.native_tokens_unlock_message()?,
+			Ok(WithdrawAsset { .. }) => self.native_tokens_unlock_message(),
+			Err(e) => Err(e),
 			_ => return Err(XcmConverterError::UnexpectedInstruction),
-		};
+		}?;
 
 		// All xcm instructions must be consumed before exit.
 		if self.next().is_ok() {
