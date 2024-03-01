@@ -5,7 +5,7 @@ use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use scale_info::TypeInfo;
 use sp_core::{H160, H256, U256};
 use sp_runtime::RuntimeDebug;
-use sp_std::{boxed::Box, iter::repeat, prelude::*};
+use sp_std::prelude::*;
 
 use crate::config::{PUBKEY_SIZE, SIGNATURE_SIZE};
 
@@ -22,9 +22,6 @@ use crate::ssz::{
 use ssz_rs::SimpleSerializeError;
 
 pub use crate::bits::decompress_sync_committee_bits;
-
-use crate::bls::{prepare_g1_pubkeys, prepare_milagro_pubkey, BlsError};
-use milagro_bls::PublicKey as PublicKeyPrepared;
 
 pub type ValidatorIndex = u64;
 pub type ForkVersion = [u8; 4];
@@ -177,46 +174,6 @@ impl<const COMMITTEE_SIZE: usize> Default for SyncCommittee<COMMITTEE_SIZE> {
 impl<const COMMITTEE_SIZE: usize> SyncCommittee<COMMITTEE_SIZE> {
 	pub fn hash_tree_root(&self) -> Result<H256, SimpleSerializeError> {
 		hash_tree_root::<SSZSyncCommittee<COMMITTEE_SIZE>>(self.clone().into())
-	}
-}
-
-/// Prepared G1 public key of sync committee as it is stored in the runtime storage.
-#[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen)]
-pub struct SyncCommitteePrepared<const COMMITTEE_SIZE: usize> {
-	pub root: H256,
-	pub pubkeys: Box<[PublicKeyPrepared; COMMITTEE_SIZE]>,
-	pub aggregate_pubkey: PublicKeyPrepared,
-}
-
-impl<const COMMITTEE_SIZE: usize> Default for SyncCommitteePrepared<COMMITTEE_SIZE> {
-	fn default() -> Self {
-		let pubkeys: Vec<PublicKeyPrepared> =
-			repeat(PublicKeyPrepared::default()).take(COMMITTEE_SIZE).collect();
-		let pubkeys: Box<[PublicKeyPrepared; COMMITTEE_SIZE]> =
-			Box::new(pubkeys.try_into().map_err(|_| ()).expect("checked statically; qed"));
-
-		SyncCommitteePrepared {
-			root: H256::default(),
-			pubkeys,
-			aggregate_pubkey: PublicKeyPrepared::default(),
-		}
-	}
-}
-
-impl<const COMMITTEE_SIZE: usize> TryFrom<&SyncCommittee<COMMITTEE_SIZE>>
-	for SyncCommitteePrepared<COMMITTEE_SIZE>
-{
-	type Error = BlsError;
-
-	fn try_from(sync_committee: &SyncCommittee<COMMITTEE_SIZE>) -> Result<Self, Self::Error> {
-		let g1_pubkeys = prepare_g1_pubkeys(&sync_committee.pubkeys)?;
-		let sync_committee_root = sync_committee.hash_tree_root().expect("checked statically; qed");
-
-		Ok(SyncCommitteePrepared::<COMMITTEE_SIZE> {
-			pubkeys: g1_pubkeys.try_into().map_err(|_| ()).expect("checked statically; qed"),
-			aggregate_pubkey: prepare_milagro_pubkey(&sync_committee.aggregate_pubkey)?,
-			root: sync_committee_root,
-		})
 	}
 }
 

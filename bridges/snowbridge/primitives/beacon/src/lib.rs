@@ -17,16 +17,17 @@ mod serde_utils;
 pub use types::{
 	BeaconHeader, CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState,
 	ExecutionPayloadHeader, FinalizedHeaderState, Fork, ForkData, ForkVersion, ForkVersions, Mode,
-	PublicKey, Signature, SigningData, SyncAggregate, SyncCommittee, SyncCommitteePrepared,
+	PublicKey, Signature, SigningData, SyncAggregate, SyncCommittee,
 	VersionedExecutionPayloadHeader,
 };
 pub use updates::{CheckpointUpdate, ExecutionHeaderUpdate, NextSyncCommitteeUpdate, Update};
 
 pub use bits::decompress_sync_committee_bits;
 pub use bls::{
-	fast_aggregate_verify, prepare_aggregate_pubkey, prepare_aggregate_pubkey_from_absent,
-	prepare_aggregate_signature, prepare_g1_pubkeys, AggregatePublicKey, AggregateSignature,
-	BlsError, PublicKeyPrepared, SignaturePrepared,
+	arkworks::{
+		fast_aggregate_verify, ArkScaleProjective, PublicKeyPrepared, SyncCommitteePrepared,
+	},
+	BlsError,
 };
 pub use merkle_proof::verify_merkle_branch;
 pub use receipt::verify_receipt_proof;

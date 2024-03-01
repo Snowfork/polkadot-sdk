@@ -39,9 +39,9 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use primitives::{
-	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
-	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
-	ForkVersions, PublicKeyPrepared, SigningData,
+	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, ArkScaleProjective,
+	BeaconHeader, BlsError, CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState,
+	ForkData, ForkVersion, ForkVersions, PublicKeyPrepared, SigningData,
 };
 use snowbridge_core::{BasicOperatingMode, RingBufferMap};
 use sp_core::H256;
@@ -179,13 +179,13 @@ pub mod pallet {
 
 	/// Sync committee for current period
 	#[pallet::storage]
-	pub(super) type CurrentSyncCommittee<T: Config> =
-		StorageValue<_, SyncCommitteePrepared, ValueQuery>;
+	#[pallet::unbounded]
+	pub(super) type CurrentSyncCommittee<T: Config> = StorageValue<_, Vec<u8>, ValueQuery>;
 
 	/// Sync committee for next period
 	#[pallet::storage]
-	pub(super) type NextSyncCommittee<T: Config> =
-		StorageValue<_, SyncCommitteePrepared, ValueQuery>;
+	#[pallet::unbounded]
+	pub(super) type NextSyncCommittee<T: Config> = StorageValue<_, Vec<u8>, ValueQuery>;
 
 	/// Latest imported execution header
 	#[pallet::storage]
@@ -318,7 +318,7 @@ pub mod pallet {
 			let sync_committee_prepared: SyncCommitteePrepared = (&update.current_sync_committee)
 				.try_into()
 				.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
-			<CurrentSyncCommittee<T>>::set(sync_committee_prepared);
+			<CurrentSyncCommittee<T>>::set(sync_committee_prepared.encode());
 			<NextSyncCommittee<T>>::kill();
 			InitialCheckpointRoot::<T>::set(header_root);
 			<LatestExecutionState<T>>::kill();
@@ -437,7 +437,10 @@ pub mod pallet {
 					.hash_tree_root()
 					.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 				if update_attested_period == store_period && <NextSyncCommittee<T>>::exists() {
-					let next_committee_root = <NextSyncCommittee<T>>::get().root;
+					let next_sync_committee =
+						SyncCommitteePrepared::decode(&mut &<NextSyncCommittee<T>>::get()[..])
+							.map_err(|_| Error::<T>::BLSPreparePublicKeysFailed)?;
+					let next_committee_root = next_sync_committee.root;
 					ensure!(
 						sync_committee_root == next_committee_root,
 						Error::<T>::InvalidSyncCommitteeUpdate
@@ -461,8 +464,10 @@ pub mod pallet {
 			} else {
 				<NextSyncCommittee<T>>::get()
 			};
-			let absent_pubkeys =
-				Self::find_pubkeys(&participation, (*sync_committee.pubkeys).as_ref(), false);
+			let sync_committee = SyncCommitteePrepared::decode(&mut &sync_committee[..])
+				.map_err(|_| Error::<T>::BLSPreparePublicKeysFailed)?;
+			let pubkeys =
+				Self::find_pubkeys(&participation, (*sync_committee.pubkeys).as_ref(), true);
 			let signing_root = Self::signing_root(
 				&update.attested_header,
 				Self::validators_root(),
@@ -472,10 +477,9 @@ pub mod pallet {
 			// suggested start from the full set aggregate_pubkey then subtracting the absolute
 			// minority that did not participate.
 			fast_aggregate_verify(
-				&sync_committee.aggregate_pubkey,
-				&absent_pubkeys,
+				pubkeys,
 				signing_root,
-				&update.sync_aggregate.sync_committee_signature,
+				update.sync_aggregate.sync_committee_signature,
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
@@ -503,10 +507,10 @@ pub mod pallet {
 						update_finalized_period == store_period,
 						<Error<T>>::InvalidSyncCommitteeUpdate
 					);
-					<NextSyncCommittee<T>>::set(sync_committee_prepared);
+					<NextSyncCommittee<T>>::set(sync_committee_prepared.encode());
 				} else if update_finalized_period == store_period + 1 {
 					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
-					<NextSyncCommittee<T>>::set(sync_committee_prepared);
+					<NextSyncCommittee<T>>::set(sync_committee_prepared.encode());
 				}
 				log::info!(
 					target: LOG_TARGET,
@@ -815,7 +819,7 @@ pub mod pallet {
 			let mut pubkeys: Vec<PublicKeyPrepared> = Vec::new();
 			for (bit, pubkey) in sync_committee_bits.iter().zip(sync_committee_pubkeys.iter()) {
 				if *bit == u8::from(participant) {
-					pubkeys.push(pubkey.clone());
+					pubkeys.push(ArkScaleProjective::from(pubkey.0));
 				}
 			}
 			pubkeys

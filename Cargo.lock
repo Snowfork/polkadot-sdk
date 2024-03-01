@@ -17760,6 +17760,12 @@ dependencies = [
 name = "snowbridge-beacon-primitives"
 version = "0.9.0"
 dependencies = [
+ "ark-bls12-381",
+ "ark-bls12-381-ext",
+ "ark-ec",
+ "ark-ff 0.4.2",
+ "ark-scale 0.0.12",
+ "ark-serialize 0.4.2",
  "byte-slice-cast",
  "frame-support",
  "frame-system",
@@ -17769,6 +17775,7 @@ dependencies = [
  "rlp",
  "scale-info",
  "serde",
+ "sha2 0.10.7",
  "snowbridge-ethereum",
  "snowbridge-milagro-bls",
  "sp-core",
