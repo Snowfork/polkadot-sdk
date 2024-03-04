@@ -70,6 +70,11 @@ jobs:
         with:
           name: start-services.log
           path: "${{ env.LOG_DIR }}/start-services.log"
+      - name: Save beacon-relay log file
+        uses: actions/upload-artifact@v3
+        with:
+          name: beacon-relay.log
+          path: "${{ env.OUTPUT_DIR }}/beacon-relay.log"
       - name: check E2E test outcome
         if: ${{ steps.run_e2e_stack.outcome != 'success' }}
         run: |
