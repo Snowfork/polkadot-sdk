@@ -10,11 +10,6 @@ pub fn verify_receipt_proof(
 	receipts_root: H256,
 	proof: &[Vec<u8>],
 ) -> Option<Result<Receipt, rlp::DecoderError>> {
-	//let amp = apply_merkle_proof(proof);
-	//match amp {
-	//	Some((root, data)) => { println!("ROOT: {:?}", root)}
-	//	_ => {}
-	//};
 	match apply_merkle_proof(proof) {
 		Some((root, data)) if root == receipts_root => Some(rlp::decode(&data)),
 		Some((_, _)) => None,
