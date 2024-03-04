@@ -27,14 +27,15 @@ use bridge_hub_rococo_runtime::{
 use bridge_hub_test_utils::ExtBuilder;
 use codec::{Decode, DecodeAll, Encode};
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
-use frame_support::{assert_err, parameter_types};
+use frame_support::{assert_err, parameter_types, storage::generator::StorageMap};
 use hex_literal::hex;
 use parachains_common::{AccountId, AuraId, Balance};
-use snowbridge_core::inbound::Log;
+use snowbridge_core::{inbound::Log, ChannelId, ParaId};
 use snowbridge_pallet_ethereum_client::WeightInfo;
 use snowbridge_pallet_inbound_queue::{Error, SendError};
 use snowbridge_router_primitives::inbound;
 use sp_core::H160;
+use sp_io::misc::print_hex;
 use sp_keyring::AccountKeyring::Alice;
 use sp_runtime::{
 	generic::{Era, SignedPayload},
@@ -247,5 +248,32 @@ pub fn send_token_to_foreign_chain_with_invalid_dest_fee() {
 			println!("xcm converted as {:?} and fee is {:?}.", xcm, fee);
 			let result = <snowbridge_pallet_inbound_queue::Pallet<Runtime>>::send_xcm(xcm, 1000.into());
 			assert_err!(result,<Error<Runtime>>::Send(SendError::ExceedsMaxMessageSize));
+		});
+}
+
+#[test]
+pub fn generate_nonce_key() {
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_keys().collators())
+		.with_session_keys(collator_session_keys().session_keys())
+		.with_para_id(1013.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			let para_id: ParaId = 1000.into();
+			let channel_id: ChannelId = para_id.into();
+			let inbound_queue_nonce_key =
+				snowbridge_pallet_inbound_queue::Nonce::<Runtime>::storage_map_final_key(
+					channel_id,
+				);
+			print_hex(inbound_queue_nonce_key.as_slice());
+			assert_eq!(inbound_queue_nonce_key,hex!("7d7c8b03a2a182824cfe569187a28faa718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539"));
+			let inbound_queue_nonce_value = 30_u64.encode();
+			print_hex(inbound_queue_nonce_value.as_slice());
+			let items = vec![(inbound_queue_nonce_key, inbound_queue_nonce_value)];
+			let set_storage_call =
+				RuntimeCall::System(frame_system::Call::set_storage { items }).encode();
+			print_hex(set_storage_call.as_slice());
+			assert_eq!(set_storage_call,hex!("00040421017d7c8b03a2a182824cfe569187a28faa718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539201e00000000000000"));
 		});
 }
