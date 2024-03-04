@@ -40,7 +40,7 @@ mod mock;
 mod test;
 
 use codec::{Decode, DecodeAll, Encode};
-use envelope::Envelope;
+pub use envelope::Envelope;
 use frame_support::{
 	traits::{
 		fungible::{Inspect, Mutate},
@@ -164,6 +164,7 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
+	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub enum Error<T> {
 		/// Message came from an invalid outbound channel on the Ethereum side.
 		InvalidGateway,

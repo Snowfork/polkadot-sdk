@@ -21,19 +21,28 @@ use bridge_hub_rococo_runtime::{
 	bridge_to_bulletin_config::OnBridgeHubRococoRefundRococoBulletinMessages,
 	bridge_to_westend_config::OnBridgeHubRococoRefundBridgeHubWestendMessages,
 	xcm_config::XcmConfig, AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages,
-	Executive, MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, SessionKeys,
-	SignedExtra, UncheckedExtrinsic,
+	Executive, MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
+	SessionKeys, SignedExtra, UncheckedExtrinsic,
 };
-use codec::{Decode, Encode};
+use bridge_hub_test_utils::ExtBuilder;
+use codec::{Decode, DecodeAll, Encode};
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
-use frame_support::parameter_types;
+use frame_support::{assert_err, parameter_types};
+use hex_literal::hex;
 use parachains_common::{AccountId, AuraId, Balance};
+use snowbridge_core::inbound::Log;
 use snowbridge_pallet_ethereum_client::WeightInfo;
+use snowbridge_pallet_inbound_queue::{Error, SendError};
+use snowbridge_router_primitives::inbound;
 use sp_core::H160;
 use sp_keyring::AccountKeyring::Alice;
 use sp_runtime::{
 	generic::{Era, SignedPayload},
 	AccountId32,
+};
+use xcm::{
+	latest::Location,
+	prelude::{Parachain, XCM_VERSION},
 };
 
 parameter_types! {
@@ -205,4 +214,38 @@ fn construct_and_apply_extrinsic(
 	let xt = construct_extrinsic(origin, call);
 	let r = Executive::apply_extrinsic(xt);
 	r.unwrap()
+}
+
+#[test]
+#[cfg(not(debug_assertions))]
+pub fn send_token_to_foreign_chain_with_invalid_dest_fee() {
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_keys().collators())
+		.with_session_keys(collator_session_keys().session_keys())
+		.with_para_id(1013.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			let _ = <pallet_xcm::Pallet<Runtime>>::force_xcm_version(
+				RuntimeOrigin::root(),
+				Box::new(Location::new(1, [Parachain(1000)])),
+				XCM_VERSION,
+			).unwrap();
+			// Reproduce https://bridgehub-rococo.stg.subscan.io/extrinsic/2583529-2
+			let event_log = Log {
+				address: hex!("5b4909ce6ca82d2ce23bd46738953c7959e710cd").into(),
+				topics: vec![
+					hex!("7153f9357c8ea496bba60bf82e67143e27b64462b49041f8e689e1b05728f84f").into(),
+					hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539").into(),
+					hex!("e1f34efbe357e26b778c73724e9a64777d95cf5b54e146de8e8ea9a78cf7cda7").into(),
+				],
+				data: hex!("000000000000000000000000000000000000000000000000000000000000001d0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000007300a736aa000000000001fff9976782d46cc05630d1f6ebab18b2324d6b1401ee070000904411b468d36fc59a7440fac24170a40f5c74d3a6571cf3de326300cd43874a0000000000000000000000000000000000ac23fc06000000000000000000000000e40b5402000000000000000000000000000000000000000000000000").into(),
+			};
+			let envelope =
+				snowbridge_pallet_inbound_queue::Envelope::try_from(&event_log).map_err(|_| Error::<Runtime>::InvalidEnvelope).unwrap();
+			let message = inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()).map_err(|_| Error::<Runtime>::InvalidPayload).unwrap();
+			let (xcm,_fee) = <snowbridge_pallet_inbound_queue::Pallet<Runtime>>::do_convert(envelope.message_id, message).unwrap();
+			let result = <snowbridge_pallet_inbound_queue::Pallet<Runtime>>::send_xcm(xcm, 1000.into());
+			assert_err!(result,<Error<Runtime>>::Send(SendError::ExceedsMaxMessageSize));
+		});
 }
