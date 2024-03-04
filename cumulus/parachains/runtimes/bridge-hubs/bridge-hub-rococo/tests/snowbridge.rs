@@ -40,10 +40,7 @@ use sp_runtime::{
 	generic::{Era, SignedPayload},
 	AccountId32,
 };
-use xcm::{
-	latest::Location,
-	prelude::{Parachain, XCM_VERSION},
-};
+use xcm::prelude::{Location, Parachain, XCM_VERSION};
 
 parameter_types! {
 		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
@@ -216,6 +213,9 @@ fn construct_and_apply_extrinsic(
 	r.unwrap()
 }
 
+// The event log from https://bridgehub-rococo.stg.subscan.io/extrinsic/2583529-2 to reproduce an issue
+// run this test with ```cargo test --release -p bridge-hub-rococo-runtime --test snowbridge
+// send_token_to_foreign_chain_with_invalid_dest_fee -- --nocapture```
 #[test]
 #[cfg(not(debug_assertions))]
 pub fn send_token_to_foreign_chain_with_invalid_dest_fee() {
@@ -231,7 +231,6 @@ pub fn send_token_to_foreign_chain_with_invalid_dest_fee() {
 				Box::new(Location::new(1, [Parachain(1000)])),
 				XCM_VERSION,
 			).unwrap();
-			// Reproduce https://bridgehub-rococo.stg.subscan.io/extrinsic/2583529-2
 			let event_log = Log {
 				address: hex!("5b4909ce6ca82d2ce23bd46738953c7959e710cd").into(),
 				topics: vec![
@@ -244,7 +243,8 @@ pub fn send_token_to_foreign_chain_with_invalid_dest_fee() {
 			let envelope =
 				snowbridge_pallet_inbound_queue::Envelope::try_from(&event_log).map_err(|_| Error::<Runtime>::InvalidEnvelope).unwrap();
 			let message = inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()).map_err(|_| Error::<Runtime>::InvalidPayload).unwrap();
-			let (xcm,_fee) = <snowbridge_pallet_inbound_queue::Pallet<Runtime>>::do_convert(envelope.message_id, message).unwrap();
+			let (xcm,fee) = <snowbridge_pallet_inbound_queue::Pallet<Runtime>>::do_convert(envelope.message_id, message).unwrap();
+			println!("xcm converted as {:?} and fee is {:?}.", xcm, fee);
 			let result = <snowbridge_pallet_inbound_queue::Pallet<Runtime>>::send_xcm(xcm, 1000.into());
 			assert_err!(result,<Error<Runtime>>::Send(SendError::ExceedsMaxMessageSize));
 		});
