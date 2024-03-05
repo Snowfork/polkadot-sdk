@@ -16,6 +16,8 @@
 
 #![cfg(test)]
 
+extern crate alloc;
+use alloc::sync::Arc;
 use bp_polkadot_core::Signature;
 use bridge_hub_rococo_runtime::{
 	bridge_to_bulletin_config::OnBridgeHubRococoRefundRococoBulletinMessages,
@@ -27,7 +29,7 @@ use bridge_hub_rococo_runtime::{
 use bridge_hub_test_utils::ExtBuilder;
 use codec::{Decode, DecodeAll, Encode};
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
-use frame_support::{assert_err, parameter_types, storage::generator::StorageMap};
+use frame_support::{assert_err, assert_ok, parameter_types, storage::generator::StorageMap};
 use hex_literal::hex;
 use parachains_common::{AccountId, AuraId, Balance};
 use snowbridge_core::{inbound::Log, ChannelId, ParaId};
@@ -39,9 +41,12 @@ use sp_io::misc::print_hex;
 use sp_keyring::AccountKeyring::Alice;
 use sp_runtime::{
 	generic::{Era, SignedPayload},
-	AccountId32,
+	AccountId32 as RuntimeAccountId32,
 };
-use xcm::prelude::{Location, Parachain, XCM_VERSION};
+use xcm::prelude::{
+	Junctions::{X1, X2},
+	*,
+};
 
 parameter_types! {
 		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
@@ -177,7 +182,7 @@ fn construct_extrinsic(
 	sender: sp_keyring::AccountKeyring,
 	call: RuntimeCall,
 ) -> UncheckedExtrinsic {
-	let account_id = AccountId32::from(sender.public());
+	let account_id = RuntimeAccountId32::from(sender.public());
 	let extra: SignedExtra = (
 		frame_system::CheckNonZeroSender::<Runtime>::new(),
 		frame_system::CheckSpecVersion::<Runtime>::new(),
@@ -214,12 +219,9 @@ fn construct_and_apply_extrinsic(
 	r.unwrap()
 }
 
-// The event log from https://bridgehub-rococo.stg.subscan.io/extrinsic/2583529-2 to reproduce an issue
-// run this test with ```cargo test --release -p bridge-hub-rococo-runtime --test snowbridge
-// send_token_to_foreign_chain_with_invalid_dest_fee -- --nocapture```
+// The event log from https://bridgehub-rococo.stg.subscan.io/extrinsic/2537445-2
 #[test]
-#[cfg(not(debug_assertions))]
-pub fn send_token_to_foreign_chain_with_invalid_dest_fee() {
+pub fn send_token_to_foreign_chain() {
 	ExtBuilder::<Runtime>::default()
 		.with_collators(collator_session_keys().collators())
 		.with_session_keys(collator_session_keys().session_keys())
@@ -239,15 +241,15 @@ pub fn send_token_to_foreign_chain_with_invalid_dest_fee() {
 					hex!("c173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539").into(),
 					hex!("e1f34efbe357e26b778c73724e9a64777d95cf5b54e146de8e8ea9a78cf7cda7").into(),
 				],
-				data: hex!("000000000000000000000000000000000000000000000000000000000000001d0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000007300a736aa000000000001fff9976782d46cc05630d1f6ebab18b2324d6b1401ee070000904411b468d36fc59a7440fac24170a40f5c74d3a6571cf3de326300cd43874a0000000000000000000000000000000000ac23fc06000000000000000000000000e40b5402000000000000000000000000000000000000000000000000").into(),
+				data: hex!("00000000000000000000000000000000000000000000000000000000000000170000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000005f00a736aa000000000001fff9976782d46cc05630d1f6ebab18b2324d6b1400f4befb32bffac93a1e45336e81dd6498485f9b13935ab108db7afe0bbfa71c6800f2052a01000000000000000000000000e40b5402000000000000000000000000").into(),
 			};
 			let envelope =
 				snowbridge_pallet_inbound_queue::Envelope::try_from(&event_log).map_err(|_| Error::<Runtime>::InvalidEnvelope).unwrap();
 			let message = inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()).map_err(|_| Error::<Runtime>::InvalidPayload).unwrap();
 			let (xcm,fee) = <snowbridge_pallet_inbound_queue::Pallet<Runtime>>::do_convert(envelope.message_id, message).unwrap();
+			assert_eq!(xcm.len(),8);
+			assert_eq!(fee,10000000000);
 			println!("xcm converted as {:?} and fee is {:?}.", xcm, fee);
-			let result = <snowbridge_pallet_inbound_queue::Pallet<Runtime>>::send_xcm(xcm, 1000.into());
-			assert_err!(result,<Error<Runtime>>::Send(SendError::ExceedsMaxMessageSize));
 		});
 }
 
@@ -275,5 +277,124 @@ pub fn generate_nonce_key() {
 				RuntimeCall::System(frame_system::Call::set_storage { items }).encode();
 			print_hex(set_storage_call.as_slice());
 			assert_eq!(set_storage_call,hex!("00040421017d7c8b03a2a182824cfe569187a28faa718368a0ace36e2b1b8b6dbd7f8093c0594aa8a9c557dabac173fac324158e77fb5840738a1a541f633cbec8884c6a601c567d2b376a0539201e00000000000000"));
+		});
+}
+
+#[test]
+pub fn trigger_exceeds_max_message_size() {
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_keys().collators())
+		.with_session_keys(collator_session_keys().session_keys())
+		.with_para_id(1013.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			assert_ok!(<pallet_xcm::Pallet<Runtime>>::force_xcm_version(
+				RuntimeOrigin::root(),
+				Box::new(Location::new(1, [Parachain(1000)])),
+				XCM_VERSION,
+			));
+			let xcm = Xcm::<()>(vec![
+				ReceiveTeleportedAsset(Assets::from(vec![Asset {
+					id: AssetId(Location { parents: 1, interior: Here }),
+					fun: Fungible(10000000000),
+				}])),
+				BuyExecution {
+					fees: Asset {
+						id: AssetId(Location { parents: 1, interior: Here }),
+						fun: Fungible(10000000000),
+					},
+					weight_limit: Unlimited,
+				},
+				DescendOrigin(X1([PalletInstance(80)].into())),
+				UniversalOrigin(GlobalConsensus(Ethereum { chain_id: 11155111 })),
+				ReserveAssetDeposited(Assets::from(vec![Asset {
+					id: AssetId(Location {
+						parents: 2,
+						interior: X2(Arc::from([
+							GlobalConsensus(Ethereum { chain_id: 11155111 }),
+							AccountKey20 {
+								network: None,
+								key: [
+									255, 249, 151, 103, 130, 212, 108, 192, 86, 48, 209, 246, 235,
+									171, 24, 178, 50, 77, 107, 20,
+								],
+							},
+						])),
+					}),
+					fun: Fungible(30000000000),
+				}])),
+				ClearOrigin,
+				DepositReserveAsset {
+					assets: Definite(Assets::from(vec![
+						Asset {
+							id: AssetId(Location { parents: 1, interior: Here }),
+							fun: Fungible(0),
+						},
+						Asset {
+							id: AssetId(Location {
+								parents: 2,
+								interior: X2(Arc::from([
+									GlobalConsensus(Ethereum { chain_id: 11155111 }),
+									AccountKey20 {
+										network: None,
+										key: [
+											255, 249, 151, 103, 130, 212, 108, 192, 86, 48, 209,
+											246, 235, 171, 24, 178, 50, 77, 107, 20,
+										],
+									},
+								])),
+							}),
+							fun: Fungible(30000000000),
+						},
+					])),
+					dest: Location { parents: 1, interior: X1(Arc::from([Parachain(2030)])) },
+					xcm: Xcm(vec![
+						BuyExecution {
+							fees: Asset {
+								id: AssetId(Location { parents: 1, interior: Here }),
+								fun: Fungible(0),
+							},
+							weight_limit: Unlimited,
+						},
+						DepositAsset {
+							assets: Definite(Assets::from(vec![Asset {
+								id: AssetId(Location {
+									parents: 2,
+									interior: X2(Arc::from([
+										GlobalConsensus(Ethereum { chain_id: 11155111 }),
+										AccountKey20 {
+											network: None,
+											key: [
+												255, 249, 151, 103, 130, 212, 108, 192, 86, 48,
+												209, 246, 235, 171, 24, 178, 50, 77, 107, 20,
+											],
+										},
+									])),
+								}),
+								fun: Fungible(30000000000),
+							}])),
+							beneficiary: Location {
+								parents: 0,
+								interior: X1(Arc::from([AccountId32 {
+									network: None,
+									id: [
+										144, 68, 17, 180, 104, 211, 111, 197, 154, 116, 64, 250,
+										194, 65, 112, 164, 15, 92, 116, 211, 166, 87, 28, 243, 222,
+										50, 99, 0, 205, 67, 135, 74,
+									],
+								}])),
+							},
+						},
+					]),
+				},
+				SetTopic([
+					225, 243, 78, 251, 227, 87, 226, 107, 119, 140, 115, 114, 78, 154, 100, 119,
+					125, 149, 207, 91, 84, 225, 70, 222, 142, 142, 169, 167, 140, 247, 205, 167,
+				]),
+			]);
+			let result =
+				<snowbridge_pallet_inbound_queue::Pallet<Runtime>>::send_xcm(xcm, 1000.into());
+			assert_err!(result, <Error<Runtime>>::Send(SendError::ExceedsMaxMessageSize));
 		});
 }
