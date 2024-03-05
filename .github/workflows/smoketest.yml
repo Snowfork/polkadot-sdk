@@ -75,6 +75,7 @@ jobs:
         with:
           name: beacon-relay.log
           path: "${{ env.OUTPUT_DIR }}/beacon-relay.log"
+      - run: ls
       - name: check E2E test outcome
         if: ${{ steps.run_e2e_stack.outcome != 'success' }}
         run: |
