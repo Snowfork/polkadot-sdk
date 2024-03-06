@@ -352,35 +352,46 @@ where
 					WithdrawAsset(xcm_fee.clone().into()),
 					// Pay for execution.
 					BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
+					SetAppendix(Xcm(vec![
+						RefundSurplus,
+						// Deposit surplus back to sender.
+						DepositAsset {
+							assets: Wild(AllCounted(1u32)),
+							beneficiary: Location {
+								parents: 0,
+								interior: Junctions::from([
+									GlobalConsensus(Ethereum { chain_id }),
+									AccountKey20 { network: None, key: sender.into() },
+								]),
+							},
+						},
+					])),
+					// Transact on dest chain.
+					Transact {
+						origin_kind,
+						require_weight_at_most: weight_at_most,
+						call: payload.into(),
+					},
 				]);
 				message
 			},
 			TransactFeeMode::OnEthereum => {
-				let mut unpaid =
-					vec![UnpaidExecution { weight_limit: Unlimited, check_origin: None }];
+				let mut unpaid = vec![
+					UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+					// Actually BurnAsset does nothing on dest chain, included here only for
+					// the dest chain to implement a custom Barrier which inspect the fee as
+					// expected(i.e. can cover the transact cost to avoid spamming)
+					BurnAsset(xcm_fee.clone().into()),
+					Transact {
+						origin_kind,
+						require_weight_at_most: weight_at_most,
+						call: payload.into(),
+					},
+				];
 				unpaid.extend(message);
 				unpaid
 			},
 		};
-		message.extend(vec![
-			SetAppendix(Xcm(vec![
-				RefundSurplus,
-				// Deposit surplus back to sender.
-				DepositAsset {
-					assets: Wild(AllCounted(1u32)),
-					beneficiary: Location {
-						parents: 0,
-						interior: Junctions::from([
-							GlobalConsensus(Ethereum { chain_id }),
-							AccountKey20 { network: None, key: sender.into() },
-						]),
-					},
-				},
-			])),
-			// Transact on dest chain.
-			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() },
-		]);
-
 		(message.into(), fee.into())
 	}
 }
