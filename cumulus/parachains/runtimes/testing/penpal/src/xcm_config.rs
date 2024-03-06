@@ -33,7 +33,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungibles::{self, Balanced, Credit},
-		ConstU32, Contains, ContainsPair, Everything, Get, Nothing,
+		ConstU32, Contains, ContainsPair, Equals, Everything, Get, Nothing,
 	},
 	weights::Weight,
 };
@@ -203,6 +203,8 @@ pub type Barrier = TrailingSetTopicAsId<(
 	TakeWeightCredit,
 	// Expected responses are OK.
 	AllowKnownQueryResponses<PolkadotXcm>,
+	// Allow from BridgeHub
+	AllowExplicitUnpaidExecutionFrom<Equals<SiblingBridgeHub>>,
 	// Allow XCMs with some computed origins to pass through.
 	WithComputedOrigin<
 		(
@@ -340,6 +342,7 @@ parameter_types! {
 				(SiblingBridgeHubWithEthereumInboundQueueInstance::get(),GlobalConsensus(EthereumNetwork::get())),
 			]
 	);
+	pub SiblingBridgeHub: Location = Location::new(1, [Parachain(bp_bridge_hub_rococo::BRIDGE_HUB_ROCOCO_PARACHAIN_ID)]);
 }
 
 pub struct GlobalConsensusEthereumAddressConvertsFor<AccountId>(PhantomData<AccountId>);

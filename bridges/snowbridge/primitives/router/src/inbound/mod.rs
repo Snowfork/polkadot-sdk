@@ -62,6 +62,8 @@ pub enum Command {
 		sender: H160,
 		/// OriginKind
 		origin_kind: OriginKind,
+		/// FeeMode
+		fee_mode: TransactFeeMode,
 		/// XCM execution fee on dest chain
 		fee: u128,
 		/// The weight required at most on dest chain
@@ -69,6 +71,15 @@ pub enum Command {
 		/// The payload of the transact
 		payload: Vec<u8>,
 	},
+}
+
+/// TransactFeeMode
+#[derive(Clone, Encode, Decode, RuntimeDebug)]
+pub enum TransactFeeMode {
+	/// Transact Fee paid full on Ethereum side upfront
+	OnEthereum,
+	/// Transact Fee paid on destination chain by prefunded sender
+	OnSubstrate,
 }
 
 /// Destination for bridged tokens
@@ -161,11 +172,12 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
 			V1(MessageV1 {
 				chain_id,
-				command: Transact { sender, origin_kind, fee, weight_at_most, payload },
+				command: Transact { sender, origin_kind, fee_mode, fee, weight_at_most, payload },
 			}) => Ok(Self::convert_transact(
 				chain_id,
 				sender,
 				origin_kind,
+				fee_mode,
 				fee,
 				weight_at_most,
 				payload,
@@ -318,23 +330,39 @@ where
 		chain_id: u64,
 		sender: H160,
 		origin_kind: OriginKind,
+		fee_mode: TransactFeeMode,
 		fee: u128,
 		weight_at_most: Weight,
 		payload: Vec<u8>,
 	) -> (Xcm<()>, Balance) {
 		let xcm_fee: Asset = (Location::parent(), fee).into();
 
-		let xcm: Xcm<()> = vec![
+		let mut message = vec![
 			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
 			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
 			// DescendOrigin to the sender.
 			DescendOrigin(AccountKey20 { network: None, key: sender.into() }.into()),
-			// Withdraw fees from sender to pay the xcm execution
-			WithdrawAsset(xcm_fee.clone().into()),
-			// Pay for execution.
-			BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
+		];
+		message = match fee_mode {
+			TransactFeeMode::OnSubstrate => {
+				message.extend(vec![
+					// Withdraw fees from sender to pay the xcm execution
+					WithdrawAsset(xcm_fee.clone().into()),
+					// Pay for execution.
+					BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
+				]);
+				message
+			},
+			TransactFeeMode::OnEthereum => {
+				let mut unpaid =
+					vec![UnpaidExecution { weight_limit: Unlimited, check_origin: None }];
+				unpaid.extend(message);
+				unpaid
+			},
+		};
+		message.extend(vec![
 			SetAppendix(Xcm(vec![
 				RefundSurplus,
 				// Deposit surplus back to sender.
@@ -351,10 +379,9 @@ where
 			])),
 			// Transact on dest chain.
 			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() },
-		]
-		.into();
+		]);
 
-		(xcm, fee.into())
+		(message.into(), fee.into())
 	}
 }
 

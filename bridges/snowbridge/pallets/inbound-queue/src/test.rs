@@ -5,6 +5,7 @@ use super::*;
 use frame_support::{assert_noop, assert_ok, weights::Weight};
 use hex_literal::hex;
 use snowbridge_core::{inbound::Proof, ChannelId};
+use snowbridge_router_primitives::inbound::TransactFeeMode;
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::DispatchError;
 use sp_std::convert::From;
@@ -270,6 +271,7 @@ fn test_convert_transact() {
 				weight_at_most,
 				origin_kind,
 				payload: payload.clone(),
+				fee_mode: TransactFeeMode::OnSubstrate,
 			},
 		});
 		// Convert the message to XCM

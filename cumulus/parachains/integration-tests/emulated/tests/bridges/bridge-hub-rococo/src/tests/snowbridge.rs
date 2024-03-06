@@ -23,12 +23,12 @@ use snowbridge_core::{outbound::OperatingMode, Channel, ChannelId};
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message,
 	register_token_with_insufficient_fee::make_register_token_with_infufficient_fee_message,
-	send_call_to_penpal::make_send_call_to_penpal_message, send_token::make_send_token_message,
-	send_token_to_penpal::make_send_token_to_penpal_message, InboundQueueFixture,
+	send_token::make_send_token_message, send_token_to_penpal::make_send_token_to_penpal_message,
+	InboundQueueFixture,
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
-	Command, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
+	Command, GlobalConsensusEthereumConvertsFor, MessageV1, TransactFeeMode, VersionedMessage,
 };
 use sp_core::{H160, H256};
 use sp_io::hashing::blake2_256;
@@ -543,7 +543,7 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
 }
 
 #[test]
-fn transact_from_ethereum_to_penpal() {
+fn transact_from_ethereum_to_penpal_fee_paid_on_substrate() {
 	// Fund sender on penpal so that it can pay execution fees.
 	let sender: H160 = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe").into();
 	let sovereign_of_sender = blake2_256(&(b"AccountKey20", sender).encode());
@@ -567,8 +567,22 @@ fn transact_from_ethereum_to_penpal() {
 			Channel { agent_id, para_id: PenpalA::para_id() },
 		);
 
-		// Construct Send call to penpal message and sent to inbound queue
-		send_inbound_message(make_send_call_to_penpal_message()).unwrap();
+		let message_id: H256 = [1; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::Transact {
+				sender,
+				fee: XCM_FEE,
+				weight_at_most: XCM_WEIGHT,
+				origin_kind: OriginKind::SovereignAccount,
+				payload: hex!("00071468656c6c6f").to_vec(),
+				fee_mode: TransactFeeMode::OnSubstrate,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
@@ -610,6 +624,7 @@ fn transact_from_ethereum_to_penpal_insufficient_fee() {
 				weight_at_most: XCM_WEIGHT,
 				origin_kind: OriginKind::SovereignAccount,
 				payload: hex!("00071468656c6c6f").to_vec(),
+				fee_mode: TransactFeeMode::OnSubstrate,
 			},
 		});
 		// Convert the message to XCM
@@ -657,6 +672,7 @@ fn transact_from_ethereum_to_penpal_sender_insufficient_fund() {
 				weight_at_most: XCM_WEIGHT,
 				origin_kind: OriginKind::SovereignAccount,
 				payload: hex!("00071468656c6c6f").to_vec(),
+				fee_mode: TransactFeeMode::OnSubstrate,
 			},
 		});
 		// Convert the message to XCM
@@ -704,6 +720,7 @@ fn transact_from_ethereum_to_penpal_insufficient_weight() {
 				weight_at_most: INSUFFICIENT_XCM_WEIGHT,
 				origin_kind: OriginKind::SovereignAccount,
 				payload: hex!("00071468656c6c6f").to_vec(),
+				fee_mode: TransactFeeMode::OnSubstrate,
 			},
 		});
 		// Convert the message to XCM
@@ -726,6 +743,68 @@ fn transact_from_ethereum_to_penpal_insufficient_weight() {
 			PenpalA,
 			vec![
 				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:false,.. }) => {},
+			]
+		);
+	});
+}
+
+#[test]
+fn transact_from_ethereum_to_penpal_fee_paid_on_ethereum() {
+	// Fund sender on penpal so that it can pay execution fees.
+	let sender: H160 = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe").into();
+	let sovereign_of_sender = blake2_256(&(b"AccountKey20", sender).encode());
+	println!("sovereign account of the sender: {:#?}", hex::encode(sovereign_of_sender.clone()));
+	PenpalA::fund_accounts(vec![(sovereign_of_sender.into(), INITIAL_FUND)]);
+	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type Runtime = <BridgeHubRococo as Chain>::Runtime;
+
+		let agent_id = snowbridge_pallet_system::agent_id_of::<Runtime>(&Location::new(
+			1,
+			[Parachain(PenpalA::para_id().into())],
+		))
+		.unwrap();
+		snowbridge_pallet_system::Agents::<Runtime>::insert(agent_id, ());
+		let channel_id: ChannelId = PenpalA::para_id().into();
+		snowbridge_pallet_system::Channels::<Runtime>::insert(
+			channel_id,
+			Channel { agent_id, para_id: PenpalA::para_id() },
+		);
+
+		let message_id: H256 = [1; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::Transact {
+				sender,
+				fee: XCM_FEE,
+				weight_at_most: XCM_WEIGHT,
+				origin_kind: OriginKind::SovereignAccount,
+				payload: hex!("00071468656c6c6f").to_vec(),
+				fee_mode: TransactFeeMode::OnEthereum,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	PenpalA::execute_with(|| {
+		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
+		// Check that system event remarked on PenPal
+		assert_expected_events!(
+			PenpalA,
+			vec![
+				RuntimeEvent::System(frame_system::Event::Remarked { .. }) => {},
 			]
 		);
 	});
