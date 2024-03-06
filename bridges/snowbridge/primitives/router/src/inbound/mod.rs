@@ -248,8 +248,9 @@ where
 			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
+			// Todo: For test only and need to pass original sender from Ethereum side
+			DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
 			ReserveAssetDeposited(asset.clone().into()),
-			ClearOrigin,
 		];
 
 		match dest_para_id {

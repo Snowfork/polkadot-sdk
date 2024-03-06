@@ -27,7 +27,9 @@ use snowbridge_pallet_inbound_queue_fixtures::{
 	InboundQueueFixture,
 };
 use snowbridge_pallet_system;
-use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
+use snowbridge_router_primitives::inbound::{
+	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
+};
 use sp_core::H256;
 use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
@@ -533,5 +535,89 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
 
 	BridgeHubRococo::execute_with(|| {
 		assert_err!(send_inbound_message(make_register_token_message()), Token(FundsUnavailable));
+	});
+}
+
+// register weth as non-sufficient asset, dest account in this test does not exist so the transfer
+// should be trapped, just verify that the trapped origin contains the original sender so could
+// be claimed by himself from Gateway later.
+#[test]
+fn send_token_from_ethereum_to_asset_hub_verify_trapped_as_original_sender() {
+	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
+
+	// Fund ethereum sovereign on AssetHub
+	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
+
+	// Create asset on AssetHub.
+	let weth_asset_location: Location =
+		(Parent, Parent, EthereumNetwork::get(), AccountKey20 { network: None, key: WETH }).into();
+	let weth_asset_id: v3::Location = weth_asset_location.try_into().unwrap();
+	let asset_hub_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
+		1,
+		[Parachain(AssetHubRococo::para_id().into())],
+	));
+	AssetHubRococo::execute_with(|| {
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::force_create(
+			<AssetHubRococo as Chain>::RuntimeOrigin::root(),
+			weth_asset_id,
+			asset_hub_sovereign.into(),
+			false,
+			1,
+		));
+		assert!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::asset_exists(
+			weth_asset_id
+		));
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type EthereumInboundQueue =
+			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		const XCM_FEE: u128 = 4_000_000_000;
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendToken {
+				token: WETH.into(),
+				destination: Destination::AccountId32 {
+					// dest account not exist and since weth is non-sufficient asset, the transfer
+					// should be trapped
+					id: [1; 32],
+				},
+				amount: 1_000_000_000,
+				fee: XCM_FEE,
+			},
+		});
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+		// Check that the message was sent
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
+		let expected_origin = Location {
+			parents: 2,
+			interior: Junctions::from([
+				GlobalConsensus(Ethereum { chain_id: 11155111 }),
+				AccountKey20 { network: None, key: [1u8; 20] },
+			]),
+		};
+
+		// Check that asset trapped as original sender
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::PolkadotXcm(pallet_xcm::Event::AssetsTrapped { origin,.. }) => {
+					origin: *origin == expected_origin,
+				},
+			]
+		);
 	});
 }

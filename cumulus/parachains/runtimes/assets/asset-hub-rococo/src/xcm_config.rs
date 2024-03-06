@@ -21,7 +21,7 @@ use super::{
 	XcmpQueue,
 };
 use assets_common::{
-	matching::{FromNetwork, FromSiblingParachain, IsForeignConcreteAsset},
+	matching::{FromSiblingParachain, IsForeignConcreteAsset},
 	TrustBackedAssetsAsLocation,
 };
 use frame_support::{
@@ -838,6 +838,7 @@ pub mod bridging {
 
 	pub mod to_ethereum {
 		use super::*;
+		use assets_common::matching::FromNetworkSovereignAccount;
 
 		parameter_types! {
 			/// User fee for ERC20 token transfer back to Ethereum.
@@ -876,8 +877,9 @@ pub mod bridging {
 			);
 		}
 
-		pub type IsTrustedBridgedReserveLocationForForeignAsset =
-			matching::IsForeignConcreteAsset<FromNetwork<UniversalLocation, EthereumNetwork>>;
+		pub type IsTrustedBridgedReserveLocationForForeignAsset = matching::IsForeignConcreteAsset<
+			FromNetworkSovereignAccount<UniversalLocation, EthereumNetwork>,
+		>;
 
 		impl Contains<(Location, Junction)> for UniversalAliases {
 			fn contains(alias: &(Location, Junction)) -> bool {

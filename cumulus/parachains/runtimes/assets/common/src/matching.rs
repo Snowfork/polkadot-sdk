@@ -94,6 +94,46 @@ impl<
 	}
 }
 
+pub struct FromNetworkSovereignAccount<UniversalLocation, ExpectedNetworkId, L = Location>(
+	sp_std::marker::PhantomData<(UniversalLocation, ExpectedNetworkId, L)>,
+);
+impl<
+		UniversalLocation: Get<InteriorLocation>,
+		ExpectedNetworkId: Get<NetworkId>,
+		L: TryFrom<Location> + TryInto<Location> + Clone,
+	> ContainsPair<L, L>
+	for crate::matching::FromNetworkSovereignAccount<UniversalLocation, ExpectedNetworkId, L>
+{
+	fn contains(a: &L, b: &L) -> bool {
+		// We convert locations to latest
+		let a = match ((*a).clone().try_into(), (*b).clone().try_into()) {
+			(Ok(a), Ok(b)) => {
+				let prefix_b = b.split_last_interior().0;
+				if !a.starts_with(&prefix_b) {
+					return false;
+				}
+				a
+			},
+			_ => return false,
+		};
+
+		let universal_source = UniversalLocation::get();
+
+		// ensure that `a` is remote and from the expected network
+		match ensure_is_remote(universal_source.clone(), a.clone()) {
+			Ok((network_id, _)) => network_id == ExpectedNetworkId::get(),
+			Err(e) => {
+				log::trace!(
+					target: "xcm::contains",
+					"FromNetwork origin: {:?} is not remote to the universal_source: {:?} {:?}",
+					a, universal_source, e
+				);
+				false
+			},
+		}
+	}
+}
+
 /// Adapter verifies if it is allowed to receive `Asset` from `Location`.
 ///
 /// Note: `Location` has to be from a different global consensus.
