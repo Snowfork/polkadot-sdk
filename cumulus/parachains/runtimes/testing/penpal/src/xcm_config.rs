@@ -30,10 +30,10 @@ use super::{
 use codec::Encode;
 use core::marker::PhantomData;
 use frame_support::{
-	parameter_types,
+	ensure, parameter_types,
 	traits::{
 		fungibles::{self, Balanced, Credit},
-		ConstU32, Contains, ContainsPair, Equals, Everything, Get, Nothing,
+		ConstU32, Contains, ContainsPair, Equals, Everything, Get, Nothing, ProcessMessageError,
 	},
 	weights::Weight,
 };
@@ -45,21 +45,21 @@ use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::Zero;
-use sp_std::collections::btree_set::BTreeSet;
+use sp_std::{collections::btree_set::BTreeSet, ops::ControlFlow};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses,
 	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom, AsPrefixedGeneralIndex,
-	ConvertedConcreteId, EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor,
-	FungibleAdapter, FungiblesAdapter, IsConcrete, LocalMint, NativeAsset, NoChecking,
-	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, StartsWith, TakeWeightCredit, TrailingSetTopicAsId,
-	UsingComponents, WithComputedOrigin, WithUniqueTopic,
+	ConvertedConcreteId, CreateMatcher, EnsureXcmOrigin, FixedWeightBounds,
+	FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter, IsConcrete, LocalMint,
+	MatchXcm, NativeAsset, NoChecking, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, StartsWith, TakeWeightCredit,
+	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
 };
 use xcm_executor::{
-	traits::{ConvertLocation, JustTry},
+	traits::{ConvertLocation, JustTry, Properties, ShouldExecute, WeightTrader},
 	XcmExecutor,
 };
 
@@ -200,12 +200,47 @@ impl Contains<Location> for CommonGoodAssetsParachain {
 	}
 }
 
+pub struct AllowUnpaidExecutionFromSnowBridgeWithFeeChecked<T>(PhantomData<T>);
+impl<T: Contains<Location>> ShouldExecute for AllowUnpaidExecutionFromSnowBridgeWithFeeChecked<T> {
+	fn should_execute<RuntimeCall>(
+		origin: &Location,
+		instructions: &mut [Instruction<RuntimeCall>],
+		max_weight: Weight,
+		_properties: &mut Properties,
+	) -> Result<(), ProcessMessageError> {
+		log::trace!(
+			target: "xcm::barriers",
+			"AllowUnpaidExecutionFromSnowBridgeWithFeeChecked origin: {:?}, instructions: {:?}, max_weight: {:?}, properties: {:?}",
+			origin, instructions, max_weight, _properties,
+		);
+		ensure!(T::contains(origin), ProcessMessageError::Unsupported);
+		let mut fee_assets = xcm::prelude::Assets::default();
+		instructions.matcher().match_next_inst_while(
+			|_| true,
+			|inst| match inst {
+				BurnAsset(assets) => {
+					fee_assets = assets.clone();
+					Ok(ControlFlow::Break(()))
+				},
+
+				_ => Ok(ControlFlow::Continue(())),
+			},
+		)?;
+		let mut trader = <XcmConfig as xcm_executor::Config>::Trader::new();
+		let ctx = XcmContext { origin: None, message_id: XcmHash::default(), topic: None };
+		trader
+			.buy_weight(max_weight, fee_assets.into(), &ctx)
+			.map_err(|_| ProcessMessageError::Unsupported)?;
+		Ok(())
+	}
+}
+
 pub type Barrier = TrailingSetTopicAsId<(
 	TakeWeightCredit,
 	// Expected responses are OK.
 	AllowKnownQueryResponses<PolkadotXcm>,
 	// Allow from BridgeHub
-	AllowExplicitUnpaidExecutionFrom<Equals<SiblingBridgeHub>>,
+	AllowUnpaidExecutionFromSnowBridgeWithFeeChecked<Equals<SiblingBridgeHub>>,
 	// Allow XCMs with some computed origins to pass through.
 	WithComputedOrigin<
 		(
