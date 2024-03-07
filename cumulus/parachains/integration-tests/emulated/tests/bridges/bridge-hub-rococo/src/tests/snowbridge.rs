@@ -542,7 +542,7 @@ fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
 // should be trapped, just verify that the trapped origin contains the original sender so could
 // be claimed by himself from Gateway later.
 #[test]
-fn send_token_from_ethereum_to_asset_hub_verify_trapped_as_original_sender() {
+fn send_token_from_ethereum_to_asset_hub_trapped_and_then_claimed() {
 	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
 
 	// Fund ethereum sovereign on AssetHub
@@ -616,6 +616,49 @@ fn send_token_from_ethereum_to_asset_hub_verify_trapped_as_original_sender() {
 			vec![
 				RuntimeEvent::PolkadotXcm(pallet_xcm::Event::AssetsTrapped { origin,.. }) => {
 					origin: *origin == expected_origin,
+				},
+			]
+		);
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type EthereumInboundQueue =
+			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		const XCM_FEE: u128 = 4_000_000_000;
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::ClaimToken {
+				token: WETH.into(),
+				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
+				token_amount: 1_000_000_000,
+				// Not the original since some fees already consumed, check it from trapped event
+				fee_amount: 3_978_102_671,
+				asset_hub_fee: XCM_FEE,
+			},
+		});
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+		// Check that the message was sent
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
+		// Check that the token was claimed to the recipient and issued as a foreign asset on
+		// AssetHub
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { owner, .. }) => {
+					owner: *owner == AssetHubRococoReceiver::get(),
 				},
 			]
 		);

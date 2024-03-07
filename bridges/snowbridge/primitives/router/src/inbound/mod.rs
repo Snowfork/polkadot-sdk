@@ -56,6 +56,19 @@ pub enum Command {
 		/// XCM execution fee on AssetHub
 		fee: u128,
 	},
+	/// Claim token trapped on AssetHub
+	ClaimToken {
+		/// The address of the ERC20 token to be bridged over to AssetHub
+		token: H160,
+		/// The destination for the transfer
+		destination: Destination,
+		/// Amount of token to claim
+		token_amount: u128,
+		/// Amount of fee to claim
+		fee_amount: u128,
+		/// XCM execution fee on AssetHub
+		asset_hub_fee: u128,
+	},
 }
 
 /// Destination for bridged tokens
@@ -108,6 +121,8 @@ pub struct MessageToXcm<
 pub enum ConvertMessageError {
 	/// The message version is not supported for conversion.
 	UnsupportedVersion,
+	/// Claim from AssetHub only
+	UnsupportedClaim,
 }
 
 /// convert the inbound message to xcm which will be forwarded to the destination chain
@@ -146,6 +161,17 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_register_token(chain_id, token, fee)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
+			V1(MessageV1 {
+				chain_id,
+				command: ClaimToken { token, destination, token_amount, fee_amount, asset_hub_fee },
+			}) => Self::convert_claim_token(
+				chain_id,
+				token,
+				destination,
+				token_amount,
+				fee_amount,
+				asset_hub_fee,
+			),
 		}
 	}
 }
@@ -289,6 +315,44 @@ where
 			2,
 			[GlobalConsensus(network), AccountKey20 { network: None, key: token.into() }],
 		)
+	}
+
+	fn convert_claim_token(
+		chain_id: u64,
+		token: H160,
+		destination: Destination,
+		token_amount: u128,
+		fee_amount: u128,
+		asset_hub_fee: u128,
+	) -> Result<(Xcm<()>, Balance), ConvertMessageError> {
+		let network = Ethereum { chain_id };
+		let asset_hub_fee_asset: Asset = (Location::parent(), asset_hub_fee).into();
+		let token_asset: Asset = (Self::convert_token_address(network, token), token_amount).into();
+		let fee_asset: Asset = (Location::parent(), fee_amount).into();
+
+		let beneficiary = match destination {
+			// Final destination is a 32-byte account on AssetHub
+			Destination::AccountId32 { id } =>
+				Ok(Location::new(0, [AccountId32 { network: None, id }])),
+			// Others are not supported for now
+			_ => Err(ConvertMessageError::UnsupportedClaim),
+		}?;
+
+		let instructions = vec![
+			ReceiveTeleportedAsset(asset_hub_fee_asset.clone().into()),
+			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
+			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
+			UniversalOrigin(GlobalConsensus(network)),
+			// Todo: For test only and need to pass original sender from Ethereum side
+			DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
+			ClaimAsset {
+				assets: vec![fee_asset, token_asset].into(),
+				ticket: GeneralIndex(4).into(),
+			},
+			DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+		];
+
+		Ok((instructions.into(), asset_hub_fee.into()))
 	}
 }
 
