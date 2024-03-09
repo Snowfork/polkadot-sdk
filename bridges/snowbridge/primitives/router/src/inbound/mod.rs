@@ -205,16 +205,16 @@ where
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let xcm: Xcm<()> = vec![
-			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
-			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
-			// Change origin to the bridge.
-			UniversalOrigin(GlobalConsensus(network)),
-			// ReserveAssetDeposited to holding registry prepared for pay
-			ReserveAssetDeposited(total.into()),
+			// Teleport required fees.
+			ReceiveTeleportedAsset(total.into()),
 			// Pay for execution.
 			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
 			// Fund the snowbridge sovereign with the required deposit for creation.
 			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
+			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
+			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
+			// Change origin to the bridge.
+			UniversalOrigin(GlobalConsensus(network)),
 			// Refund the surplus execution weight to Ethereum
 			SetAppendix(Xcm(vec![
 				RefundSurplus,
@@ -282,8 +282,9 @@ where
 			UniversalOrigin(GlobalConsensus(network)),
 			// Todo: Hardcode for the POC and will pass original sender from Ethereum side
 			DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
-			ReserveAssetDeposited(vec![total_fee_asset, asset.clone()].into()),
+			ReceiveTeleportedAsset(total_fee_asset.into()),
 			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
+			ReserveAssetDeposited(asset.clone().into()),
 		];
 
 		match dest_para_id {
