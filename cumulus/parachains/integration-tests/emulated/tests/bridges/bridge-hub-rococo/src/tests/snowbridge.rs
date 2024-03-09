@@ -622,6 +622,7 @@ fn send_token_from_ethereum_to_asset_hub_trapped_for_insufficient_fee_and_then_c
 			chain_id: CHAIN_ID,
 			command: Command::ClaimToken {
 				token: WETH.into(),
+				sender: [1_u8; 20].into(),
 				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
 				token_amount: TOKEN_AMOUNT,
 				fee_amount: INSUFFICIENT_XCM_FEE,
@@ -741,6 +742,7 @@ fn send_token_from_ethereum_to_asset_hub_trapped_for_dest_account_not_exist_and_
 			chain_id: CHAIN_ID,
 			command: Command::ClaimToken {
 				token: WETH.into(),
+				sender: [1_u8; 20].into(),
 				destination: Destination::AccountId32 { id: AssetHubRococoReceiver::get().into() },
 				token_amount: TOKEN_AMOUNT,
 				// Not the original fee amount since some already consumed, check it out from

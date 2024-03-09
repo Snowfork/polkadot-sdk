@@ -58,8 +58,10 @@ pub enum Command {
 	},
 	/// Claim token trapped on AssetHub
 	ClaimToken {
-		/// The address of the ERC20 token to be bridged over to AssetHub
+		/// The address of the ERC20 token to be claimed from AssetHub
 		token: H160,
+		/// The original sender
+		sender: H160,
 		/// The destination for the transfer
 		destination: Destination,
 		/// Amount of token to claim
@@ -163,10 +165,12 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
 			V1(MessageV1 {
 				chain_id,
-				command: ClaimToken { token, destination, token_amount, fee_amount, asset_hub_fee },
+				command:
+					ClaimToken { token, sender, destination, token_amount, fee_amount, asset_hub_fee },
 			}) => Self::convert_claim_token(
 				chain_id,
 				token,
+				sender,
 				destination,
 				token_amount,
 				fee_amount,
@@ -328,6 +332,7 @@ where
 	fn convert_claim_token(
 		chain_id: u64,
 		token: H160,
+		sender: H160,
 		destination: Destination,
 		token_amount: u128,
 		fee_amount: u128,
@@ -349,8 +354,7 @@ where
 		let instructions = vec![
 			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
 			UniversalOrigin(GlobalConsensus(network)),
-			// Todo: Hardcode for the POC and will pass original sender from Ethereum side
-			DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
+			DescendOrigin([AccountKey20 { network: None, key: sender.into() }].into()),
 			ReserveAssetDeposited(asset_hub_fee_asset.clone().into()),
 			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			ClaimAsset {
