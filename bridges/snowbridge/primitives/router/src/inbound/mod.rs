@@ -195,22 +195,33 @@ where
 
 		let bridge_location: Location = (Parent, Parent, GlobalConsensus(network)).into();
 
+		// Todo: make the owner derived from the original sender on Ethereum side
 		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 		let asset_id = Self::convert_token_address(network, token);
 		let create_call_index: [u8; 2] = CreateAssetCall::get();
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let xcm: Xcm<()> = vec![
-			// Teleport required fees.
-			ReceiveTeleportedAsset(total.into()),
-			// Pay for execution.
-			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
-			// Fund the snowbridge sovereign with the required deposit for creation.
-			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
 			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(network)),
+			// Todo: For test only and need to pass original sender from Ethereum side
+			// DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
+			// ReserveAssetDeposited to holding registry prepared for pay
+			ReserveAssetDeposited(total.into()),
+			// Pay for execution.
+			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
+			// Fund the snowbridge sovereign with the required deposit for creation.
+			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
+			// Refund the surplus execution weight to Ethereum
+			SetAppendix(Xcm(vec![
+				RefundSurplus,
+				DepositAsset {
+					assets: Wild(AllCounted(1u32)),
+					beneficiary: Location::from(GlobalConsensus(network)),
+				},
+			])),
 			// Call create_asset on foreign assets pallet.
 			Transact {
 				origin_kind: OriginKind::Xcm,
@@ -224,10 +235,6 @@ where
 					.encode()
 					.into(),
 			},
-			RefundSurplus,
-			// Clear the origin so that remaining assets in holding
-			// are claimable by the physical origin (BridgeHub)
-			ClearOrigin,
 		]
 		.into();
 
@@ -270,13 +277,12 @@ where
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let mut instructions = vec![
-			ReceiveTeleportedAsset(total_fee_asset.into()),
-			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
 			// Todo: For test only and need to pass original sender from Ethereum side
 			DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
-			ReserveAssetDeposited(asset.clone().into()),
+			ReserveAssetDeposited(vec![total_fee_asset, asset.clone()].into()),
+			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 		];
 
 		match dest_para_id {
@@ -291,8 +297,10 @@ where
 						xcm: vec![
 							// Buy execution on target.
 							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
-							// Deposit asset to beneficiary.
-							DepositAsset { assets: Definite(asset.into()), beneficiary },
+							// Deposit both asset and fees left to beneficiary.
+							DepositAsset { assets: Wild(AllCounted(2u32)), beneficiary },
+							// Todo: We may add another SetTopic here to trace the original
+							// message_id from Ethereum
 						]
 						.into(),
 					},
@@ -300,8 +308,10 @@ where
 			},
 			None => {
 				instructions.extend(vec![
-					// Deposit asset to beneficiary.
-					DepositAsset { assets: Definite(asset.into()), beneficiary },
+					// Deposit both asset and fees left to beneficiary. Meanwhile it resolves the
+					// issue when beneficiary not exist, in case the fees left more than ED could
+					// be used to create the dest account
+					DepositAsset { assets: Wild(AllCounted(2u32)), beneficiary },
 				]);
 			},
 		}
@@ -339,12 +349,12 @@ where
 		}?;
 
 		let instructions = vec![
-			ReceiveTeleportedAsset(asset_hub_fee_asset.clone().into()),
-			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
 			UniversalOrigin(GlobalConsensus(network)),
 			// Todo: For test only and need to pass original sender from Ethereum side
 			DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
+			ReserveAssetDeposited(asset_hub_fee_asset.clone().into()),
+			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			ClaimAsset {
 				assets: vec![fee_asset, token_asset].into(),
 				ticket: GeneralIndex(4).into(),
@@ -363,7 +373,7 @@ where
 {
 	fn convert_location(location: &Location) -> Option<AccountId> {
 		match location.unpack() {
-			(_, [GlobalConsensus(Ethereum { chain_id })]) =>
+			(_, [GlobalConsensus(Ethereum { chain_id }), ..]) =>
 				Some(Self::from_chain_id(chain_id).into()),
 			_ => None,
 		}

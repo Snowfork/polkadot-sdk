@@ -21,7 +21,10 @@ use super::{
 	XcmpQueue,
 };
 use assets_common::{
-	matching::{FromSiblingParachain, IsForeignConcreteAsset},
+	matching::{
+		FeeAssetFromChildSovereignWithinNetwork, FeeAssetFromNetwork,
+		ForeignAssetFromChildSovereignWithinNetwork, FromSiblingParachain, IsForeignConcreteAsset,
+	},
 	TrustBackedAssetsAsLocation,
 };
 use frame_support::{
@@ -559,6 +562,8 @@ impl xcm_executor::Config for XcmConfig {
 	type IsReserve = (
 		bridging::to_westend::IsTrustedBridgedReserveLocationForConcreteAsset,
 		bridging::to_ethereum::IsTrustedBridgedReserveLocationForForeignAsset,
+		bridging::to_ethereum::IsTrustedBridgedReserveLocationForFeeAsset,
+		bridging::to_ethereum::IsTrustedBridgedReserveLocationForFeeAssetFromChildSovereign,
 	);
 	type IsTeleporter = TrustedTeleporters;
 	type UniversalLocation = UniversalLocation;
@@ -838,8 +843,6 @@ pub mod bridging {
 
 	pub mod to_ethereum {
 		use super::*;
-		use assets_common::matching::FromNetworkSovereignAccount;
-
 		parameter_types! {
 			/// User fee for ERC20 token transfer back to Ethereum.
 			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
@@ -878,8 +881,21 @@ pub mod bridging {
 		}
 
 		pub type IsTrustedBridgedReserveLocationForForeignAsset = matching::IsForeignConcreteAsset<
-			FromNetworkSovereignAccount<UniversalLocation, EthereumNetwork>,
+			ForeignAssetFromChildSovereignWithinNetwork<UniversalLocation, EthereumNetwork>,
 		>;
+
+		pub type IsTrustedBridgedReserveLocationForFeeAsset = matching::IsForeignConcreteAsset<
+			FeeAssetFromNetwork<TokenLocation, UniversalLocation, EthereumNetwork, Location>,
+		>;
+
+		pub type IsTrustedBridgedReserveLocationForFeeAssetFromChildSovereign =
+			matching::IsForeignConcreteAsset<
+				FeeAssetFromChildSovereignWithinNetwork<
+					TokenLocation,
+					UniversalLocation,
+					EthereumNetwork,
+				>,
+			>;
 
 		impl Contains<(Location, Junction)> for UniversalAliases {
 			fn contains(alias: &(Location, Junction)) -> bool {

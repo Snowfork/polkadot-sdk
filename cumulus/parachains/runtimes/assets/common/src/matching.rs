@@ -94,15 +94,17 @@ impl<
 	}
 }
 
-pub struct FromNetworkSovereignAccount<UniversalLocation, ExpectedNetworkId, L = Location>(
-	sp_std::marker::PhantomData<(UniversalLocation, ExpectedNetworkId, L)>,
-);
+pub struct ForeignAssetFromChildSovereignWithinNetwork<
+	UniversalLocation,
+	ExpectedNetworkId,
+	L = Location,
+>(sp_std::marker::PhantomData<(UniversalLocation, ExpectedNetworkId, L)>);
 impl<
 		UniversalLocation: Get<InteriorLocation>,
 		ExpectedNetworkId: Get<NetworkId>,
 		L: TryFrom<Location> + TryInto<Location> + Clone,
 	> ContainsPair<L, L>
-	for crate::matching::FromNetworkSovereignAccount<UniversalLocation, ExpectedNetworkId, L>
+	for ForeignAssetFromChildSovereignWithinNetwork<UniversalLocation, ExpectedNetworkId, L>
 {
 	fn contains(a: &L, b: &L) -> bool {
 		// We convert locations to latest
@@ -127,6 +129,92 @@ impl<
 					target: "xcm::contains",
 					"FromNetwork origin: {:?} is not remote to the universal_source: {:?} {:?}",
 					a, universal_source, e
+				);
+				false
+			},
+		}
+	}
+}
+
+pub struct FeeAssetFromChildSovereignWithinNetwork<
+	FeeAssetLocation,
+	UniversalLocation,
+	ExpectedNetworkId,
+	L = Location,
+>(sp_std::marker::PhantomData<(FeeAssetLocation, UniversalLocation, ExpectedNetworkId, L)>);
+impl<
+		FeeAssetLocation: Get<Location>,
+		UniversalLocation: Get<InteriorLocation>,
+		ExpectedNetworkId: Get<NetworkId>,
+		L: TryFrom<Location> + TryInto<Location> + Clone,
+	> ContainsPair<L, L>
+	for crate::matching::FeeAssetFromChildSovereignWithinNetwork<
+		FeeAssetLocation,
+		UniversalLocation,
+		ExpectedNetworkId,
+		L,
+	>
+{
+	fn contains(a: &L, b: &L) -> bool {
+		let prefix_b = match ((*a).clone().try_into(), (*b).clone().try_into()) {
+			(Ok(a), Ok(b)) => {
+				if a.ne(&FeeAssetLocation::get()) {
+					return false;
+				}
+				b.split_last_interior().0
+			},
+			_ => return false,
+		};
+
+		let universal_source = UniversalLocation::get();
+
+		// ensure that `a` is remote and from the expected network
+		match ensure_is_remote(universal_source.clone(), prefix_b.clone()) {
+			Ok((network_id, _)) => network_id == ExpectedNetworkId::get(),
+			Err(e) => {
+				log::trace!(
+					target: "xcm::contains",
+					"FromNetwork origin: {:?} is not remote to the universal_source: {:?} {:?}",
+					prefix_b, universal_source, e
+				);
+				false
+			},
+		}
+	}
+}
+
+pub struct FeeAssetFromNetwork<FeeAssetLocation, UniversalLocation, ExpectedNetworkId, L = Location>(
+	sp_std::marker::PhantomData<(FeeAssetLocation, UniversalLocation, ExpectedNetworkId, L)>,
+);
+impl<
+		FeeAssetLocation: Get<Location>,
+		UniversalLocation: Get<InteriorLocation>,
+		ExpectedNetworkId: Get<NetworkId>,
+		L: TryFrom<Location> + TryInto<Location> + Clone,
+	> ContainsPair<L, L>
+	for crate::matching::FeeAssetFromNetwork<FeeAssetLocation, UniversalLocation, ExpectedNetworkId, L>
+{
+	fn contains(a: &L, b: &L) -> bool {
+		let b = match ((*a).clone().try_into(), (*b).clone().try_into()) {
+			(Ok(a), Ok(b)) => {
+				if a.ne(&FeeAssetLocation::get()) {
+					return false;
+				}
+				b
+			},
+			_ => return false,
+		};
+
+		let universal_source = UniversalLocation::get();
+
+		// ensure that `a` is remote and from the expected network
+		match ensure_is_remote(universal_source.clone(), b.clone()) {
+			Ok((network_id, _)) => network_id == ExpectedNetworkId::get(),
+			Err(e) => {
+				log::trace!(
+					target: "xcm::contains",
+					"FromNetwork origin: {:?} is not remote to the universal_source: {:?} {:?}",
+					b, universal_source, e
 				);
 				false
 			},

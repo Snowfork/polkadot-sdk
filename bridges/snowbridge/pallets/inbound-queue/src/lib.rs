@@ -56,7 +56,7 @@ use sp_runtime::traits::Zero;
 use sp_std::{convert::TryFrom, vec};
 use xcm::prelude::{
 	send_xcm, Instruction::SetTopic, Junction::*, Location, SendError as XcmpSendError, SendXcm,
-	Xcm, XcmContext, XcmHash,
+	Xcm, XcmHash,
 };
 use xcm_executor::traits::TransactAsset;
 
@@ -69,7 +69,7 @@ use snowbridge_router_primitives::{
 	inbound,
 	inbound::{ConvertMessage, ConvertMessageError},
 };
-use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
+use sp_runtime::traits::Saturating;
 
 pub use weights::WeightInfo;
 
@@ -156,8 +156,8 @@ pub mod pallet {
 			nonce: u64,
 			/// ID of the XCM message which was forwarded to the final destination parachain
 			message_id: [u8; 32],
-			/// Fee burned for the teleport
-			fee_burned: BalanceOf<T>,
+			/// Fee for the reserve transfer
+			fee: BalanceOf<T>,
 		},
 		/// Set OperatingMode
 		OperatingModeChanged { mode: BasicOperatingMode },
@@ -290,9 +290,6 @@ pub mod pallet {
 				fee
 			);
 
-			// Burning fees for teleport
-			Self::burn_fees(channel.para_id, fee)?;
-
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;
 
@@ -300,7 +297,7 @@ pub mod pallet {
 				channel_id: envelope.channel_id,
 				nonce: envelope.nonce,
 				message_id,
-				fee_burned: fee,
+				fee,
 			});
 
 			Ok(())
@@ -344,30 +341,6 @@ pub mod pallet {
 			weight_fee
 				.saturating_add(len_fee)
 				.saturating_add(T::PricingParameters::get().rewards.local)
-		}
-
-		/// Burn the amount of the fee embedded into the XCM for teleports
-		pub fn burn_fees(para_id: ParaId, fee: BalanceOf<T>) -> DispatchResult {
-			let dummy_context =
-				XcmContext { origin: None, message_id: Default::default(), topic: None };
-			let dest = Location::new(1, [Parachain(para_id.into())]);
-			let fees = (Location::parent(), fee.saturated_into::<u128>()).into();
-			T::AssetTransactor::can_check_out(&dest, &fees, &dummy_context).map_err(|error| {
-				log::error!(
-					target: LOG_TARGET,
-					"XCM asset check out failed with error {:?}", error
-				);
-				TokenError::FundsUnavailable
-			})?;
-			T::AssetTransactor::check_out(&dest, &fees, &dummy_context);
-			T::AssetTransactor::withdraw_asset(&fees, &dest, None).map_err(|error| {
-				log::error!(
-					target: LOG_TARGET,
-					"XCM asset withdraw failed with error {:?}", error
-				);
-				TokenError::FundsUnavailable
-			})?;
-			Ok(())
 		}
 	}
 
