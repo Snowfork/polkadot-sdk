@@ -195,7 +195,6 @@ where
 
 		let bridge_location: Location = (Parent, Parent, GlobalConsensus(network)).into();
 
-		// Todo: make the owner derived from the original sender on Ethereum side
 		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
 		let asset_id = Self::convert_token_address(network, token);
 		let create_call_index: [u8; 2] = CreateAssetCall::get();
@@ -206,8 +205,6 @@ where
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(network)),
-			// Todo: For test only and need to pass original sender from Ethereum side
-			// DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
 			// ReserveAssetDeposited to holding registry prepared for pay
 			ReserveAssetDeposited(total.into()),
 			// Pay for execution.
@@ -279,7 +276,7 @@ where
 		let mut instructions = vec![
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
-			// Todo: For test only and need to pass original sender from Ethereum side
+			// Todo: Hardcode for the POC and will pass original sender from Ethereum side
 			DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
 			ReserveAssetDeposited(vec![total_fee_asset, asset.clone()].into()),
 			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
@@ -299,8 +296,9 @@ where
 							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
 							// Deposit both asset and fees left to beneficiary.
 							DepositAsset { assets: Wild(AllCounted(2u32)), beneficiary },
-							// Todo: We may add another SetTopic here to trace the original
-							// message_id from Ethereum
+							// Todo: Add another `SetTopic` here to trace the original `message_id`
+							// on destination chain, potentially used to claim trapped asset later
+							// by self governance
 						]
 						.into(),
 					},
@@ -308,9 +306,9 @@ where
 			},
 			None => {
 				instructions.extend(vec![
-					// Deposit both asset and fees left to beneficiary. Meanwhile it resolves the
-					// issue when beneficiary not exist, in case the fees left more than ED could
-					// be used to create the dest account
+					// Deposit both asset and fees left to beneficiary so the fees will not get
+					// trapped. Another benefit is when fees left more than ED could be used to
+					// create the dest account in case it does not exist.
 					DepositAsset { assets: Wild(AllCounted(2u32)), beneficiary },
 				]);
 			},
@@ -351,7 +349,7 @@ where
 		let instructions = vec![
 			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
 			UniversalOrigin(GlobalConsensus(network)),
-			// Todo: For test only and need to pass original sender from Ethereum side
+			// Todo: Hardcode for the POC and will pass original sender from Ethereum side
 			DescendOrigin([AccountKey20 { network: None, key: [1u8; 20] }].into()),
 			ReserveAssetDeposited(asset_hub_fee_asset.clone().into()),
 			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
@@ -373,7 +371,7 @@ where
 {
 	fn convert_location(location: &Location) -> Option<AccountId> {
 		match location.unpack() {
-			(_, [GlobalConsensus(Ethereum { chain_id }), ..]) =>
+			(_, [GlobalConsensus(Ethereum { chain_id })]) =>
 				Some(Self::from_chain_id(chain_id).into()),
 			_ => None,
 		}

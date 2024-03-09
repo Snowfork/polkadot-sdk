@@ -94,6 +94,8 @@ impl<
 	}
 }
 
+/// Checks if `a` is from the expected global consensus network. Checks that `Location-a`
+/// starts with prefix of `Location-b`, and that network is a foreign consensus system.
 pub struct ForeignAssetFromChildSovereignWithinNetwork<
 	UniversalLocation,
 	ExpectedNetworkId,
@@ -107,7 +109,6 @@ impl<
 	for ForeignAssetFromChildSovereignWithinNetwork<UniversalLocation, ExpectedNetworkId, L>
 {
 	fn contains(a: &L, b: &L) -> bool {
-		// We convert locations to latest
 		let a = match ((*a).clone().try_into(), (*b).clone().try_into()) {
 			(Ok(a), Ok(b)) => {
 				let prefix_b = b.split_last_interior().0;
@@ -121,7 +122,6 @@ impl<
 
 		let universal_source = UniversalLocation::get();
 
-		// ensure that `a` is remote and from the expected network
 		match ensure_is_remote(universal_source.clone(), a.clone()) {
 			Ok((network_id, _)) => network_id == ExpectedNetworkId::get(),
 			Err(e) => {
@@ -136,6 +136,8 @@ impl<
 	}
 }
 
+/// Checks if `a` is from the expected `FeeAssetLocation`. Checks that prefix of `Location-b` is
+/// network from a foreign consensus system.
 pub struct FeeAssetFromChildSovereignWithinNetwork<
 	FeeAssetLocation,
 	UniversalLocation,
@@ -168,7 +170,6 @@ impl<
 
 		let universal_source = UniversalLocation::get();
 
-		// ensure that `a` is remote and from the expected network
 		match ensure_is_remote(universal_source.clone(), prefix_b.clone()) {
 			Ok((network_id, _)) => network_id == ExpectedNetworkId::get(),
 			Err(e) => {
@@ -183,6 +184,8 @@ impl<
 	}
 }
 
+/// Checks if `a` is from the expected `FeeAssetLocation`. Checks that `Location-b` is
+/// network from a foreign consensus system.
 pub struct FeeAssetFromNetwork<FeeAssetLocation, UniversalLocation, ExpectedNetworkId, L = Location>(
 	sp_std::marker::PhantomData<(FeeAssetLocation, UniversalLocation, ExpectedNetworkId, L)>,
 );
@@ -207,7 +210,6 @@ impl<
 
 		let universal_source = UniversalLocation::get();
 
-		// ensure that `a` is remote and from the expected network
 		match ensure_is_remote(universal_source.clone(), b.clone()) {
 			Ok((network_id, _)) => network_id == ExpectedNetworkId::get(),
 			Err(e) => {
