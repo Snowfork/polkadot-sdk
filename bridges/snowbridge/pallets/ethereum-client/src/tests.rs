@@ -370,7 +370,9 @@ fn cross_check_execution_state() {
 		});
 
 		assert_err!(
-			EthereumBeaconClient::cross_check_execution_state(),
+			EthereumBeaconClient::cross_check_execution_state(
+				&load_finalized_header_update_fixture()
+			),
 			Error::<Test>::ExecutionHeaderTooFarBehind
 		);
 	});
@@ -546,7 +548,7 @@ fn submit_update_with_skipped_period() {
 		));
 		assert_err!(
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update),
-			Error::<Test>::SkippedSyncCommitteePeriod
+			Error::<Test>::FinalizedHeaderTooFarBehind
 		);
 	});
 }

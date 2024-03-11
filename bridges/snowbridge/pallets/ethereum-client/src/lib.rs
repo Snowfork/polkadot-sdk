@@ -146,6 +146,7 @@ pub mod pallet {
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedBlock,
 		Halted,
+		FinalizedHeaderTooFarBehind,
 	}
 
 	/// Latest imported checkpoint root
@@ -330,7 +331,7 @@ pub mod pallet {
 		}
 
 		pub(crate) fn process_update(update: &Update) -> DispatchResult {
-			Self::cross_check_execution_state()?;
+			Self::cross_check_execution_state(update)?;
 			Self::verify_update(update)?;
 			Self::apply_update(update)?;
 			Ok(())
@@ -339,19 +340,24 @@ pub mod pallet {
 		/// Cross check to make sure that execution header import does not fall too far behind
 		/// finalised beacon header import. If that happens just return an error and pause
 		/// processing until execution header processing has caught up.
-		pub(crate) fn cross_check_execution_state() -> DispatchResult {
+		pub(crate) fn cross_check_execution_state(update: &Update) -> DispatchResult {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
 			let latest_execution_state = Self::latest_execution_state();
 			// The execution header import should be at least within the slot range of a sync
 			// committee period.
-			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
+			let max_latency =
+				(config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH) as u64;
 			ensure!(
 				latest_execution_state.beacon_slot == 0 ||
 					latest_finalized_state.slot <
-						latest_execution_state.beacon_slot + max_latency as u64,
+						latest_execution_state.beacon_slot + max_latency,
 				Error::<T>::ExecutionHeaderTooFarBehind
+			);
+			ensure!(
+				update.attested_header.slot < latest_finalized_state.slot + max_latency,
+				Error::<T>::FinalizedHeaderTooFarBehind
 			);
 			Ok(())
 		}
