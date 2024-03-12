@@ -34,9 +34,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-use frame_support::{
-	dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get, transactional,
-};
+use frame_support::{dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get};
 use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
@@ -214,8 +212,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::force_checkpoint())]
-		#[transactional]
+		#[pallet::weight((T::WeightInfo::force_checkpoint(), DispatchClass::Operational))]
 		/// Used for pallet initialization and light client resetting. Needs to be called by
 		/// the root origin.
 		pub fn force_checkpoint(
@@ -234,7 +231,6 @@ pub mod pallet {
 				Some(_) => T::WeightInfo::submit_with_sync_committee(),
 			}
 		})]
-		#[transactional]
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
 		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
@@ -246,7 +242,6 @@ pub mod pallet {
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::submit_execution_header())]
-		#[transactional]
 		/// Submits a new execution header update. The relevant related beacon header
 		/// is also included to prove the execution header, as well as ancestry proof data.
 		pub fn submit_execution_header(
@@ -330,29 +325,8 @@ pub mod pallet {
 		}
 
 		pub(crate) fn process_update(update: &Update) -> DispatchResult {
-			Self::cross_check_execution_state()?;
 			Self::verify_update(update)?;
 			Self::apply_update(update)?;
-			Ok(())
-		}
-
-		/// Cross check to make sure that execution header import does not fall too far behind
-		/// finalised beacon header import. If that happens just return an error and pause
-		/// processing until execution header processing has caught up.
-		pub(crate) fn cross_check_execution_state() -> DispatchResult {
-			let latest_finalized_state =
-				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
-					.ok_or(Error::<T>::NotBootstrapped)?;
-			let latest_execution_state = Self::latest_execution_state();
-			// The execution header import should be at least within the slot range of a sync
-			// committee period.
-			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
-			ensure!(
-				latest_execution_state.beacon_slot == 0 ||
-					latest_finalized_state.slot <
-						latest_execution_state.beacon_slot + max_latency as u64,
-				Error::<T>::ExecutionHeaderTooFarBehind
-			);
 			Ok(())
 		}
 
@@ -479,6 +453,28 @@ pub mod pallet {
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
+			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
+			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
+			if let Some(version_execution_header) = &update.execution_header {
+				let execution_header_root: H256 = version_execution_header
+					.hash_tree_root()
+					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+				ensure!(
+					&update.execution_branch.is_some(),
+					Error::<T>::InvalidExecutionHeaderProof
+				);
+				ensure!(
+					verify_merkle_branch(
+						execution_header_root,
+						&update.execution_branch.clone().unwrap(),
+						config::EXECUTION_HEADER_SUBTREE_INDEX,
+						config::EXECUTION_HEADER_DEPTH,
+						update.finalized_header.body_root
+					),
+					Error::<T>::InvalidExecutionHeaderProof
+				);
+			}
+
 			Ok(())
 		}
 
@@ -530,6 +526,19 @@ pub mod pallet {
 				)?;
 			}
 
+			if let Some(version_execution_header) = &update.execution_header {
+				let finalized_block_root: H256 = update
+					.finalized_header
+					.hash_tree_root()
+					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
+				Self::store_execution_header(
+					version_execution_header.block_hash(),
+					version_execution_header.clone().into(),
+					update.finalized_header.slot,
+					finalized_block_root,
+				);
+			}
+
 			Ok(())
 		}
 
@@ -546,15 +555,6 @@ pub mod pallet {
 			ensure!(
 				update.header.slot <= latest_finalized_state.slot,
 				Error::<T>::HeaderNotFinalized
-			);
-
-			// Checks that we don't skip execution headers, they need to be imported sequentially.
-			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
-			ensure!(
-				latest_execution_state.block_number == 0 ||
-					update.execution_header.block_number() ==
-						latest_execution_state.block_number + 1,
-				Error::<T>::ExecutionHeaderSkippedBlock
 			);
 
 			// Gets the hash tree root of the execution header, in preparation for the execution

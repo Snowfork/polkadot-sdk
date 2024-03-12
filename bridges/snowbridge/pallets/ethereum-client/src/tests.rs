@@ -3,7 +3,7 @@
 use crate::{
 	functions::compute_period, pallet::ExecutionHeaders, sync_committee_sum, verify_merkle_branch,
 	BeaconHeader, CompactBeaconState, Error, ExecutionHeaderBuffer, FinalizedBeaconState,
-	LatestExecutionState, LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared,
+	LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared,
 };
 
 use crate::mock::{
@@ -18,10 +18,7 @@ pub use crate::mock::*;
 use crate::config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH};
 use frame_support::{assert_err, assert_noop, assert_ok};
 use hex_literal::hex;
-use primitives::{
-	CompactExecutionHeader, ExecutionHeaderState, Fork, ForkVersions, NextSyncCommitteeUpdate,
-	VersionedExecutionPayloadHeader,
-};
+use primitives::{CompactExecutionHeader, Fork, ForkVersions, NextSyncCommitteeUpdate};
 use rand::{thread_rng, Rng};
 use snowbridge_core::{
 	inbound::{VerificationError, Verifier},
@@ -348,34 +345,6 @@ fn find_present_keys() {
 	});
 }
 
-#[test]
-fn cross_check_execution_state() {
-	new_tester().execute_with(|| {
-		let header_root: H256 = TEST_HASH.into();
-		<FinalizedBeaconState<Test>>::insert(
-			header_root,
-			CompactBeaconState {
-				// set slot to period 5
-				slot: ((EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) * 5) as u64,
-				block_roots_root: Default::default(),
-			},
-		);
-		LatestFinalizedBlockRoot::<Test>::set(header_root);
-		<LatestExecutionState<Test>>::set(ExecutionHeaderState {
-			beacon_block_root: Default::default(),
-			// set slot to period 2
-			beacon_slot: ((EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) * 2) as u64,
-			block_hash: Default::default(),
-			block_number: 0,
-		});
-
-		assert_err!(
-			EthereumBeaconClient::cross_check_execution_state(),
-			Error::<Test>::ExecutionHeaderTooFarBehind
-		);
-	});
-}
-
 /* SYNC PROCESS TESTS */
 
 #[test]
@@ -609,40 +578,6 @@ fn submit_update_with_skipped_sync_committee_period() {
 }
 
 #[test]
-fn submit_update_execution_headers_too_far_behind() {
-	let checkpoint = Box::new(load_checkpoint_update_fixture());
-	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
-	let execution_header_update = Box::new(load_execution_header_update_fixture());
-	let next_update = Box::new(load_next_sync_committee_update_fixture());
-
-	new_tester().execute_with(|| {
-		let far_ahead_finalized_header_slot = finalized_header_update.finalized_header.slot +
-			(EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH * 2) as u64;
-		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
-		assert_ok!(EthereumBeaconClient::submit_execution_header(
-			RuntimeOrigin::signed(1),
-			execution_header_update
-		));
-
-		let header_root: H256 = TEST_HASH.into();
-		<FinalizedBeaconState<Test>>::insert(
-			header_root,
-			CompactBeaconState {
-				slot: far_ahead_finalized_header_slot,
-				block_roots_root: Default::default(),
-			},
-		);
-		LatestFinalizedBlockRoot::<Test>::set(header_root);
-
-		assert_err!(
-			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_update),
-			Error::<Test>::ExecutionHeaderTooFarBehind
-		);
-	});
-}
-
-#[test]
 fn submit_irrelevant_update() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let mut update = Box::new(load_next_finalized_header_update_fixture());
@@ -760,51 +695,6 @@ fn submit_execution_header_update_invalid_execution_header_proof() {
 				execution_header_update
 			),
 			Error::<Test>::InvalidExecutionHeaderProof
-		);
-	});
-}
-
-#[test]
-fn submit_execution_header_update_that_skips_block() {
-	let checkpoint = Box::new(load_checkpoint_update_fixture());
-	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
-	let execution_header_update = Box::new(load_execution_header_update_fixture());
-	let mut skipped_block_execution_header_update =
-		Box::new(load_execution_header_update_fixture());
-	let mut skipped_execution_header =
-		skipped_block_execution_header_update.execution_header.clone();
-
-	skipped_execution_header = match skipped_execution_header {
-		VersionedExecutionPayloadHeader::Capella(execution_payload_header) => {
-			let mut mut_execution_payload_header = execution_payload_header.clone();
-			mut_execution_payload_header.block_number = execution_payload_header.block_number + 2;
-			VersionedExecutionPayloadHeader::Capella(mut_execution_payload_header)
-		},
-		VersionedExecutionPayloadHeader::Deneb(execution_payload_header) => {
-			let mut mut_execution_payload_header = execution_payload_header.clone();
-			mut_execution_payload_header.block_number = execution_payload_header.block_number + 2;
-			VersionedExecutionPayloadHeader::Deneb(mut_execution_payload_header)
-		},
-	};
-
-	skipped_block_execution_header_update.execution_header = skipped_execution_header;
-
-	new_tester().execute_with(|| {
-		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
-		assert_ok!(EthereumBeaconClient::submit_execution_header(
-			RuntimeOrigin::signed(1),
-			execution_header_update.clone()
-		));
-		assert!(<ExecutionHeaders<Test>>::contains_key(
-			execution_header_update.execution_header.block_hash()
-		));
-		assert_err!(
-			EthereumBeaconClient::submit_execution_header(
-				RuntimeOrigin::signed(1),
-				skipped_block_execution_header_update
-			),
-			Error::<Test>::ExecutionHeaderSkippedBlock
 		);
 	});
 }
