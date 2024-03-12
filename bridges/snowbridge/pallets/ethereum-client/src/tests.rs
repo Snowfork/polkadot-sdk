@@ -891,7 +891,7 @@ fn submit_finalized_header_update_with_too_large_gap() {
 	let update = Box::new(load_sync_committee_update_fixture());
 	let mut next_update = Box::new(load_next_sync_committee_update_fixture());
 
-	// Add 2500 blocks, so that the next update is still in the next sync committee, but the
+	// Adds 8193 slots, so that the next update is still in the next sync committee, but the
 	// gap between the finalized headers is more than 8192 slots.
 	let slot_with_large_gap = checkpoint.header.slot + ((EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) as u64) + 1;
 
