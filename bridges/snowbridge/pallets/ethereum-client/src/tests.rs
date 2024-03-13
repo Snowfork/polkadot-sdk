@@ -217,15 +217,10 @@ pub fn execution_header_pruning() {
 
 		let mut stored_hashes = vec![];
 
-		for i in 0..execution_header_prune_threshold {
+		for _ in 0..execution_header_prune_threshold {
 			let mut hash = H256::default();
 			thread_rng().try_fill(&mut hash.0[..]).unwrap();
-			EthereumBeaconClient::store_execution_header(
-				hash,
-				CompactExecutionHeader::default(),
-				i as u64,
-				hash,
-			);
+			EthereumBeaconClient::store_execution_header(hash, CompactExecutionHeader::default());
 			stored_hashes.push(hash);
 		}
 
@@ -233,15 +228,10 @@ pub fn execution_header_pruning() {
 		assert_eq!({ ExecutionHeaders::<Test>::iter().count() }, stored_hashes.len());
 
 		// Let's push extra entries so that some of the previous entries are deleted.
-		for i in 0..to_be_deleted {
+		for _ in 0..to_be_deleted {
 			let mut hash = H256::default();
 			thread_rng().try_fill(&mut hash.0[..]).unwrap();
-			EthereumBeaconClient::store_execution_header(
-				hash,
-				CompactExecutionHeader::default(),
-				(i + execution_header_prune_threshold) as u64,
-				hash,
-			);
+			EthereumBeaconClient::store_execution_header(hash, CompactExecutionHeader::default());
 
 			stored_hashes.push(hash);
 		}

@@ -40,8 +40,8 @@ use frame_support::{
 use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
-	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
-	ForkVersions, PublicKeyPrepared, SigningData,
+	CompactBeaconState, CompactExecutionHeader, ForkData, ForkVersion, ForkVersions,
+	PublicKeyPrepared, SigningData,
 };
 use snowbridge_core::{BasicOperatingMode, RingBufferMap};
 use sp_core::H256;
@@ -187,12 +187,6 @@ pub mod pallet {
 	pub(super) type NextSyncCommittee<T: Config> =
 		StorageValue<_, SyncCommitteePrepared, ValueQuery>;
 
-	/// Latest imported execution header
-	#[pallet::storage]
-	#[pallet::getter(fn latest_execution_state)]
-	pub(super) type LatestExecutionState<T: Config> =
-		StorageValue<_, ExecutionHeaderState, ValueQuery>;
-
 	/// Execution Headers
 	#[pallet::storage]
 	pub type ExecutionHeaders<T: Config> =
@@ -321,7 +315,6 @@ pub mod pallet {
 			<CurrentSyncCommittee<T>>::set(sync_committee_prepared);
 			<NextSyncCommittee<T>>::kill();
 			InitialCheckpointRoot::<T>::set(header_root);
-			<LatestExecutionState<T>>::kill();
 
 			Self::store_validators_root(update.validators_root);
 			Self::store_finalized_header(header_root, update.header, update.block_roots_root)?;
@@ -458,28 +451,6 @@ pub mod pallet {
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
-			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
-			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
-			if let Some(version_execution_header) = &update.execution_header {
-				let execution_header_root: H256 = version_execution_header
-					.hash_tree_root()
-					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-				ensure!(
-					&update.execution_branch.is_some(),
-					Error::<T>::InvalidExecutionHeaderProof
-				);
-				ensure!(
-					verify_merkle_branch(
-						execution_header_root,
-						&update.execution_branch.clone().unwrap(),
-						config::EXECUTION_HEADER_SUBTREE_INDEX,
-						config::EXECUTION_HEADER_DEPTH,
-						update.finalized_header.body_root
-					),
-					Error::<T>::InvalidExecutionHeaderProof
-				);
-			}
-
 			Ok(())
 		}
 
@@ -529,19 +500,6 @@ pub mod pallet {
 					update.finalized_header,
 					update.block_roots_root,
 				)?;
-			}
-
-			if let Some(version_execution_header) = &update.execution_header {
-				let finalized_block_root: H256 = update
-					.finalized_header
-					.hash_tree_root()
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
-				Self::store_execution_header(
-					version_execution_header.block_hash(),
-					version_execution_header.clone().into(),
-					update.finalized_header.slot,
-					finalized_block_root,
-				);
 			}
 
 			Ok(())
@@ -610,8 +568,6 @@ pub mod pallet {
 			Self::store_execution_header(
 				update.execution_header.block_hash(),
 				update.execution_header.clone().into(),
-				update.header.slot,
-				block_root,
 			);
 
 			Ok(())
@@ -697,12 +653,7 @@ pub mod pallet {
 		/// Stores the provided execution header in pallet storage. The header is stored
 		/// in a ring buffer map, with the block hash as map key. The last imported execution
 		/// header is also kept in storage, for the relayer to check import progress.
-		pub fn store_execution_header(
-			block_hash: H256,
-			header: CompactExecutionHeader,
-			beacon_slot: u64,
-			beacon_block_root: H256,
-		) {
+		pub fn store_execution_header(block_hash: H256, header: CompactExecutionHeader) {
 			let block_number = header.block_number;
 
 			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
@@ -714,15 +665,6 @@ pub mod pallet {
 				block_number
 			);
 
-			let latest_execution_state = LatestExecutionState::<T>::get();
-			if beacon_slot > latest_execution_state.beacon_slot {
-				LatestExecutionState::<T>::mutate(|s| {
-					s.beacon_block_root = beacon_block_root;
-					s.beacon_slot = beacon_slot;
-					s.block_hash = block_hash;
-					s.block_number = block_number;
-				});
-			}
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
 		}
 
