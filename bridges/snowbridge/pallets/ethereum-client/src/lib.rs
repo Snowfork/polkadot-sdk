@@ -709,13 +709,15 @@ pub mod pallet {
 				block_number
 			);
 
-			LatestExecutionState::<T>::mutate(|s| {
-				s.beacon_block_root = beacon_block_root;
-				s.beacon_slot = beacon_slot;
-				s.block_hash = block_hash;
-				s.block_number = block_number;
-			});
-
+			let latest_execution_state = LatestExecutionState::<T>::get();
+			if beacon_slot > latest_execution_state.beacon_slot {
+				LatestExecutionState::<T>::mutate(|s| {
+					s.beacon_block_root = beacon_block_root;
+					s.beacon_slot = beacon_slot;
+					s.block_hash = block_hash;
+					s.block_number = block_number;
+				});
+			}
 			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
 		}
 
