@@ -8,9 +8,7 @@ use sp_std::prelude::*;
 
 use crate::types::{BeaconHeader, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader};
 
-#[derive(
-	Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
-)]
+#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 #[cfg_attr(
 	feature = "std",
 	derive(serde::Serialize, serde::Deserialize),
