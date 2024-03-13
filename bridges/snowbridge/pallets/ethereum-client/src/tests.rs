@@ -15,7 +15,7 @@ use crate::mock::{
 
 pub use crate::mock::*;
 
-use crate::config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH};
+use crate::config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT};
 use frame_support::{assert_err, assert_noop, assert_ok};
 use hex_literal::hex;
 use primitives::{
@@ -894,7 +894,7 @@ fn submit_finalized_header_update_with_too_large_gap() {
 	// Adds 8193 slots, so that the next update is still in the next sync committee, but the
 	// gap between the finalized headers is more than 8192 slots.
 	let slot_with_large_gap =
-		checkpoint.header.slot + ((EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) as u64) + 1;
+		checkpoint.header.slot + SLOTS_PER_HISTORICAL_ROOT as u64 + 1;
 
 	next_update.finalized_header.slot = slot_with_large_gap;
 	// Adding some slots to the attested header and signature slot since they need to be ahead
@@ -920,8 +920,7 @@ fn submit_finalized_header_update_with_gap_at_limit() {
 	let update = Box::new(load_sync_committee_update_fixture());
 	let mut next_update = Box::new(load_next_sync_committee_update_fixture());
 
-	let max_latency = (EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH) as u64;
-	next_update.finalized_header.slot = checkpoint.header.slot + max_latency;
+	next_update.finalized_header.slot = checkpoint.header.slot + SLOTS_PER_HISTORICAL_ROOT as u64;
 	// Adding some slots to the attested header and signature slot since they need to be ahead
 	// of the finalized header.
 	next_update.attested_header.slot = checkpoint.header.slot + max_latency + 33;

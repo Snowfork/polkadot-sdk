@@ -64,7 +64,3 @@ pub const SYNC_COMMITTEE_BITS_SIZE: usize = SYNC_COMMITTEE_SIZE / 8;
 pub const SLOTS_PER_HISTORICAL_ROOT: usize = 8192;
 /// The index of the block_roots field in the beacon state tree.
 pub const BLOCK_ROOT_AT_INDEX_DEPTH: usize = 13;
-/// The maximum gap between finalized headers, so that execution header ancestry proofs
-/// are always possible against a finalized header.
-pub const HEADER_IMPORT_MAX_GAP: usize =
-	EPOCHS_PER_SYNC_COMMITTEE_PERIOD.saturating_mul(SLOTS_PER_EPOCH);
