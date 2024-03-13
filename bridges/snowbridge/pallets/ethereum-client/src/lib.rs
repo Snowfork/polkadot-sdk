@@ -34,7 +34,9 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-use frame_support::{dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get};
+use frame_support::{
+	dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get, transactional,
+};
 use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
@@ -212,7 +214,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight((T::WeightInfo::force_checkpoint(), DispatchClass::Operational))]
+		#[pallet::weight(T::WeightInfo::force_checkpoint())]
+		#[transactional]
 		/// Used for pallet initialization and light client resetting. Needs to be called by
 		/// the root origin.
 		pub fn force_checkpoint(
@@ -231,6 +234,7 @@ pub mod pallet {
 				Some(_) => T::WeightInfo::submit_with_sync_committee(),
 			}
 		})]
+		#[transactional]
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
 		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
@@ -242,6 +246,7 @@ pub mod pallet {
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::submit_execution_header())]
+		#[transactional]
 		/// Submits a new execution header update. The relevant related beacon header
 		/// is also included to prove the execution header, as well as ancestry proof data.
 		pub fn submit_execution_header(
