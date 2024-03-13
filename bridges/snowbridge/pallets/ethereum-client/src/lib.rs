@@ -405,9 +405,9 @@ pub mod pallet {
 			// Verify the finalized header gap between the current finalized header and new imported
 			// header is not larger than the sync committee period, otherwise we cannot do
 			// ancestry proofs for execution headers in the gap.
-			let max_latency = config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD * config::SLOTS_PER_EPOCH;
 			ensure!(
-				latest_finalized_state.slot + max_latency as u64 >= update.finalized_header.slot,
+				latest_finalized_state.slot + config::HEADER_IMPORT_MAX_GAP as u64 >=
+					update.finalized_header.slot,
 				Error::<T>::InvalidFinalizedHeaderGap
 			);
 
