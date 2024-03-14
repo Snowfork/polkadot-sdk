@@ -893,8 +893,7 @@ fn submit_finalized_header_update_with_too_large_gap() {
 
 	// Adds 8193 slots, so that the next update is still in the next sync committee, but the
 	// gap between the finalized headers is more than 8192 slots.
-	let slot_with_large_gap =
-		checkpoint.header.slot + SLOTS_PER_HISTORICAL_ROOT as u64 + 1;
+	let slot_with_large_gap = checkpoint.header.slot + SLOTS_PER_HISTORICAL_ROOT as u64 + 1;
 
 	next_update.finalized_header.slot = slot_with_large_gap;
 	// Adding some slots to the attested header and signature slot since they need to be ahead
