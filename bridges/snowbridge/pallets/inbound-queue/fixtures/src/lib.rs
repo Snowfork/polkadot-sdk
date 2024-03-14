@@ -7,7 +7,7 @@ use snowbridge_beacon_primitives::{
 	VersionedExecutionPayloadHeader,
 };
 use snowbridge_core::inbound::Message;
-use sp_core::RuntimeDebug;
+use sp_core::{RuntimeDebug, H256};
 use sp_std::vec;
 
 pub mod register_token;
@@ -21,7 +21,7 @@ pub struct InboundQueueFixture {
 	pub message: Message,
 }
 
-pub fn mock_execution_update() -> ExecutionHeaderUpdate {
+pub fn mock_execution_update(receipts_root: H256) -> ExecutionHeaderUpdate {
 	ExecutionHeaderUpdate {
 		header: BeaconHeader::default(),
 		ancestry_proof: None,
@@ -29,7 +29,7 @@ pub fn mock_execution_update() -> ExecutionHeaderUpdate {
 			parent_hash: Default::default(),
 			fee_recipient: Default::default(),
 			state_root: Default::default(),
-			receipts_root: Default::default(),
+			receipts_root,
 			logs_bloom: vec![],
 			prev_randao: Default::default(),
 			block_number: 0,

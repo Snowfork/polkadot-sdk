@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::*;
-use bridge_hub_rococo_runtime::{EthereumBeaconClient, EthereumInboundQueue, RuntimeOrigin};
+use bridge_hub_rococo_runtime::{EthereumInboundQueue, RuntimeOrigin};
 use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
@@ -28,7 +28,6 @@ use snowbridge_pallet_inbound_queue_fixtures::{
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
-use sp_core::H256;
 use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 
@@ -55,11 +54,6 @@ pub enum SnowbridgeControl {
 }
 
 pub fn send_inbound_message(fixture: InboundQueueFixture) -> DispatchResult {
-	EthereumBeaconClient::store_execution_header(
-		fixture.message.proof.block_hash,
-		fixture.execution_header,
-	);
-
 	EthereumInboundQueue::submit(
 		RuntimeOrigin::signed(BridgeHubRococoSender::get()),
 		fixture.message,

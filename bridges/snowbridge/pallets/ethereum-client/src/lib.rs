@@ -488,6 +488,7 @@ pub mod pallet {
 		/// Validates an execution header for import. The beacon header containing the execution
 		/// header is sent, plus the execution header, along with a proof that the execution header
 		/// is rooted in the beacon header body.
+		#[allow(dead_code)]
 		pub(crate) fn verify_execution_header_update(
 			update: &ExecutionHeaderUpdate,
 		) -> DispatchResult {
@@ -551,6 +552,7 @@ pub mod pallet {
 		/// Verify that `block_root` is an ancestor of `finalized_block_root` Used to prove that
 		/// an execution header is an ancestor of a finalized header (i.e. the blocks are
 		/// on the same chain).
+		#[allow(dead_code)]
 		fn verify_ancestry_proof(
 			block_root: H256,
 			block_slot: u64,
