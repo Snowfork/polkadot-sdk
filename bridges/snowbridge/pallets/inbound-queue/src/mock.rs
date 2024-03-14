@@ -8,7 +8,10 @@ use frame_support::{
 	weights::IdentityFee,
 };
 use hex_literal::hex;
-use snowbridge_beacon_primitives::{Fork, ForkVersions};
+use snowbridge_beacon_primitives::{
+	types::deneb, BeaconHeader, ExecutionHeaderUpdate, Fork, ForkVersions,
+	VersionedExecutionPayloadHeader,
+};
 use snowbridge_core::{
 	gwei,
 	inbound::{Log, Proof, VerificationError},
@@ -20,7 +23,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage, FixedU128, MultiSignature,
 };
-use sp_std::convert::From;
+use sp_std::{convert::From, default::Default};
 use xcm::{latest::SendXcm, prelude::*};
 use xcm_executor::AssetsInHolding;
 
@@ -131,7 +134,7 @@ impl snowbridge_pallet_ethereum_client::Config for Test {
 pub struct MockVerifier;
 
 impl Verifier for MockVerifier {
-	fn verify(_: &Log, _: &Proof) -> Result<(), VerificationError> {
+	fn verify(_: &Log, _: &Proof, _: &ExecutionHeaderUpdate) -> Result<(), VerificationError> {
 		Ok(())
 	}
 }
@@ -147,12 +150,6 @@ parameter_types! {
 	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
 	pub const InitialFund: u128 = 1_000_000_000_000;
 	pub const InboundQueuePalletInstance: u8 = 80;
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-impl<T: snowbridge_pallet_ethereum_client::Config> BenchmarkHelper<T> for Test {
-	// not implemented since the MockVerifier is used for tests
-	fn initialize_storage(_: H256, _: CompactExecutionHeader) {}
 }
 
 // Mock XCM sender that always succeeds
@@ -255,8 +252,6 @@ impl inbound_queue::Config for Test {
 	>;
 	type PricingParameters = Parameters;
 	type ChannelLookup = MockChannelLookup;
-	#[cfg(feature = "runtime-benchmarks")]
-	type Helper = Test;
 	type WeightToFee = IdentityFee<u128>;
 	type LengthToFee = IdentityFee<u128>;
 	type MaxMessageSize = ConstU32<1024>;
@@ -345,6 +340,33 @@ pub fn mock_event_log_invalid_gateway() -> Log {
         // Nonce + Payload
         data: hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000001e000f000000000000000087d1f7fdfee7f651fabc8bfcb6e086c278b77a7d0000").into(),
     }
+}
+
+pub fn mock_execution_update() -> ExecutionHeaderUpdate {
+	ExecutionHeaderUpdate {
+		header: BeaconHeader::default(),
+		ancestry_proof: None,
+		execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
+			parent_hash: Default::default(),
+			fee_recipient: Default::default(),
+			state_root: Default::default(),
+			receipts_root: Default::default(),
+			logs_bloom: vec![],
+			prev_randao: Default::default(),
+			block_number: 0,
+			gas_limit: 0,
+			gas_used: 0,
+			timestamp: 0,
+			extra_data: vec![],
+			base_fee_per_gas: Default::default(),
+			block_hash: Default::default(),
+			transactions_root: Default::default(),
+			withdrawals_root: Default::default(),
+			blob_gas_used: 0,
+			excess_blob_gas: 0,
+		}),
+		execution_branch: vec![],
+	}
 }
 
 pub const ASSET_HUB_PARAID: u32 = 1000u32;

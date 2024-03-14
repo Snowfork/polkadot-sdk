@@ -18,11 +18,6 @@ mod benchmarks {
 
 		let create_message = make_register_token_message();
 
-		T::Helper::initialize_storage(
-			create_message.message.proof.block_hash,
-			create_message.execution_header,
-		);
-
 		let sovereign_account = sibling_sovereign_account::<T>(1000u32.into());
 
 		let minimum_balance = T::Token::minimum_balance();

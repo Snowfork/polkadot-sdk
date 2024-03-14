@@ -28,9 +28,6 @@ mod envelope;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_beacon_primitives::CompactExecutionHeader;
-
 pub mod weights;
 
 #[cfg(test)]
@@ -90,11 +87,6 @@ pub mod pallet {
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
-	#[cfg(feature = "runtime-benchmarks")]
-	pub trait BenchmarkHelper<T> {
-		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
-	}
-
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -125,9 +117,6 @@ pub mod pallet {
 		type PricingParameters: Get<PricingParameters<BalanceOf<Self>>>;
 
 		type WeightInfo: WeightInfo;
-
-		#[cfg(feature = "runtime-benchmarks")]
-		type Helper: BenchmarkHelper<Self>;
 
 		/// Convert a weight value into deductible balance type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
@@ -235,7 +224,7 @@ pub mod pallet {
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
 			// submit message to verifier for verification
-			T::Verifier::verify(&message.event_log, &message.proof)
+			T::Verifier::verify(&message.event_log, &message.proof, &message.update)
 				.map_err(|e| Error::<T>::Verification(e))?;
 
 			// Decode event log into an Envelope

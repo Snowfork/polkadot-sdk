@@ -13,27 +13,33 @@ impl<T: Config> Verifier for Pallet<T> {
 	/// Ethereum log in a block. Returns the log if successful. The execution header containing
 	/// the log should be in the beacon client storage, meaning it has been verified and is an
 	/// ancestor of a finalized beacon block.
-	fn verify(event_log: &Log, proof: &Proof) -> Result<(), VerificationError> {
+	fn verify(
+		event_log: &Log,
+		proof: &Proof,
+		update: &ExecutionHeaderUpdate,
+	) -> Result<(), VerificationError> {
 		log::info!(
 			target: "ethereum-client",
 			"💫 Verifying message with block hash {}",
 			proof.block_hash,
 		);
 
-		let header = <ExecutionHeaderBuffer<T>>::get(proof.block_hash).ok_or(HeaderNotFound)?;
+		#[cfg(not(any(feature = "std", feature = "runtime-benchmarks")))]
+		Self::verify_execution_header_update(update).map_err(|_| InvalidExecutionUpdate)?;
 
-		let receipt = match Self::verify_receipt_inclusion(header.receipts_root, proof) {
-			Ok(receipt) => receipt,
-			Err(err) => {
-				log::error!(
-					target: "ethereum-client",
-					"💫 Verification of receipt inclusion failed for block {}: {:?}",
-					proof.block_hash,
-					err
-				);
-				return Err(err)
-			},
-		};
+		let receipt =
+			match Self::verify_receipt_inclusion(update.execution_header.receipts_root(), proof) {
+				Ok(receipt) => receipt,
+				Err(err) => {
+					log::error!(
+						target: "ethereum-client",
+						"💫 Verification of receipt inclusion failed for block {}: {:?}",
+						proof.block_hash,
+						err
+					);
+					return Err(err)
+				},
+			};
 
 		log::trace!(
 			target: "ethereum-client",

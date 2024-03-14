@@ -29,6 +29,7 @@ fn test_submit_happy_path() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			update: mock_execution_update(),
 		};
 
 		let initial_fund = InitialFund::get();
@@ -81,6 +82,7 @@ fn test_submit_xcm_invalid_channel() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			update: mock_execution_update(),
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
@@ -107,6 +109,7 @@ fn test_submit_with_invalid_gateway() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			update: mock_execution_update(),
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
@@ -133,6 +136,7 @@ fn test_submit_with_invalid_nonce() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			update: mock_execution_update(),
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
@@ -167,6 +171,7 @@ fn test_submit_no_funds_to_reward_relayers_just_ignore() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			update: mock_execution_update(),
 		};
 		// Check submit successfully in case no funds available
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
@@ -185,6 +190,7 @@ fn test_set_operating_mode() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			update: mock_execution_update(),
 		};
 
 		assert_ok!(InboundQueue::set_operating_mode(
@@ -227,6 +233,7 @@ fn test_submit_no_funds_to_reward_relayers_and_ed_preserved() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			update: mock_execution_update(),
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
@@ -244,6 +251,7 @@ fn test_submit_no_funds_to_reward_relayers_and_ed_preserved() {
 				tx_index: Default::default(),
 				data: Default::default(),
 			},
+			update: mock_execution_update(),
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 		// Check balance of sovereign account as ED does not change

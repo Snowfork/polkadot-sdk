@@ -5,9 +5,15 @@ use crate::config;
 use frame_support::{derive_impl, parameter_types};
 use hex_literal::hex;
 use pallet_timestamp;
-use primitives::{CompactExecutionHeader, Fork, ForkVersions};
+use primitives::{
+	types::deneb, BeaconHeader, CompactExecutionHeader, ExecutionHeaderUpdate, Fork, ForkVersions,
+	VersionedExecutionPayloadHeader,
+};
 use snowbridge_core::inbound::{Log, Proof};
+use sp_core::H256;
+use sp_std::default::Default;
 use std::{fs::File, path::PathBuf};
+
 type Block = frame_system::mocking::MockBlock<Test>;
 use sp_runtime::BuildStorage;
 
@@ -84,6 +90,33 @@ pub fn get_message_verification_header() -> CompactExecutionHeader {
 		state_root: hex!("894d968712976d613519f973a317cb0781c7b039c89f27ea2b7ca193f7befdb3").into(),
 		receipts_root: hex!("cf0d1c1ba57d1e0edfb59786c7e30c2b7e12bd54612b00cd21c4eaeecedf44fb")
 			.into(),
+	}
+}
+
+pub fn build_execution_update(receipts_root: H256) -> ExecutionHeaderUpdate {
+	ExecutionHeaderUpdate {
+		header: BeaconHeader::default(),
+		ancestry_proof: None,
+		execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
+			parent_hash: Default::default(),
+			fee_recipient: Default::default(),
+			state_root: Default::default(),
+			receipts_root,
+			logs_bloom: vec![],
+			prev_randao: Default::default(),
+			block_number: 0,
+			gas_limit: 0,
+			gas_used: 0,
+			timestamp: 0,
+			extra_data: vec![],
+			base_fee_per_gas: Default::default(),
+			block_hash: Default::default(),
+			transactions_root: Default::default(),
+			withdrawals_root: Default::default(),
+			blob_gas_used: 0,
+			excess_blob_gas: 0,
+		}),
+		execution_branch: vec![],
 	}
 }
 

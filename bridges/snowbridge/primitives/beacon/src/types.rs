@@ -448,6 +448,15 @@ impl VersionedExecutionPayloadHeader {
 				execution_payload_header.block_number,
 		}
 	}
+
+	pub fn receipts_root(&self) -> H256 {
+		match self {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.receipts_root,
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
+				execution_payload_header.receipts_root,
+		}
+	}
 }
 
 #[cfg(test)]

@@ -51,7 +51,6 @@ pub use weights::WeightInfo;
 use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
-pub use types::ExecutionHeaderBuffer;
 use types::{
 	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared,
 	Update,
@@ -104,10 +103,6 @@ pub mod pallet {
 		BeaconHeaderImported {
 			block_hash: H256,
 			slot: u64,
-		},
-		ExecutionHeaderImported {
-			block_hash: H256,
-			block_number: u64,
 		},
 		SyncCommitteeUpdated {
 			period: u64,
@@ -235,21 +230,6 @@ pub mod pallet {
 			ensure_signed(origin)?;
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 			Self::process_update(&update)?;
-			Ok(())
-		}
-
-		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::submit_execution_header())]
-		#[transactional]
-		/// Submits a new execution header update. The relevant related beacon header
-		/// is also included to prove the execution header, as well as ancestry proof data.
-		pub fn submit_execution_header(
-			origin: OriginFor<T>,
-			update: Box<ExecutionHeaderUpdate>,
-		) -> DispatchResult {
-			ensure_signed(origin)?;
-			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
-			Self::process_execution_header_update(&update)?;
 			Ok(())
 		}
 
@@ -508,7 +488,7 @@ pub mod pallet {
 		/// Validates an execution header for import. The beacon header containing the execution
 		/// header is sent, plus the execution header, along with a proof that the execution header
 		/// is rooted in the beacon header body.
-		pub(crate) fn process_execution_header_update(
+		pub(crate) fn verify_execution_header_update(
 			update: &ExecutionHeaderUpdate,
 		) -> DispatchResult {
 			let latest_finalized_state =
@@ -564,11 +544,6 @@ pub mod pallet {
 					}
 				},
 			}
-
-			Self::store_execution_header(
-				update.execution_header.block_hash(),
-				update.execution_header.clone().into(),
-			);
 
 			Ok(())
 		}
@@ -648,24 +623,6 @@ pub mod pallet {
 			Self::deposit_event(Event::BeaconHeaderImported { block_hash: header_root, slot });
 
 			Ok(())
-		}
-
-		/// Stores the provided execution header in pallet storage. The header is stored
-		/// in a ring buffer map, with the block hash as map key. The last imported execution
-		/// header is also kept in storage, for the relayer to check import progress.
-		pub fn store_execution_header(block_hash: H256, header: CompactExecutionHeader) {
-			let block_number = header.block_number;
-
-			<ExecutionHeaderBuffer<T>>::insert(block_hash, header);
-
-			log::trace!(
-				target: LOG_TARGET,
-				"💫 Updated latest execution block at {} to number {}.",
-				block_hash,
-				block_number
-			);
-
-			Self::deposit_event(Event::ExecutionHeaderImported { block_hash, block_number });
 		}
 
 		/// Stores the validators root in storage. Validators root is the hash tree root of all the
