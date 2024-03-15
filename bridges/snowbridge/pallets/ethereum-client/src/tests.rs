@@ -922,7 +922,8 @@ fn submit_finalized_header_update_with_gap_at_limit() {
 	next_update.finalized_header.slot = checkpoint.header.slot + SLOTS_PER_HISTORICAL_ROOT as u64;
 	// Adding some slots to the attested header and signature slot since they need to be ahead
 	// of the finalized header.
-	next_update.attested_header.slot = checkpoint.header.slot + SLOTS_PER_HISTORICAL_ROOT as u64 + 33;
+	next_update.attested_header.slot =
+		checkpoint.header.slot + SLOTS_PER_HISTORICAL_ROOT as u64 + 33;
 	next_update.signature_slot = checkpoint.header.slot + SLOTS_PER_HISTORICAL_ROOT as u64 + 43;
 
 	new_tester().execute_with(|| {
