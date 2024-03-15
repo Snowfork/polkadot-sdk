@@ -6,8 +6,8 @@
 
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	types::deneb, updates::AncestryProof, BeaconHeader, ExecutionHeaderUpdate,
-	NextSyncCommitteeUpdate, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader,
+	types::deneb, AncestryProof, BeaconHeader, ExecutionProof, NextSyncCommitteeUpdate,
+	SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader,
 };
 use sp_core::U256;
 use sp_std::{boxed::Box, vec};
@@ -1169,8 +1169,8 @@ pub fn make_finalized_header_update() -> Box<Update> {
     })
 }
 
-pub fn make_execution_header_update() -> Box<ExecutionHeaderUpdate> {
-	Box::new(ExecutionHeaderUpdate {
+pub fn make_execution_header_proof() -> Box<ExecutionProof> {
+	Box::new(ExecutionProof {
         header: BeaconHeader {
             slot: 215,
             proposer_index: 2,

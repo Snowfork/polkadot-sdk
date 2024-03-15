@@ -15,7 +15,7 @@ pub type CheckpointUpdate = primitives::CheckpointUpdate<SC_SIZE>;
 pub type Update = primitives::Update<SC_SIZE, SC_BITS_SIZE>;
 pub type NextSyncCommitteeUpdate = primitives::NextSyncCommitteeUpdate<SC_SIZE>;
 
-pub use primitives::ExecutionHeaderUpdate;
+pub use primitives::{AncestryProof, ExecutionProof};
 
 /// FinalizedState ring buffer implementation
 pub(crate) type FinalizedBeaconStateBuffer<T> = RingBufferMapImpl<

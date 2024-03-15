@@ -3,8 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use snowbridge_beacon_primitives::{
-	types::deneb, BeaconHeader, CompactExecutionHeader, ExecutionHeaderUpdate,
-	VersionedExecutionPayloadHeader,
+	types::deneb, BeaconHeader, ExecutionProof, VersionedExecutionPayloadHeader,
 };
 use snowbridge_core::inbound::Message;
 use sp_core::{RuntimeDebug, H256};
@@ -17,12 +16,11 @@ pub mod send_token_to_penpal;
 
 #[derive(Clone, RuntimeDebug)]
 pub struct InboundQueueFixture {
-	pub execution_header: CompactExecutionHeader,
 	pub message: Message,
 }
 
-pub fn mock_execution_update(receipts_root: H256) -> ExecutionHeaderUpdate {
-	ExecutionHeaderUpdate {
+pub fn mock_execution_proof(receipts_root: H256) -> ExecutionProof {
+	ExecutionProof {
 		header: BeaconHeader::default(),
 		ancestry_proof: None,
 		execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {

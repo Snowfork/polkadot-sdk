@@ -224,7 +224,7 @@ pub mod pallet {
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
 			// submit message to verifier for verification
-			T::Verifier::verify(&message.event_log, &message.proof, &message.update)
+			T::Verifier::verify(&message.event_log, &message.proof)
 				.map_err(|e| Error::<T>::Verification(e))?;
 
 			// Decode event log into an Envelope

@@ -7,10 +7,9 @@ use crate::{
 };
 
 use crate::mock::{
-	get_message_verification_header, get_message_verification_payload,
-	load_checkpoint_update_fixture, load_finalized_header_update_fixture,
-	load_next_finalized_header_update_fixture, load_next_sync_committee_update_fixture,
-	load_sync_committee_update_fixture,
+	get_message_verification_payload, load_checkpoint_update_fixture,
+	load_finalized_header_update_fixture, load_next_finalized_header_update_fixture,
+	load_next_sync_committee_update_fixture, load_sync_committee_update_fixture,
 };
 
 pub use crate::mock::*;
@@ -18,7 +17,9 @@ pub use crate::mock::*;
 use crate::config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH};
 use frame_support::{assert_err, assert_noop, assert_ok};
 use hex_literal::hex;
-use primitives::{Fork, ForkVersions, NextSyncCommitteeUpdate};
+use primitives::{
+	types::deneb, Fork, ForkVersions, NextSyncCommitteeUpdate, VersionedExecutionPayloadHeader,
+};
 use snowbridge_core::inbound::{VerificationError, Verifier};
 use sp_core::H256;
 use sp_runtime::DispatchError;
@@ -583,25 +584,21 @@ fn submit_update_with_invalid_sync_committee_update() {
 
 #[test]
 fn verify_message() {
-	let header = get_message_verification_header();
 	let (event_log, proof) = get_message_verification_payload();
-	let update = build_execution_update(header.receipts_root);
 
 	new_tester().execute_with(|| {
-		assert_ok!(EthereumBeaconClient::verify(&event_log, &proof, &update));
+		assert_ok!(EthereumBeaconClient::verify(&event_log, &proof));
 	});
 }
 
 #[test]
 fn verify_message_invalid_proof() {
-	let header = get_message_verification_header();
 	let (event_log, mut proof) = get_message_verification_payload();
-	proof.data.1[0] = TEST_HASH.into();
-	let update = build_execution_update(header.receipts_root);
+	proof.receipt_proof.1[0] = TEST_HASH.into();
 
 	new_tester().execute_with(|| {
 		assert_err!(
-			EthereumBeaconClient::verify(&event_log, &proof, &update),
+			EthereumBeaconClient::verify(&event_log, &proof),
 			VerificationError::InvalidProof
 		);
 	});
@@ -609,14 +606,14 @@ fn verify_message_invalid_proof() {
 
 #[test]
 fn verify_message_invalid_receipts_root() {
-	let mut header = get_message_verification_header();
-	let (event_log, proof) = get_message_verification_payload();
-	header.receipts_root = TEST_HASH.into();
-	let update = build_execution_update(header.receipts_root);
+	let (event_log, mut proof) = get_message_verification_payload();
+	let mut payload = deneb::ExecutionPayloadHeader::default();
+	payload.receipts_root = TEST_HASH.into();
+	proof.execution_proof.execution_header = VersionedExecutionPayloadHeader::Deneb(payload);
 
 	new_tester().execute_with(|| {
 		assert_err!(
-			EthereumBeaconClient::verify(&event_log, &proof, &update),
+			EthereumBeaconClient::verify(&event_log, &proof),
 			VerificationError::InvalidProof
 		);
 	});
@@ -624,14 +621,11 @@ fn verify_message_invalid_receipts_root() {
 
 #[test]
 fn verify_message_invalid_log() {
-	let header = get_message_verification_header();
 	let (mut event_log, proof) = get_message_verification_payload();
 	event_log.topics = vec![H256::zero(); 10];
-	let update = build_execution_update(header.receipts_root);
-
 	new_tester().execute_with(|| {
 		assert_err!(
-			EthereumBeaconClient::verify(&event_log, &proof, &update),
+			EthereumBeaconClient::verify(&event_log, &proof),
 			VerificationError::InvalidLog
 		);
 	});
@@ -639,14 +633,12 @@ fn verify_message_invalid_log() {
 
 #[test]
 fn verify_message_receipt_does_not_contain_log() {
-	let header = get_message_verification_header();
 	let (mut event_log, proof) = get_message_verification_payload();
 	event_log.data = hex!("f9013c94ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0f863a01b11dcf133cc240f682dab2d3a8e4cd35c5da8c9cf99adac4336f8512584c5ada000000000000000000000000000000000000000000000000000000000000003e8a00000000000000000000000000000000000000000000000000000000000000002b8c000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000068000f000000000000000101d184c103f7acc340847eee82a0b909e3358bc28d440edffa1352b13227e8ee646f3ea37456dec70100000101001cbd2d43530a44705ad088af313e18f80b53ef16b36177cd4b77b846f2a5f07c0000e8890423c78a0000000000000000000000000000000000000000000000000000000000000000").to_vec();
-	let update = build_execution_update(header.receipts_root);
 
 	new_tester().execute_with(|| {
 		assert_err!(
-			EthereumBeaconClient::verify(&event_log, &proof, &update),
+			EthereumBeaconClient::verify(&event_log, &proof),
 			VerificationError::LogNotFound
 		);
 	});

@@ -40,8 +40,7 @@ use frame_support::{
 use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
-	CompactBeaconState, CompactExecutionHeader, ForkData, ForkVersion, ForkVersions,
-	PublicKeyPrepared, SigningData,
+	CompactBeaconState, ForkData, ForkVersion, ForkVersions, PublicKeyPrepared, SigningData,
 };
 use snowbridge_core::{BasicOperatingMode, RingBufferMap};
 use sp_core::H256;
@@ -51,10 +50,7 @@ pub use weights::WeightInfo;
 use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
-use types::{
-	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared,
-	Update,
-};
+use types::{CheckpointUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared, Update};
 
 pub use pallet::*;
 
@@ -75,10 +71,7 @@ pub mod pallet {
 	pub struct MaxFinalizedHeadersToKeep<T: Config>(PhantomData<T>);
 	impl<T: Config> Get<u32> for MaxFinalizedHeadersToKeep<T> {
 		fn get() -> u32 {
-			// Consider max latency allowed between LatestFinalizedState and LatestExecutionState is
-			// the total slots in one sync_committee_period so 1 should be fine we keep 2 periods
-			// here for redundancy.
-			const MAX_REDUNDANCY: u32 = 2;
+			const MAX_REDUNDANCY: u32 = 20;
 			config::EPOCHS_PER_SYNC_COMMITTEE_PERIOD as u32 * MAX_REDUNDANCY
 		}
 	}
@@ -181,19 +174,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type NextSyncCommittee<T: Config> =
 		StorageValue<_, SyncCommitteePrepared, ValueQuery>;
-
-	/// Execution Headers
-	#[pallet::storage]
-	pub type ExecutionHeaders<T: Config> =
-		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
-
-	/// Execution Headers: Current position in ring buffer
-	#[pallet::storage]
-	pub type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
-
-	/// Execution Headers: Mapping of ring buffer index to a pruning candidate
-	#[pallet::storage]
-	pub type ExecutionHeaderMapping<T: Config> = StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	/// The current operating mode of the pallet.
 	#[pallet::storage]
@@ -481,102 +461,6 @@ pub mod pallet {
 					update.block_roots_root,
 				)?;
 			}
-
-			Ok(())
-		}
-
-		/// Validates an execution header for import. The beacon header containing the execution
-		/// header is sent, plus the execution header, along with a proof that the execution header
-		/// is rooted in the beacon header body.
-		#[allow(dead_code)]
-		pub(crate) fn verify_execution_header_update(
-			update: &ExecutionHeaderUpdate,
-		) -> DispatchResult {
-			let latest_finalized_state =
-				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
-					.ok_or(Error::<T>::NotBootstrapped)?;
-			// Checks that the header is an ancestor of a finalized header, using slot number.
-			ensure!(
-				update.header.slot <= latest_finalized_state.slot,
-				Error::<T>::HeaderNotFinalized
-			);
-
-			// Gets the hash tree root of the execution header, in preparation for the execution
-			// header proof (used to check that the execution header is rooted in the beacon
-			// header body.
-			let execution_header_root: H256 = update
-				.execution_header
-				.hash_tree_root()
-				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-
-			ensure!(
-				verify_merkle_branch(
-					execution_header_root,
-					&update.execution_branch,
-					config::EXECUTION_HEADER_SUBTREE_INDEX,
-					config::EXECUTION_HEADER_DEPTH,
-					update.header.body_root
-				),
-				Error::<T>::InvalidExecutionHeaderProof
-			);
-
-			let block_root: H256 = update
-				.header
-				.hash_tree_root()
-				.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
-
-			match &update.ancestry_proof {
-				Some(proof) => {
-					Self::verify_ancestry_proof(
-						block_root,
-						update.header.slot,
-						&proof.header_branch,
-						proof.finalized_block_root,
-					)?;
-				},
-				None => {
-					// If the ancestry proof is not provided, we expect this header to be a
-					// finalized header. We need to check that the header hash matches the finalized
-					// header root at the expected slot.
-					let state = <FinalizedBeaconState<T>>::get(block_root)
-						.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
-					if update.header.slot != state.slot {
-						return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
-					}
-				},
-			}
-
-			Ok(())
-		}
-
-		/// Verify that `block_root` is an ancestor of `finalized_block_root` Used to prove that
-		/// an execution header is an ancestor of a finalized header (i.e. the blocks are
-		/// on the same chain).
-		#[allow(dead_code)]
-		fn verify_ancestry_proof(
-			block_root: H256,
-			block_slot: u64,
-			block_root_proof: &[H256],
-			finalized_block_root: H256,
-		) -> DispatchResult {
-			let state = <FinalizedBeaconState<T>>::get(finalized_block_root)
-				.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
-
-			ensure!(block_slot < state.slot, Error::<T>::HeaderNotFinalized);
-
-			let index_in_array = block_slot % (SLOTS_PER_HISTORICAL_ROOT as u64);
-			let leaf_index = (SLOTS_PER_HISTORICAL_ROOT as u64) + index_in_array;
-
-			ensure!(
-				verify_merkle_branch(
-					block_root,
-					block_root_proof,
-					leaf_index as usize,
-					config::BLOCK_ROOT_AT_INDEX_DEPTH,
-					state.block_roots_root
-				),
-				Error::<T>::InvalidAncestryMerkleProof
-			);
 
 			Ok(())
 		}

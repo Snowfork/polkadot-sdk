@@ -5,18 +5,14 @@
 use codec::{Decode, Encode};
 use frame_support::PalletError;
 use scale_info::TypeInfo;
-use snowbridge_beacon_primitives::ExecutionHeaderUpdate;
+use snowbridge_beacon_primitives::ExecutionProof;
 use sp_core::{H160, H256};
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
 
 /// A trait for verifying inbound messages from Ethereum.
 pub trait Verifier {
-	fn verify(
-		event: &Log,
-		proof: &Proof,
-		update: &ExecutionHeaderUpdate,
-	) -> Result<(), VerificationError>;
+	fn verify(event: &Log, proof: &Proof) -> Result<(), VerificationError>;
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug, PalletError, TypeInfo)]
@@ -30,8 +26,8 @@ pub enum VerificationError {
 	InvalidLog,
 	/// Unable to verify the transaction receipt with the provided proof
 	InvalidProof,
-	/// Unable to verify the execution update with ancestry proof
-	InvalidExecutionUpdate,
+	/// Unable to verify the execution header with ancestry proof
+	InvalidExecutionProof,
 }
 
 pub type MessageNonce = u64;
@@ -43,8 +39,6 @@ pub struct Message {
 	pub event_log: Log,
 	/// Inclusion proof for a transaction receipt containing the event log
 	pub proof: Proof,
-	/// Execution update for the block
-	pub update: ExecutionHeaderUpdate,
 }
 
 const MAX_TOPICS: usize = 4;
@@ -79,5 +73,7 @@ pub struct Proof {
 	// The index of the transaction (and receipt) within the block.
 	pub tx_index: u32,
 	// Proof keys and values (receipts tree)
-	pub data: (Vec<Vec<u8>>, Vec<Vec<u8>>),
+	pub receipt_proof: (Vec<Vec<u8>>, Vec<Vec<u8>>),
+	// The execution proof which includes ancestry proof
+	pub execution_proof: ExecutionProof,
 }

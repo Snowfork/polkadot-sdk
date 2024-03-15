@@ -9,8 +9,7 @@ use frame_support::{
 };
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
-	types::deneb, BeaconHeader, ExecutionHeaderUpdate, Fork, ForkVersions,
-	VersionedExecutionPayloadHeader,
+	types::deneb, BeaconHeader, ExecutionProof, Fork, ForkVersions, VersionedExecutionPayloadHeader,
 };
 use snowbridge_core::{
 	gwei,
@@ -134,7 +133,7 @@ impl snowbridge_pallet_ethereum_client::Config for Test {
 pub struct MockVerifier;
 
 impl Verifier for MockVerifier {
-	fn verify(_: &Log, _: &Proof, _: &ExecutionHeaderUpdate) -> Result<(), VerificationError> {
+	fn verify(_: &Log, _: &Proof) -> Result<(), VerificationError> {
 		Ok(())
 	}
 }
@@ -342,8 +341,8 @@ pub fn mock_event_log_invalid_gateway() -> Log {
     }
 }
 
-pub fn mock_execution_update() -> ExecutionHeaderUpdate {
-	ExecutionHeaderUpdate {
+pub fn mock_execution_proof() -> ExecutionProof {
+	ExecutionProof {
 		header: BeaconHeader::default(),
 		ancestry_proof: None,
 		execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {

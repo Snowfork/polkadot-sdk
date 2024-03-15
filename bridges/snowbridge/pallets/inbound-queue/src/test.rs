@@ -27,9 +27,9 @@ fn test_submit_happy_path() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
-			update: mock_execution_update(),
 		};
 
 		let initial_fund = InitialFund::get();
@@ -80,9 +80,9 @@ fn test_submit_xcm_invalid_channel() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
-			update: mock_execution_update(),
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
@@ -107,9 +107,9 @@ fn test_submit_with_invalid_gateway() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
-			update: mock_execution_update(),
 		};
 		assert_noop!(
 			InboundQueue::submit(origin.clone(), message.clone()),
@@ -134,9 +134,9 @@ fn test_submit_with_invalid_nonce() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
-			update: mock_execution_update(),
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
@@ -169,9 +169,9 @@ fn test_submit_no_funds_to_reward_relayers_just_ignore() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
-			update: mock_execution_update(),
 		};
 		// Check submit successfully in case no funds available
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
@@ -188,9 +188,9 @@ fn test_set_operating_mode() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
-			update: mock_execution_update(),
 		};
 
 		assert_ok!(InboundQueue::set_operating_mode(
@@ -231,9 +231,9 @@ fn test_submit_no_funds_to_reward_relayers_and_ed_preserved() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
-			update: mock_execution_update(),
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 
@@ -249,9 +249,9 @@ fn test_submit_no_funds_to_reward_relayers_and_ed_preserved() {
 			proof: Proof {
 				block_hash: Default::default(),
 				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
-			update: mock_execution_update(),
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
 		// Check balance of sovereign account as ED does not change
