@@ -405,8 +405,9 @@ pub mod pallet {
 			// Verify the finalized header gap between the current finalized header and new imported
 			// header is not larger than the sync committee period, otherwise we cannot do
 			// ancestry proofs for execution headers in the gap.
+			let slots_per_historical_root: u64 = config::SLOTS_PER_HISTORICAL_ROOT.into();
 			ensure!(
-				latest_finalized_state.slot + config::SLOTS_PER_HISTORICAL_ROOT as u64 >=
+				latest_finalized_state.slot.saturating_add(slots_per_historical_root) >=
 					update.finalized_header.slot,
 				Error::<T>::InvalidFinalizedHeaderGap
 			);
