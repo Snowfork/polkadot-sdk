@@ -13,17 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::*;
-use bridge_hub_rococo_runtime::{EthereumInboundQueue, EthereumBeaconClient,RuntimeOrigin};
+use bridge_hub_rococo_runtime::{EthereumBeaconClient, EthereumInboundQueue, RuntimeOrigin};
 use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
-use snowbridge_core::inbound::InboundQueueFixture;
-use snowbridge_core::outbound::OperatingMode;
+use snowbridge_core::{inbound::InboundQueueFixture, outbound::OperatingMode};
 use snowbridge_pallet_inbound_queue_fixtures::{
-	register_token::make_register_token_message,
-	send_token::make_send_token_message, send_token_to_penpal::make_send_token_to_penpal_message,
+	register_token::make_register_token_message, send_token::make_send_token_message,
+	send_token_to_penpal::make_send_token_to_penpal_message,
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
@@ -60,7 +59,7 @@ pub fn send_inbound_message(fixture: InboundQueueFixture) -> DispatchResult {
 		fixture.finalized_header,
 		fixture.block_roots_root,
 	)
-		.unwrap();
+	.unwrap();
 	EthereumInboundQueue::submit(
 		RuntimeOrigin::signed(BridgeHubRococoSender::get()),
 		fixture.message,
@@ -324,7 +323,8 @@ fn send_token_from_ethereum_to_penpal() {
 		// Construct RegisterToken message and sent to inbound queue
 		send_inbound_message(make_register_token_message()).unwrap();
 
-		// Construct SendToken message to AssetHub(only for increase the nonce as the same order in smoke test)
+		// Construct SendToken message to AssetHub(only for increase the nonce as the same order in
+		// smoke test)
 		send_inbound_message(make_send_token_message()).unwrap();
 
 		// Construct SendToken message and sent to inbound queue
