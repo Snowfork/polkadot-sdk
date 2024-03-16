@@ -406,7 +406,9 @@ pub mod pallet {
 			// header is not larger than the sync committee period, otherwise we cannot do
 			// ancestry proofs for execution headers in the gap.
 			ensure!(
-				latest_finalized_state.slot.saturating_add(config::SLOTS_PER_HISTORICAL_ROOT as u64) >=
+				latest_finalized_state
+					.slot
+					.saturating_add(config::SLOTS_PER_HISTORICAL_ROOT as u64) >=
 					update.finalized_header.slot,
 				Error::<T>::InvalidFinalizedHeaderGap
 			);
