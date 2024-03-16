@@ -547,7 +547,7 @@ fn submit_update_with_missing_bootstrap() {
 	new_tester().execute_with(|| {
 		assert_err!(
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update),
-			Error::<Test>::NotBootstrapped
+			Error::<Test>::SkippedSyncCommitteePeriod
 		);
 	});
 }
@@ -614,7 +614,7 @@ fn verify_message_invalid_receipts_root() {
 	new_tester().execute_with(|| {
 		assert_err!(
 			EthereumBeaconClient::verify(&event_log, &proof),
-			VerificationError::InvalidProof
+			VerificationError::InvalidExecutionProof
 		);
 	});
 }

@@ -486,7 +486,7 @@ pub mod pallet {
 		/// Stores a compacted (slot and block roots root (hash of the `block_roots` beacon state
 		/// field, used for ancestry proof)) beacon state in a ring buffer map, with the header root
 		/// as map key.
-		fn store_finalized_header(
+		pub fn store_finalized_header(
 			header_root: H256,
 			header: BeaconHeader,
 			block_roots_root: H256,

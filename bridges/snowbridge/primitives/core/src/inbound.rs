@@ -5,7 +5,7 @@
 use codec::{Decode, Encode};
 use frame_support::PalletError;
 use scale_info::TypeInfo;
-use snowbridge_beacon_primitives::ExecutionProof;
+use snowbridge_beacon_primitives::{BeaconHeader, ExecutionProof};
 use sp_core::{H160, H256};
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
@@ -59,7 +59,7 @@ pub struct Log {
 impl Log {
 	pub fn validate(&self) -> Result<(), LogValidationError> {
 		if self.topics.len() > MAX_TOPICS {
-			return Err(LogValidationError::TooManyTopics);
+			return Err(LogValidationError::TooManyTopics)
 		}
 		Ok(())
 	}
@@ -76,4 +76,11 @@ pub struct Proof {
 	pub receipt_proof: (Vec<Vec<u8>>, Vec<Vec<u8>>),
 	// The execution proof which includes ancestry proof
 	pub execution_proof: ExecutionProof,
+}
+
+#[derive(Clone, RuntimeDebug)]
+pub struct InboundQueueFixture {
+	pub message: Message,
+	pub finalized_header: BeaconHeader,
+	pub block_roots_root: H256,
 }

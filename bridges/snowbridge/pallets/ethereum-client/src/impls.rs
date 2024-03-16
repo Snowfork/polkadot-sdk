@@ -22,7 +22,6 @@ impl<T: Config> Verifier for Pallet<T> {
 			proof.block_hash,
 		);
 
-		#[cfg(not(any(feature = "std", feature = "runtime-benchmarks")))]
 		Self::verify_execution_proof(&proof.execution_proof).map_err(|_| InvalidExecutionProof)?;
 
 		let receipt = match Self::verify_receipt_inclusion(
@@ -101,7 +100,6 @@ impl<T: Config> Pallet<T> {
 	/// Validates an execution header with ancestry_proof against a finalized checkpoint on
 	/// chain.The beacon header containing the execution header is sent, plus the execution header,
 	/// along with a proof that the execution header is rooted in the beacon header body.
-	#[allow(dead_code)]
 	pub(crate) fn verify_execution_proof(execution_proof: &ExecutionProof) -> DispatchResult {
 		let latest_finalized_state =
 			FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -163,7 +161,6 @@ impl<T: Config> Pallet<T> {
 	/// Verify that `block_root` is an ancestor of `finalized_block_root` Used to prove that
 	/// an execution header is an ancestor of a finalized header (i.e. the blocks are
 	/// on the same chain).
-	#[allow(dead_code)]
 	fn verify_ancestry_proof(
 		block_root: H256,
 		block_slot: u64,
