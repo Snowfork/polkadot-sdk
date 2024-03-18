@@ -26,7 +26,6 @@ use snowbridge_pallet_inbound_queue_fixtures::{
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
-use sp_core::H256;
 use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 
@@ -53,9 +52,7 @@ pub enum SnowbridgeControl {
 }
 
 pub fn send_inbound_message(fixture: InboundQueueFixture) -> DispatchResult {
-	let header_root: H256 = fixture.finalized_header.hash_tree_root().unwrap();
 	EthereumBeaconClient::store_finalized_header(
-		header_root,
 		fixture.finalized_header,
 		fixture.block_roots_root,
 	)

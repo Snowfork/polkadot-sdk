@@ -70,6 +70,7 @@ use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
 pub use weights::WeightInfo;
 
+#[cfg(feature = "runtime-benchmarks")]
 use snowbridge_beacon_primitives::BeaconHeader;
 
 type BalanceOf<T> =
