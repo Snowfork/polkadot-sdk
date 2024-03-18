@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate as ethereum_beacon_client;
 use crate::config;
-use frame_support::{derive_impl, parameter_types};
+use frame_support::{derive_impl, dispatch::DispatchResult, parameter_types};
 use pallet_timestamp;
 use primitives::{Fork, ForkVersions};
 use snowbridge_core::inbound::{Log, Proof};
@@ -111,14 +111,14 @@ impl ethereum_beacon_client::Config for Test {
 // Build genesis storage according to the mock runtime.
 pub fn new_tester() -> sp_io::TestExternalities {
 	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	let mut ext = sp_io::TestExternalities::new(t);
-	let _ = ext.execute_with(|| {
-		let inbound_fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
-		EthereumBeaconClient::store_finalized_header(
-			inbound_fixture.finalized_header,
-			inbound_fixture.block_roots_root,
-		)
-		.unwrap();
-	});
+	let ext = sp_io::TestExternalities::new(t);
 	ext
+}
+
+pub fn initialize_storage() -> DispatchResult {
+	let inbound_fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
+	EthereumBeaconClient::store_finalized_header(
+		inbound_fixture.finalized_header,
+		inbound_fixture.block_roots_root,
+	)
 }
