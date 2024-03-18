@@ -509,9 +509,18 @@ parameter_types! {
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmark_helpers {
-	use crate::RuntimeOrigin;
+	use crate::{EthereumBeaconClient, Runtime, RuntimeOrigin};
 	use codec::Encode;
+	use snowbridge_beacon_primitives::BeaconHeader;
+	use snowbridge_pallet_inbound_queue::BenchmarkHelper;
+	use sp_core::H256;
 	use xcm::latest::{Assets, Location, SendError, SendResult, SendXcm, Xcm, XcmHash};
+
+	impl<T: snowbridge_pallet_ethereum_client::Config> BenchmarkHelper<T> for Runtime {
+		fn initialize_storage(beacon_header: BeaconHeader, block_roots_root: H256) {
+			EthereumBeaconClient::store_finalized_header(beacon_header, block_roots_root).unwrap();
+		}
+	}
 
 	pub struct DoNothingRouter;
 	impl SendXcm for DoNothingRouter {
@@ -546,6 +555,8 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 	type XcmSender = DoNothingRouter;
 	type ChannelLookup = EthereumSystem;
 	type GatewayAddress = EthereumGatewayAddress;
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = Runtime;
 	type MessageConverter = MessageToXcm<
 		CreateAssetCall,
 		CreateAssetDeposit,

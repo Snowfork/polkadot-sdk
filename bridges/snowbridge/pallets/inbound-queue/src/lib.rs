@@ -70,6 +70,8 @@ use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
 pub use weights::WeightInfo;
 
+use snowbridge_beacon_primitives::BeaconHeader;
+
 type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -86,6 +88,11 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub trait BenchmarkHelper<T> {
+		fn initialize_storage(beacon_header: BeaconHeader, block_roots_root: H256);
+	}
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -117,6 +124,9 @@ pub mod pallet {
 		type PricingParameters: Get<PricingParameters<BalanceOf<Self>>>;
 
 		type WeightInfo: WeightInfo;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		type Helper: BenchmarkHelper<Self>;
 
 		/// Convert a weight value into deductible balance type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;

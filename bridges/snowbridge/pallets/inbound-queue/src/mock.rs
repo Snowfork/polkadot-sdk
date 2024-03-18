@@ -151,6 +151,12 @@ parameter_types! {
 	pub const InboundQueuePalletInstance: u8 = 80;
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl<T: snowbridge_pallet_ethereum_client::Config> BenchmarkHelper<T> for Test {
+	// not implemented since the MockVerifier is used for tests
+	fn initialize_storage(_: BeaconHeader, _: H256) {}
+}
+
 // Mock XCM sender that always succeeds
 pub struct MockXcmSender;
 
@@ -251,6 +257,8 @@ impl inbound_queue::Config for Test {
 	>;
 	type PricingParameters = Parameters;
 	type ChannelLookup = MockChannelLookup;
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = Test;
 	type WeightToFee = IdentityFee<u128>;
 	type LengthToFee = IdentityFee<u128>;
 	type MaxMessageSize = ConstU32<1024>;

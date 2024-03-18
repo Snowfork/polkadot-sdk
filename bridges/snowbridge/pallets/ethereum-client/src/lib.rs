@@ -277,7 +277,7 @@ pub mod pallet {
 			InitialCheckpointRoot::<T>::set(header_root);
 
 			Self::store_validators_root(update.validators_root);
-			Self::store_finalized_header(header_root, update.header, update.block_roots_root)?;
+			Self::store_finalized_header(update.header, update.block_roots_root)?;
 
 			Ok(())
 		}
@@ -451,15 +451,7 @@ pub mod pallet {
 			};
 
 			if update.finalized_header.slot > latest_finalized_state.slot {
-				let finalized_block_root: H256 = update
-					.finalized_header
-					.hash_tree_root()
-					.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
-				Self::store_finalized_header(
-					finalized_block_root,
-					update.finalized_header,
-					update.block_roots_root,
-				)?;
+				Self::store_finalized_header(update.finalized_header, update.block_roots_root)?;
 			}
 
 			Ok(())
@@ -487,11 +479,13 @@ pub mod pallet {
 		/// field, used for ancestry proof)) beacon state in a ring buffer map, with the header root
 		/// as map key.
 		pub fn store_finalized_header(
-			header_root: H256,
 			header: BeaconHeader,
 			block_roots_root: H256,
 		) -> DispatchResult {
 			let slot = header.slot;
+
+			let header_root: H256 =
+				header.hash_tree_root().map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			<FinalizedBeaconStateBuffer<T>>::insert(
 				header_root,

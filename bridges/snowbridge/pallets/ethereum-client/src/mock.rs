@@ -6,7 +6,6 @@ use frame_support::{derive_impl, parameter_types};
 use pallet_timestamp;
 use primitives::{Fork, ForkVersions};
 use snowbridge_core::inbound::{Log, Proof};
-use snowbridge_ethereum::H256;
 use sp_std::default::Default;
 use std::{fs::File, path::PathBuf};
 
@@ -115,9 +114,7 @@ pub fn new_tester() -> sp_io::TestExternalities {
 	let mut ext = sp_io::TestExternalities::new(t);
 	let _ = ext.execute_with(|| {
 		let inbound_fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
-		let header_root: H256 = inbound_fixture.finalized_header.hash_tree_root().unwrap();
 		EthereumBeaconClient::store_finalized_header(
-			header_root,
 			inbound_fixture.finalized_header,
 			inbound_fixture.block_roots_root,
 		)
