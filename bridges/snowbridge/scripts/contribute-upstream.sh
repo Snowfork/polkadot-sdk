@@ -77,9 +77,3 @@ git remote -v | grep -w parity || git remote add parity https://github.com/parit
 git fetch parity master
 git checkout parity/master -- .github
 git add -- .github
-
-# Fetch the latest from parity master
-echo "Fetching latest from Parity master. Resolve merge conflicts, if there are any."
-git fetch parity master
-git merge parity/master
-echo "OK"
