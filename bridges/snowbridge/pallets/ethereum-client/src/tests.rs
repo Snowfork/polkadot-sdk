@@ -739,7 +739,7 @@ fn set_operating_mode_root_only() {
 }
 
 #[test]
-fn verify_execution_header_update_invalid_ancestry_proof() {
+fn verify_execution_proof_invalid_ancestry_proof() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
 	let mut execution_header_update = Box::new(load_execution_proof_fixture());
@@ -758,7 +758,7 @@ fn verify_execution_header_update_invalid_ancestry_proof() {
 }
 
 #[test]
-fn submit_execution_header_update_invalid_execution_header_proof() {
+fn verify_execution_proof_invalid_execution_header_proof() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
 	let mut execution_header_update = Box::new(load_execution_proof_fixture());
@@ -775,7 +775,7 @@ fn submit_execution_header_update_invalid_execution_header_proof() {
 }
 
 #[test]
-fn submit_execution_header_update_that_is_also_finalized_header_which_is_not_stored() {
+fn verify_execution_proof_that_is_also_finalized_header_which_is_not_stored() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
 	let mut execution_header_update = Box::new(load_execution_proof_fixture());
@@ -792,8 +792,7 @@ fn submit_execution_header_update_that_is_also_finalized_header_which_is_not_sto
 }
 
 #[test]
-fn submit_execution_header_update_that_is_also_finalized_header_which_is_stored_but_slots_dont_match(
-) {
+fn submit_execution_proof_that_is_also_finalized_header_which_is_stored_but_slots_dont_match() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
 	let mut execution_header_update = Box::new(load_execution_proof_fixture());
@@ -822,7 +821,7 @@ fn submit_execution_header_update_that_is_also_finalized_header_which_is_stored_
 }
 
 #[test]
-fn submit_execution_header_not_finalized() {
+fn verify_execution_proof_not_finalized() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
 	let update = Box::new(load_execution_proof_fixture());
