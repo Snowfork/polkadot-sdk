@@ -545,10 +545,9 @@ fn submit_update_with_missing_bootstrap() {
 	let update = Box::new(load_next_finalized_header_update_fixture());
 
 	new_tester().execute_with(|| {
-		assert_ok!(initialize_storage());
 		assert_err!(
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update),
-			Error::<Test>::SkippedSyncCommitteePeriod
+			Error::<Test>::NotBootstrapped
 		);
 	});
 }
