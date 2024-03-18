@@ -737,3 +737,108 @@ fn set_operating_mode_root_only() {
 		);
 	});
 }
+
+#[test]
+fn verify_execution_header_update_invalid_ancestry_proof() {
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
+	let mut execution_header_update = Box::new(load_execution_proof_fixture());
+	if let Some(ref mut ancestry_proof) = execution_header_update.ancestry_proof {
+		ancestry_proof.header_branch[0] = TEST_HASH.into()
+	}
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+		assert_err!(
+			EthereumBeaconClient::verify_execution_proof(&execution_header_update),
+			Error::<Test>::InvalidAncestryMerkleProof
+		);
+	});
+}
+
+#[test]
+fn submit_execution_header_update_invalid_execution_header_proof() {
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
+	let mut execution_header_update = Box::new(load_execution_proof_fixture());
+	execution_header_update.execution_branch[0] = TEST_HASH.into();
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+		assert_err!(
+			EthereumBeaconClient::verify_execution_proof(&execution_header_update),
+			Error::<Test>::InvalidExecutionHeaderProof
+		);
+	});
+}
+
+#[test]
+fn submit_execution_header_update_that_is_also_finalized_header_which_is_not_stored() {
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
+	let mut execution_header_update = Box::new(load_execution_proof_fixture());
+	execution_header_update.ancestry_proof = None;
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+		assert_err!(
+			EthereumBeaconClient::verify_execution_proof(&execution_header_update),
+			Error::<Test>::ExpectedFinalizedHeaderNotStored
+		);
+	});
+}
+
+#[test]
+fn submit_execution_header_update_that_is_also_finalized_header_which_is_stored_but_slots_dont_match(
+) {
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
+	let mut execution_header_update = Box::new(load_execution_proof_fixture());
+	execution_header_update.ancestry_proof = None;
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+
+		let block_root: H256 = execution_header_update.header.hash_tree_root().unwrap();
+
+		<FinalizedBeaconState<Test>>::insert(
+			block_root,
+			CompactBeaconState {
+				slot: execution_header_update.header.slot + 1,
+				block_roots_root: Default::default(),
+			},
+		);
+		LatestFinalizedBlockRoot::<Test>::set(block_root);
+
+		assert_err!(
+			EthereumBeaconClient::verify_execution_proof(&execution_header_update),
+			Error::<Test>::ExpectedFinalizedHeaderNotStored
+		);
+	});
+}
+
+#[test]
+fn submit_execution_header_not_finalized() {
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let finalized_header_update = Box::new(load_finalized_header_update_fixture());
+	let update = Box::new(load_execution_proof_fixture());
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), finalized_header_update));
+
+		<FinalizedBeaconState<Test>>::mutate(<LatestFinalizedBlockRoot<Test>>::get(), |x| {
+			let prev = x.unwrap();
+			*x = Some(CompactBeaconState { slot: update.header.slot - 1, ..prev });
+		});
+
+		assert_err!(
+			EthereumBeaconClient::verify_execution_proof(&update),
+			Error::<Test>::HeaderNotFinalized
+		);
+	});
+}
