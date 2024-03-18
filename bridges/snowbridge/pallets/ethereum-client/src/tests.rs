@@ -668,7 +668,9 @@ fn verify_message_invalid_receipts_root() {
 	new_tester().execute_with(|| {
 		assert_err!(
 			EthereumBeaconClient::verify(&event_log, &proof),
-			VerificationError::InvalidExecutionProof
+			VerificationError::InvalidExecutionProof(
+				Error::<Test>::BlockBodyHashTreeRootFailed.into()
+			)
 		);
 	});
 }

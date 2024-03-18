@@ -27,7 +27,7 @@ pub enum VerificationError {
 	/// Unable to verify the transaction receipt with the provided proof
 	InvalidProof,
 	/// Unable to verify the execution header with ancestry proof
-	InvalidExecutionProof,
+	InvalidExecutionProof(#[codec(skip)] &'static str),
 }
 
 pub type MessageNonce = u64;

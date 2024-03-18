@@ -22,7 +22,8 @@ impl<T: Config> Verifier for Pallet<T> {
 			proof.block_hash,
 		);
 
-		Self::verify_execution_proof(&proof.execution_proof).map_err(|_| InvalidExecutionProof)?;
+		Self::verify_execution_proof(&proof.execution_proof)
+			.map_err(|e| InvalidExecutionProof(e.into()))?;
 
 		let receipt = match Self::verify_receipt_inclusion(
 			proof.execution_proof.execution_header.receipts_root(),
