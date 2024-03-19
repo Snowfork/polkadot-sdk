@@ -5,7 +5,6 @@ use super::*;
 use frame_support::{assert_noop, assert_ok, weights::Weight};
 use hex_literal::hex;
 use snowbridge_core::{inbound::Proof, ChannelId};
-use snowbridge_router_primitives::inbound::TransactFeeMode;
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::DispatchError;
 use sp_std::convert::From;
@@ -271,15 +270,14 @@ fn test_convert_transact() {
 				weight_at_most,
 				origin_kind,
 				payload: payload.clone(),
-				fee_mode: TransactFeeMode::OnSubstrate,
 			},
 		});
 		// Convert the message to XCM
 		let (xcm, dest_fee) = InboundQueue::do_convert(message_id, message).unwrap();
 		let instructions = xcm.into_inner();
-		assert_eq!(instructions.len(), 8);
+		assert_eq!(instructions.len(), 7);
 		assert_eq!(dest_fee, fee.into());
-		let transact = instructions.get(6).unwrap().clone();
+		let transact = instructions.get(2).unwrap().clone();
 		let expected =
 			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() };
 		assert_eq!(transact, expected);

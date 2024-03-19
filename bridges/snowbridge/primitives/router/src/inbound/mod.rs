@@ -62,8 +62,6 @@ pub enum Command {
 		sender: H160,
 		/// OriginKind
 		origin_kind: OriginKind,
-		/// FeeMode
-		fee_mode: TransactFeeMode,
 		/// XCM execution fee on dest chain
 		fee: u128,
 		/// The weight required at most on dest chain
@@ -71,15 +69,6 @@ pub enum Command {
 		/// The payload of the transact
 		payload: Vec<u8>,
 	},
-}
-
-/// TransactFeeMode
-#[derive(Clone, Encode, Decode, RuntimeDebug)]
-pub enum TransactFeeMode {
-	/// Transact Fee paid full on Ethereum side upfront
-	OnEthereum,
-	/// Transact Fee paid on destination chain by prefunded sender
-	OnSubstrate,
 }
 
 /// Destination for bridged tokens
@@ -172,12 +161,11 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
 			V1(MessageV1 {
 				chain_id,
-				command: Transact { sender, origin_kind, fee_mode, fee, weight_at_most, payload },
+				command: Transact { sender, origin_kind, fee, weight_at_most, payload },
 			}) => Ok(Self::convert_transact(
 				chain_id,
 				sender,
 				origin_kind,
-				fee_mode,
 				fee,
 				weight_at_most,
 				payload,
@@ -330,14 +318,19 @@ where
 		chain_id: u64,
 		sender: H160,
 		origin_kind: OriginKind,
-		fee_mode: TransactFeeMode,
 		fee: u128,
 		weight_at_most: Weight,
 		payload: Vec<u8>,
 	) -> (Xcm<()>, Balance) {
 		let xcm_fee: Asset = (Location::parent(), fee).into();
 
-		let mut message = vec![
+		let message = vec![
+			UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+			// Actually BurnAsset does nothing on dest chain, included here only for
+			// the dest chain to implement a custom Barrier which inspect the fee as
+			// expected(i.e. can cover the transact cost to avoid spamming)
+			BurnAsset(xcm_fee.clone().into()),
+			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() },
 			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
 			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
 			// Change origin to the bridge.
@@ -345,53 +338,6 @@ where
 			// DescendOrigin to the sender.
 			DescendOrigin(AccountKey20 { network: None, key: sender.into() }.into()),
 		];
-		message = match fee_mode {
-			TransactFeeMode::OnSubstrate => {
-				message.extend(vec![
-					// Withdraw fees from sender to pay the xcm execution
-					WithdrawAsset(xcm_fee.clone().into()),
-					// Pay for execution.
-					BuyExecution { fees: xcm_fee.clone(), weight_limit: Unlimited },
-					SetAppendix(Xcm(vec![
-						RefundSurplus,
-						// Deposit surplus back to sender.
-						DepositAsset {
-							assets: Wild(AllCounted(1u32)),
-							beneficiary: Location {
-								parents: 0,
-								interior: Junctions::from([
-									GlobalConsensus(Ethereum { chain_id }),
-									AccountKey20 { network: None, key: sender.into() },
-								]),
-							},
-						},
-					])),
-					// Transact on dest chain.
-					Transact {
-						origin_kind,
-						require_weight_at_most: weight_at_most,
-						call: payload.into(),
-					},
-				]);
-				message
-			},
-			TransactFeeMode::OnEthereum => {
-				let mut unpaid = vec![
-					UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-					// Actually BurnAsset does nothing on dest chain, included here only for
-					// the dest chain to implement a custom Barrier which inspect the fee as
-					// expected(i.e. can cover the transact cost to avoid spamming)
-					BurnAsset(xcm_fee.clone().into()),
-					Transact {
-						origin_kind,
-						require_weight_at_most: weight_at_most,
-						call: payload.into(),
-					},
-				];
-				unpaid.extend(message);
-				unpaid
-			},
-		};
 		(message.into(), fee.into())
 	}
 }
