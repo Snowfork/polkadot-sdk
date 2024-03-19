@@ -16,36 +16,13 @@ impl<T: Config> Verifier for Pallet<T> {
 	/// the log should be in the beacon client storage, meaning it has been verified and is an
 	/// ancestor of a finalized beacon block.
 	fn verify(event_log: &Log, proof: &Proof) -> Result<(), VerificationError> {
-		log::info!(
-			target: "ethereum-client",
-			"💫 Verifying message with block hash {}",
-			proof.block_hash,
-		);
-
 		Self::verify_execution_proof(&proof.execution_proof)
 			.map_err(|e| InvalidExecutionProof(e.into()))?;
 
-		let receipt = match Self::verify_receipt_inclusion(
+		let receipt = Self::verify_receipt_inclusion(
 			proof.execution_proof.execution_header.receipts_root(),
 			&proof.receipt_proof.1,
-		) {
-			Ok(receipt) => receipt,
-			Err(err) => {
-				log::error!(
-					target: "ethereum-client",
-					"💫 Verification of receipt inclusion failed for block {}: {:?}",
-					proof.block_hash,
-					err
-				);
-				return Err(err)
-			},
-		};
-
-		log::trace!(
-			target: "ethereum-client",
-			"💫 Verified receipt inclusion for transaction at index {} in block {}",
-			proof.tx_index, proof.block_hash,
-		);
+		)?;
 
 		event_log.validate().map_err(|_| InvalidLog)?;
 
@@ -59,17 +36,10 @@ impl<T: Config> Verifier for Pallet<T> {
 		if !receipt.contains_log(&event_log) {
 			log::error!(
 				target: "ethereum-client",
-				"💫 Event log not found in receipt for transaction at index {} in block {}",
-				proof.tx_index, proof.block_hash,
+				"💫 Event log not found in receipt for transaction",
 			);
 			return Err(LogNotFound)
 		}
-
-		log::info!(
-			target: "ethereum-client",
-			"💫 Receipt verification successful for {}",
-			proof.block_hash,
-		);
 
 		Ok(())
 	}

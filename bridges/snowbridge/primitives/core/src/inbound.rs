@@ -68,10 +68,6 @@ impl Log {
 /// Inclusion proof for a transaction receipt
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Proof {
-	// The block hash of the block in which the receipt was included.
-	pub block_hash: H256,
-	// The index of the transaction (and receipt) within the block.
-	pub tx_index: u32,
 	// Proof keys and values (receipts tree)
 	pub receipt_proof: (Vec<Vec<u8>>, Vec<Vec<u8>>),
 	// The execution proof which includes ancestry proof
