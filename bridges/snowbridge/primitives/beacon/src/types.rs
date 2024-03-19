@@ -421,7 +421,7 @@ pub struct ExecutionProof {
 	pub header: BeaconHeader,
 	/// Proof that `header` is an ancestor of a finalized header
 	pub ancestry_proof: Option<AncestryProof>,
-	/// Execution header to be imported
+	/// The execution header to be verified
 	pub execution_header: VersionedExecutionPayloadHeader,
 	/// Merkle proof that execution payload is contained within `header`
 	pub execution_branch: Vec<H256>,
