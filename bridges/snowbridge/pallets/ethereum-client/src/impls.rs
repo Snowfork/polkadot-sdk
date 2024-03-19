@@ -27,7 +27,7 @@ impl<T: Config> Verifier for Pallet<T> {
 
 		let receipt = match Self::verify_receipt_inclusion(
 			proof.execution_proof.execution_header.receipts_root(),
-			proof,
+			&proof.receipt_proof.1,
 		) {
 			Ok(receipt) => receipt,
 			Err(err) => {
@@ -80,10 +80,9 @@ impl<T: Config> Pallet<T> {
 	/// `proof.block_hash`.
 	pub fn verify_receipt_inclusion(
 		receipts_root: H256,
-		proof: &Proof,
+		receipt_proof: &[Vec<u8>],
 	) -> Result<Receipt, VerificationError> {
-		let result =
-			verify_receipt_proof(receipts_root, &proof.receipt_proof.1).ok_or(InvalidProof)?;
+		let result = verify_receipt_proof(receipts_root, receipt_proof).ok_or(InvalidProof)?;
 
 		match result {
 			Ok(receipt) => Ok(receipt),
