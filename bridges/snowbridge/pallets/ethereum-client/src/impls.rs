@@ -114,8 +114,8 @@ impl<T: Config> Pallet<T> {
 				)?;
 			},
 			None => {
-				// If the ancestry proof is not provided, we expect this header to be a
-				// finalized header. We need to check that the header hash matches the finalized
+				// If the ancestry proof is not provided, we expect this beacon header to be a
+				// finalized beacon header. We need to check that the header hash matches the finalized
 				// header root at the expected slot.
 				let state = <FinalizedBeaconState<T>>::get(block_root)
 					.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
