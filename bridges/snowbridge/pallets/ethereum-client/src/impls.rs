@@ -99,7 +99,7 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::InvalidExecutionHeaderProof
 		);
 
-		let block_root: H256 = execution_proof
+		let beacon_block_root: H256 = execution_proof
 			.header
 			.hash_tree_root()
 			.map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
@@ -107,7 +107,7 @@ impl<T: Config> Pallet<T> {
 		match &execution_proof.ancestry_proof {
 			Some(proof) => {
 				Self::verify_ancestry_proof(
-					block_root,
+					beacon_block_root,
 					execution_proof.header.slot,
 					&proof.header_branch,
 					proof.finalized_block_root,
@@ -115,9 +115,9 @@ impl<T: Config> Pallet<T> {
 			},
 			None => {
 				// If the ancestry proof is not provided, we expect this beacon header to be a
-				// finalized beacon header. We need to check that the header hash matches the finalized
-				// header root at the expected slot.
-				let state = <FinalizedBeaconState<T>>::get(block_root)
+				// finalized beacon header. We need to check that the header hash matches the
+				// finalized header root at the expected slot.
+				let state = <FinalizedBeaconState<T>>::get(beacon_block_root)
 					.ok_or(Error::<T>::ExpectedFinalizedHeaderNotStored)?;
 				if execution_proof.header.slot != state.slot {
 					return Err(Error::<T>::ExpectedFinalizedHeaderNotStored.into())
