@@ -43,6 +43,7 @@ members = [
 	"bridges/snowbridge/pallets/outbound-queue",
 	"bridges/snowbridge/pallets/outbound-queue/merkle-tree",
 	"bridges/snowbridge/pallets/outbound-queue/runtime-api",
+	"bridges/snowbridge/pallets/gas-price",
 	"bridges/snowbridge/pallets/system",
 	"bridges/snowbridge/pallets/system/runtime-api",
 	"bridges/snowbridge/primitives/beacon",

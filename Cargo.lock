@@ -17918,6 +17918,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "snowbridge-pallet-gas-price"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-beacon-primitives",
+ "snowbridge-core",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 14.0.0",
+]
+
+[[package]]
 name = "snowbridge-pallet-inbound-queue"
 version = "0.9.0"
 dependencies = [

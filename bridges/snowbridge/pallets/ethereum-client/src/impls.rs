@@ -43,6 +43,10 @@ impl<T: Config> Verifier for Pallet<T> {
 
 		Ok(())
 	}
+
+	fn verify_execution_proof(execution_proof: &ExecutionProof) -> DispatchResult {
+		<Self as Pallet<T>>::verify_execution_proof(execution_proof)
+	}
 }
 
 impl<T: Config> Pallet<T> {

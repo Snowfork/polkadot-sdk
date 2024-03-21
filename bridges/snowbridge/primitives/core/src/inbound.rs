@@ -3,7 +3,7 @@
 //! Types for representing inbound messages
 
 use codec::{Decode, Encode};
-use frame_support::PalletError;
+use frame_support::{PalletError, dispatch::DispatchResult};
 use scale_info::TypeInfo;
 use snowbridge_beacon_primitives::{BeaconHeader, ExecutionProof};
 use sp_core::{H160, H256};
@@ -13,6 +13,7 @@ use sp_std::vec::Vec;
 /// A trait for verifying inbound messages from Ethereum.
 pub trait Verifier {
 	fn verify(event: &Log, proof: &Proof) -> Result<(), VerificationError>;
+	fn verify_execution_proof(execution_proof: &ExecutionProof) -> DispatchResult;
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug, PalletError, TypeInfo)]
