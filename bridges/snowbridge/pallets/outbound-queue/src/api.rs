@@ -24,8 +24,8 @@ where
 }
 
 pub fn calculate_fee<T>(
-	parameters: Option<PricingParameters<T::Balance>>,
 	command: Command,
+	parameters: Option<PricingParameters<T::Balance>>,
 ) -> Fee<T::Balance>
 where
 	T: Config,

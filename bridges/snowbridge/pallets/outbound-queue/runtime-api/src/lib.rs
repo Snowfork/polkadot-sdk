@@ -18,6 +18,6 @@ sp_api::decl_runtime_apis! {
 		fn prove_message(leaf_index: u64) -> Option<MerkleProof>;
 
 		/// Calculate the delivery fee for `command`
-		fn calculate_fee(parameters: Option<PricingParameters<Balance>>, command: Command) -> Fee<Balance>;
+		fn calculate_fee(command: Command, parameters: Option<PricingParameters<Balance>>) -> Fee<Balance>;
 	}
 }

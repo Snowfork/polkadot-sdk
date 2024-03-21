@@ -1025,8 +1025,8 @@ impl_runtime_apis! {
 			snowbridge_pallet_outbound_queue::api::prove_message::<Runtime>(leaf_index)
 		}
 
-		fn calculate_fee(parameters: Option<PricingParameters<Balance>>, command: Command) -> Fee<Balance> {
-			snowbridge_pallet_outbound_queue::api::calculate_fee::<Runtime>(parameters, command)
+		fn calculate_fee(command: Command, parameters: Option<PricingParameters<Balance>>) -> Fee<Balance> {
+			snowbridge_pallet_outbound_queue::api::calculate_fee::<Runtime>(command, parameters)
 		}
 	}
 
