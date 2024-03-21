@@ -355,8 +355,8 @@ pub trait GasMeter {
 		Self::MAXIMUM_BASE_GAS + Self::maximum_dispatch_gas_used_at_most(command)
 	}
 
-	/// Measures the maximum amount of gas a command payload will require to *dispatch*, NOT including
-	/// validation & verification.
+	/// Measures the maximum amount of gas a command payload will require to *dispatch*, NOT
+	/// including validation & verification.
 	fn maximum_dispatch_gas_used_at_most(command: &Command) -> u64;
 }
 

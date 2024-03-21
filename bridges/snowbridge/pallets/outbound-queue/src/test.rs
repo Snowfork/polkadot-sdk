@@ -271,13 +271,12 @@ fn encode_digest_item() {
 fn test_calculate_fees_with_unit_multiplier() {
 	new_tester().execute_with(|| {
 		let gas_used: u64 = 250000;
-		let price_params: PricingParameters<<Test as Config>::Balance> =
-			PricingParameters {
-				exchange_rate: FixedU128::from_rational(1, 400),
-				fee_per_gas: 10000_u32.into(),
-				rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
-				multiplier: FixedU128::from_rational(1, 1),
-			};
+		let price_params: PricingParameters<<Test as Config>::Balance> = PricingParameters {
+			exchange_rate: FixedU128::from_rational(1, 400),
+			fee_per_gas: 10000_u32.into(),
+			rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
+			multiplier: FixedU128::from_rational(1, 1),
+		};
 		let fee = OutboundQueue::calculate_fee(gas_used, price_params);
 		assert_eq!(fee.local, 698000000);
 		assert_eq!(fee.remote, 1000000);
@@ -288,13 +287,12 @@ fn test_calculate_fees_with_unit_multiplier() {
 fn test_calculate_fees_with_multiplier() {
 	new_tester().execute_with(|| {
 		let gas_used: u64 = 250000;
-		let price_params: PricingParameters<<Test as Config>::Balance> =
-			PricingParameters {
-				exchange_rate: FixedU128::from_rational(1, 400),
-				fee_per_gas: 10000_u32.into(),
-				rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
-				multiplier: FixedU128::from_rational(4, 3),
-			};
+		let price_params: PricingParameters<<Test as Config>::Balance> = PricingParameters {
+			exchange_rate: FixedU128::from_rational(1, 400),
+			fee_per_gas: 10000_u32.into(),
+			rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
+			multiplier: FixedU128::from_rational(4, 3),
+		};
 		let fee = OutboundQueue::calculate_fee(gas_used, price_params);
 		assert_eq!(fee.local, 698000000);
 		assert_eq!(fee.remote, 1333333);
@@ -305,13 +303,12 @@ fn test_calculate_fees_with_multiplier() {
 fn test_calculate_fees_with_valid_exchange_rate_but_remote_fee_calculated_as_zero() {
 	new_tester().execute_with(|| {
 		let gas_used: u64 = 250000;
-		let price_params: PricingParameters<<Test as Config>::Balance> =
-			PricingParameters {
-				exchange_rate: FixedU128::from_rational(1, 1),
-				fee_per_gas: 1_u32.into(),
-				rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
-				multiplier: FixedU128::from_rational(1, 1),
-			};
+		let price_params: PricingParameters<<Test as Config>::Balance> = PricingParameters {
+			exchange_rate: FixedU128::from_rational(1, 1),
+			fee_per_gas: 1_u32.into(),
+			rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
+			multiplier: FixedU128::from_rational(1, 1),
+		};
 		let fee = OutboundQueue::calculate_fee(gas_used, price_params.clone());
 		assert_eq!(fee.local, 698000000);
 		// Though none zero pricing params the remote fee calculated here is invalid

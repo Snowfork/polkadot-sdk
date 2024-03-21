@@ -4,8 +4,8 @@
 
 use frame_support::traits::tokens::Balance as BalanceT;
 use snowbridge_core::{
+	outbound::{Command, Fee},
 	PricingParameters,
-	outbound::{Fee, Command},
 };
 use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 
