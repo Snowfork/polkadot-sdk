@@ -103,6 +103,10 @@ fn agent_id_of<T: Config>(location: &Location) -> Result<H256, DispatchError> {
 	T::AgentIdOf::convert_location(location).ok_or(Error::<T>::LocationConversionFailed.into())
 }
 
+fn token_id_of<T: Config>(location: &Location) -> Result<H256, DispatchError> {
+	Ok(blake2_256(&location.encode()).into())
+}
+
 #[cfg(feature = "runtime-benchmarks")]
 pub trait BenchmarkHelper<O>
 where
@@ -127,7 +131,7 @@ where
 
 #[frame_support::pallet]
 pub mod pallet {
-	use snowbridge_core::StaticLookup;
+	use snowbridge_core::{outbound::AgentExecuteCommand, StaticLookup};
 	use sp_core::U256;
 
 	use super::*;
@@ -211,6 +215,11 @@ pub mod pallet {
 		PricingParametersChanged {
 			params: PricingParametersOf<T>,
 		},
+		/// Register token
+		RegisterToken {
+			token_id: H256,
+			agent_id: AgentId,
+		},
 	}
 
 	#[pallet::error]
@@ -226,6 +235,7 @@ pub mod pallet {
 		InvalidTokenTransferFees,
 		InvalidPricingParameters,
 		InvalidUpgradeParameters,
+		TokenExists,
 	}
 
 	/// The set of registered agents
@@ -242,6 +252,10 @@ pub mod pallet {
 	#[pallet::getter(fn parameters)]
 	pub type PricingParameters<T: Config> =
 		StorageValue<_, PricingParametersOf<T>, ValueQuery, T::DefaultPricingParameters>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn tokens)]
+	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, H256, (), OptionQuery>;
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -574,6 +588,61 @@ pub mod pallet {
 			});
 			Ok(())
 		}
+
+		/// Sends a message to the Gateway contract to register a new
+		/// token that represents `asset`.
+		///
+		/// - `origin`: Must be `MultiLocation` from sibling parachain
+		#[pallet::call_index(10)]
+		#[pallet::weight(T::WeightInfo::register_token())]
+		pub fn register_token(
+			origin: OriginFor<T>,
+			asset: Box<VersionedLocation>,
+			name: Vec<u8>,
+			symbol: Vec<u8>,
+			decimals: u8,
+		) -> DispatchResult {
+			let origin_location: Location = T::SiblingOrigin::ensure_origin(origin)?;
+
+			let (para_id, agent_id) = ensure_sibling::<T>(&origin_location)?;
+
+			let asset: Location =
+				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
+
+			Self::do_register_token(para_id, agent_id, asset, name, symbol, decimals)?;
+
+			Ok(())
+		}
+
+		/// Sends a message to the Gateway contract to register a new
+		/// token that represents `asset`.
+		///
+		/// - `origin`: Must be `MultiLocation`
+		#[pallet::call_index(11)]
+		#[pallet::weight(T::WeightInfo::register_token())]
+		pub fn force_register_token(
+			origin: OriginFor<T>,
+			location: Box<VersionedLocation>,
+			asset: Box<VersionedLocation>,
+			name: Vec<u8>,
+			symbol: Vec<u8>,
+			decimals: u8,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let location: Location =
+				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
+
+			let (para_id, agent_id) =
+				ensure_sibling::<T>(&location).map_err(|_| Error::<T>::InvalidLocation)?;
+
+			let asset: Location =
+				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
+
+			Self::do_register_token(para_id, agent_id, asset, name, symbol, decimals)?;
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -662,6 +731,39 @@ pub mod pallet {
 			let primary_exists = Channels::<T>::contains_key(PRIMARY_GOVERNANCE_CHANNEL);
 			let secondary_exists = Channels::<T>::contains_key(SECONDARY_GOVERNANCE_CHANNEL);
 			primary_exists && secondary_exists
+		}
+
+		pub(crate) fn do_register_token(
+			para_id: ParaId,
+			agent_id: AgentId,
+			asset_id: Location,
+			name: Vec<u8>,
+			symbol: Vec<u8>,
+			decimals: u8,
+		) -> Result<(), DispatchError> {
+			// Check that the agent exists
+			let channel_id: ChannelId = para_id.into();
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
+			ensure!(!Channels::<T>::contains_key(channel_id), Error::<T>::ChannelAlreadyCreated);
+
+			// Check that the agent exists
+			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
+
+			// Record the token id or fail if it has already been created
+			let token_id = token_id_of::<T>(&asset_id).map_err(|_| Error::<T>::InvalidLocation)?;
+			ensure!(!Tokens::<T>::contains_key(token_id), Error::<T>::TokenExists);
+			Tokens::<T>::insert(token_id, ());
+
+			let command = Command::AgentExecute {
+				agent_id,
+				command: AgentExecuteCommand::RegisterToken { token_id, name, symbol, decimals },
+			};
+			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
+			Self::send(channel_id, command, pays_fee)?;
+
+			Self::deposit_event(Event::<T>::RegisterToken { token_id, agent_id });
+
+			Ok(())
 		}
 	}
 

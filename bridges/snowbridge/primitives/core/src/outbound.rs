@@ -238,12 +238,32 @@ mod v1 {
 			/// The amount of tokens to transfer
 			amount: u128,
 		},
+		RegisterToken {
+			/// ID for the token
+			token_id: H256,
+			/// Name of the token
+			name: Vec<u8>,
+			/// Short symbol for the token
+			symbol: Vec<u8>,
+			/// Number of decimal places
+			decimals: u8,
+		},
+		MintToken {
+			/// ID for the token
+			token_id: H256,
+			/// The recipient of the newly minted tokens
+			recipient: H160,
+			/// The amount of tokens to mint
+			amount: u128,
+		},
 	}
 
 	impl AgentExecuteCommand {
 		fn index(&self) -> u8 {
 			match self {
 				AgentExecuteCommand::TransferToken { .. } => 0,
+				AgentExecuteCommand::RegisterToken { .. } => 1,
+				AgentExecuteCommand::MintToken { .. } => 2,
 			}
 		}
 
@@ -255,6 +275,25 @@ mod v1 {
 						Token::Uint(self.index().into()),
 						Token::Bytes(ethabi::encode(&[
 							Token::Address(*token),
+							Token::Address(*recipient),
+							Token::Uint(U256::from(*amount)),
+						])),
+					]),
+				AgentExecuteCommand::RegisterToken { token_id, name, symbol, decimals } =>
+					ethabi::encode(&[
+						Token::Uint(self.index().into()),
+						Token::Bytes(ethabi::encode(&[
+							Token::FixedBytes(token_id.as_bytes().to_owned()),
+							Token::String(name.to_owned()),
+							Token::String(symbol.to_owned()),
+							Token::Uint(U256::from(*decimals)),
+						])),
+					]),
+				AgentExecuteCommand::MintToken { token_id, recipient, amount } =>
+					ethabi::encode(&[
+						Token::Uint(self.index().into()),
+						Token::Bytes(ethabi::encode(&[
+							Token::FixedBytes(token_id.as_bytes().to_owned()),
 							Token::Address(*recipient),
 							Token::Uint(U256::from(*amount)),
 						])),
@@ -391,6 +430,8 @@ impl GasMeter for ConstantGasMeter {
 				// * Assume dest account in ERC20 contract does not yet have a storage slot
 				// * ERC20.transferFrom possibly does other business logic besides updating balances
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
+				AgentExecuteCommand::RegisterToken { .. } => 250_000,
+				AgentExecuteCommand::MintToken { .. } => 150_000,
 			},
 			Command::Upgrade { initializer, .. } => {
 				let initializer_max_gas = match *initializer {
