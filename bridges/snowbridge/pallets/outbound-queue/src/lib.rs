@@ -53,7 +53,7 @@
 //! By design, it is expected that governance should manually update these
 //! parameters every few weeks using the `set_pricing_parameters` extrinsic in the
 //! system pallet.
-//! 
+//!
 //! This is an interim measure. Once ETH/DOT liquidity pools are available in the Polkadot network,
 //! we'll use them as a source of pricing info, subject to certain safeguards.
 //!
@@ -68,7 +68,7 @@
 //!
 //! By design, the computed fee includes a safety factor (the `Multiplier`) to cover
 //! unfavourable fluctuations in the ETH/DOT exchange rate.
-//! 
+//!
 //! ## Fee Settlement
 //!
 //! On the remote side, in the gateway contract, the relayer accrues
@@ -78,7 +78,7 @@
 //! ```
 //! Or in plain english, relayers are refunded for gas consumption, using a
 //! price that is a minimum of the actual gas price, or `Message.MaxFeePerGas``.
-//! 
+//!
 //! # Extrinsics
 //!
 //! * [`Call::set_operating_mode`]: Set the operating mode
@@ -118,9 +118,8 @@ use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
 use sp_core::{H256, U256};
 use sp_runtime::{
-	Saturating,
 	traits::{CheckedDiv, Hash},
-	DigestItem,
+	DigestItem, Saturating,
 };
 use sp_std::prelude::*;
 pub use types::{CommittedMessage, ProcessMessageOriginOf};
