@@ -63,7 +63,7 @@ use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	meth,
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
-	sibling_sovereign_account, AgentId, Channel, ChannelId, ParaId,
+	sibling_sovereign_account, AgentId, AssetRegistrarMetadata, Channel, ChannelId, ParaId,
 	PricingParameters as PricingParametersRecord, PRIMARY_GOVERNANCE_CHANNEL,
 	SECONDARY_GOVERNANCE_CHANNEL,
 };
@@ -598,9 +598,7 @@ pub mod pallet {
 		pub fn register_token(
 			origin: OriginFor<T>,
 			asset: Box<VersionedLocation>,
-			name: Vec<u8>,
-			symbol: Vec<u8>,
-			decimals: u8,
+			metadata: AssetRegistrarMetadata,
 		) -> DispatchResult {
 			let origin_location: Location = T::SiblingOrigin::ensure_origin(origin)?;
 
@@ -609,7 +607,7 @@ pub mod pallet {
 			let asset: Location =
 				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			Self::do_register_token(para_id, agent_id, asset, name, symbol, decimals)?;
+			Self::do_register_token(para_id, agent_id, asset, metadata)?;
 
 			Ok(())
 		}
@@ -624,9 +622,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			location: Box<VersionedLocation>,
 			asset: Box<VersionedLocation>,
-			name: Vec<u8>,
-			symbol: Vec<u8>,
-			decimals: u8,
+			metadata: AssetRegistrarMetadata,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -639,7 +635,7 @@ pub mod pallet {
 			let asset: Location =
 				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			Self::do_register_token(para_id, agent_id, asset, name, symbol, decimals)?;
+			Self::do_register_token(para_id, agent_id, asset, metadata)?;
 
 			Ok(())
 		}
@@ -737,11 +733,9 @@ pub mod pallet {
 			para_id: ParaId,
 			agent_id: AgentId,
 			asset_id: Location,
-			name: Vec<u8>,
-			symbol: Vec<u8>,
-			decimals: u8,
+			metadata: AssetRegistrarMetadata,
 		) -> Result<(), DispatchError> {
-			// Check that the agent exists
+			// Check that the channel exists
 			let channel_id: ChannelId = para_id.into();
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 			ensure!(!Channels::<T>::contains_key(channel_id), Error::<T>::ChannelAlreadyCreated);
@@ -756,7 +750,12 @@ pub mod pallet {
 
 			let command = Command::AgentExecute {
 				agent_id,
-				command: AgentExecuteCommand::RegisterToken { token_id, name, symbol, decimals },
+				command: AgentExecuteCommand::RegisterToken {
+					token_id,
+					name: metadata.name,
+					symbol: metadata.symbol,
+					decimals: metadata.decimals,
+				},
 			};
 			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
 			Self::send(channel_id, command, pays_fee)?;
