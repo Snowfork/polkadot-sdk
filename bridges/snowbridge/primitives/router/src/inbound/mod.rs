@@ -9,9 +9,10 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::tokens::Balance as BalanceT, weights::Weight, PalletError};
 use scale_info::TypeInfo;
+use snowbridge_core::TokenId;
 use sp_core::{Get, RuntimeDebug, H160};
 use sp_io::hashing::blake2_256;
-use sp_runtime::MultiAddress;
+use sp_runtime::{traits::MaybeEquivalence, MultiAddress};
 use sp_std::prelude::*;
 use xcm::prelude::{Junction::AccountKey20, *};
 use xcm_executor::traits::ConvertLocation;
@@ -45,7 +46,7 @@ pub enum Command {
 		/// XCM execution fee on AssetHub
 		fee: u128,
 	},
-	/// Send a token to AssetHub or another parachain
+	/// Send Ethereum token to AssetHub or another parachain
 	SendToken {
 		/// The address of the ERC20 token to be bridged over to AssetHub
 		token: H160,
@@ -55,6 +56,15 @@ pub enum Command {
 		amount: u128,
 		/// XCM execution fee on AssetHub
 		fee: u128,
+	},
+	/// Send Polkadot token back to the original parachain
+	TransferToken {
+		/// The Id of the token
+		token_id: TokenId,
+		/// The destination for the transfer
+		destination: Destination,
+		/// Amount to transfer
+		amount: u128,
 	},
 }
 
@@ -89,10 +99,12 @@ pub struct MessageToXcm<
 	InboundQueuePalletInstance,
 	AccountId,
 	Balance,
+	ConvertAssetId,
 > where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
+	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
 {
 	_phantom: PhantomData<(
 		CreateAssetCall,
@@ -100,6 +112,7 @@ pub struct MessageToXcm<
 		InboundQueuePalletInstance,
 		AccountId,
 		Balance,
+		ConvertAssetId,
 	)>,
 }
 
@@ -108,6 +121,8 @@ pub struct MessageToXcm<
 pub enum ConvertMessageError {
 	/// The message version is not supported for conversion.
 	UnsupportedVersion,
+	InvalidDestination,
+	InvalidToken,
 }
 
 /// convert the inbound message to xcm which will be forwarded to the destination chain
@@ -120,20 +135,28 @@ pub trait ConvertMessage {
 
 pub type CallIndex = [u8; 2];
 
-impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-	ConvertMessage
+impl<
+		CreateAssetCall,
+		CreateAssetDeposit,
+		InboundQueuePalletInstance,
+		AccountId,
+		Balance,
+		ConvertAssetId,
+	> ConvertMessage
 	for MessageToXcm<
 		CreateAssetCall,
 		CreateAssetDeposit,
 		InboundQueuePalletInstance,
 		AccountId,
 		Balance,
+		ConvertAssetId,
 	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
+	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
 {
 	type Balance = Balance;
 	type AccountId = AccountId;
@@ -146,18 +169,36 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_register_token(chain_id, token, fee)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
+			V1(MessageV1 {
+				chain_id,
+				command: TransferToken { token_id, destination, amount },
+			}) => Self::convert_transfer_token(chain_id, token_id, destination, amount),
 		}
 	}
 }
 
-impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-	MessageToXcm<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId, Balance>
-where
+impl<
+		CreateAssetCall,
+		CreateAssetDeposit,
+		InboundQueuePalletInstance,
+		AccountId,
+		Balance,
+		ConvertAssetId,
+	>
+	MessageToXcm<
+		CreateAssetCall,
+		CreateAssetDeposit,
+		InboundQueuePalletInstance,
+		AccountId,
+		Balance,
+		ConvertAssetId,
+	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
+	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
 {
 	fn convert_register_token(chain_id: u64, token: H160, fee: u128) -> (Xcm<()>, Balance) {
 		let network = Ethereum { chain_id };
@@ -288,6 +329,46 @@ where
 			2,
 			[GlobalConsensus(network), AccountKey20 { network: None, key: token.into() }],
 		)
+	}
+
+	fn convert_transfer_token(
+		chain_id: u64,
+		token_id: TokenId,
+		destination: Destination,
+		amount: u128,
+	) -> Result<(Xcm<()>, Balance), ConvertMessageError> {
+		let network = Ethereum { chain_id };
+
+		let (_, beneficiary, dest_para_fee) = match destination {
+			// Final destination is a 32-byte account on a sibling of AssetHub
+			Destination::ForeignAccountId32 { para_id, id, fee } =>
+				Some((para_id, Location::new(0, [AccountId32 { network: None, id }]), fee)),
+			// Final destination is a 20-byte account on a sibling of AssetHub
+			Destination::ForeignAccountId20 { para_id, id, fee } =>
+				Some((para_id, Location::new(0, [AccountKey20 { network: None, key: id }]), fee)),
+			_ => None,
+		}
+		.ok_or(ConvertMessageError::InvalidDestination)?;
+
+		let fee_asset: Asset = (Location::parent(), dest_para_fee).into();
+
+		let asset_id: Location =
+			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?; //Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+		let asset: Asset = (asset_id, amount).into();
+
+		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
+
+		let instructions = vec![
+			ReceiveTeleportedAsset(fee_asset.clone().into()),
+			BuyExecution { fees: fee_asset.clone(), weight_limit: Unlimited },
+			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
+			UniversalOrigin(GlobalConsensus(network)),
+			WithdrawAsset(asset.clone().into()),
+			ClearOrigin,
+			DepositAsset { assets: AllCounted(2).into(), beneficiary },
+		];
+
+		Ok((instructions.into(), dest_para_fee.into()))
 	}
 }
 

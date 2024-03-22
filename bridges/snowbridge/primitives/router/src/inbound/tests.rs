@@ -1,6 +1,6 @@
-use super::GlobalConsensusEthereumConvertsFor;
+use super::{ConvertMessageError, GlobalConsensusEthereumConvertsFor};
 use crate::inbound::CallIndex;
-use frame_support::parameter_types;
+use frame_support::{assert_ok, parameter_types};
 use hex_literal::hex;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
@@ -37,4 +37,15 @@ fn test_contract_location_with_incorrect_location_fails_convert() {
 		GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(&contract_location),
 		None,
 	);
+}
+
+#[test]
+fn test_reanchor() {
+	let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+	let asset: Asset = (asset_id, 1).into();
+	let context: InteriorLocation = [GlobalConsensus(Rococo), Parachain(1013)].into();
+	let dest = Location::new(1, [GlobalConsensus(Rococo)]);
+	let mut reanchored_assets = asset.clone();
+	assert_ok!(reanchored_assets.reanchor(&dest, &context));
+	assert_eq!(reanchored_assets.fun, 1.into());
 }

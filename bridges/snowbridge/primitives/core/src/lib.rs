@@ -163,7 +163,8 @@ impl DescribeLocation for DescribeHere {
 
 /// Creates an AgentId from a Location. An AgentId is a unique mapping to a Agent contract on
 /// Ethereum which acts as the sovereign account for the Location.
-pub type AgentIdOf = HashedDescription<H256, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
+pub type AgentIdOf =
+	HashedDescription<AgentId, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
 
 #[derive(Clone, Default, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
 pub struct AssetRegistrarMetadata {
@@ -172,6 +173,7 @@ pub struct AssetRegistrarMetadata {
 	pub decimals: u8,
 }
 
-pub fn token_id_of(location: &Location) -> H256 {
+pub type TokenId = H256;
+pub fn token_id_of(location: &Location) -> TokenId {
 	blake2_256(&location.encode()).into()
 }

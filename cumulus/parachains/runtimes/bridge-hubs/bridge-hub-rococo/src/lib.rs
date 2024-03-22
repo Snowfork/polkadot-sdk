@@ -566,6 +566,7 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 		ConstU8<INBOUND_QUEUE_PALLET_INDEX>,
 		AccountId,
 		Balance,
+		EthereumSystem,
 	>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;

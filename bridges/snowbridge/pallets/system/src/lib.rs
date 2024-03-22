@@ -64,12 +64,15 @@ use snowbridge_core::{
 	meth,
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
 	sibling_sovereign_account, token_id_of, AgentId, AssetRegistrarMetadata, Channel, ChannelId,
-	ParaId, PricingParameters as PricingParametersRecord, PRIMARY_GOVERNANCE_CHANNEL,
+	ParaId, PricingParameters as PricingParametersRecord, TokenId, PRIMARY_GOVERNANCE_CHANNEL,
 	SECONDARY_GOVERNANCE_CHANNEL,
 };
 use sp_core::{RuntimeDebug, H160, H256};
 use sp_io::hashing::blake2_256;
-use sp_runtime::{traits::BadOrigin, DispatchError, SaturatedConversion};
+use sp_runtime::{
+	traits::{BadOrigin, MaybeEquivalence},
+	DispatchError, SaturatedConversion,
+};
 use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
@@ -252,7 +255,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn tokens)]
-	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, H256, Location, OptionQuery>;
+	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, TokenId, Location, OptionQuery>;
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -779,6 +782,15 @@ pub mod pallet {
 	impl<T: Config> Get<PricingParametersOf<T>> for Pallet<T> {
 		fn get() -> PricingParametersOf<T> {
 			PricingParameters::<T>::get()
+		}
+	}
+
+	impl<T: Config> MaybeEquivalence<TokenId, Location> for Pallet<T> {
+		fn convert(id: &TokenId) -> Option<Location> {
+			Tokens::<T>::get(id)
+		}
+		fn convert_back(_loc: &Location) -> Option<TokenId> {
+			None
 		}
 	}
 }

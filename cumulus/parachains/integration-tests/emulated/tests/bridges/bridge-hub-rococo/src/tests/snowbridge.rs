@@ -19,14 +19,16 @@ use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
-use snowbridge_core::{inbound::InboundQueueFixture, outbound::OperatingMode, Channel, ChannelId};
+use snowbridge_core::{
+	inbound::InboundQueueFixture, outbound::OperatingMode, token_id_of, Channel, ChannelId,
+};
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message, send_token::make_send_token_message,
 	send_token_to_penpal::make_send_token_to_penpal_message,
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
-	Command, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
+	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
 };
 use sp_core::H256;
 use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
@@ -39,6 +41,7 @@ const TREASURY_ACCOUNT: [u8; 32] =
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const INSUFFICIENT_XCM_FEE: u128 = 1000;
+const XCM_FEE: u128 = 4_000_000_000;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
@@ -549,7 +552,9 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 }
 
 #[test]
-fn send_roc_from_asset_hub_to_ethereum() {
+fn send_relay_token_back_and_forth() {
+	const ROC_AMOUNT: u128 = 100_000_000_000; //0.1 ROC
+
 	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
 		1,
 		[Parachain(AssetHubRococo::para_id().into())],
@@ -584,7 +589,6 @@ fn send_roc_from_asset_hub_to_ethereum() {
 	AssetHubRococo::execute_with(|| {
 		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
 
-		const ROC_AMOUNT: u128 = 100_000_000_000; //0.1 ROC
 		let assets = vec![Asset { id: AssetId(Location::parent()), fun: Fungible(ROC_AMOUNT) }];
 		let multi_assets = VersionedAssets::V4(Assets::from(assets));
 
@@ -611,12 +615,50 @@ fn send_roc_from_asset_hub_to_ethereum() {
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-		// Check that the transfer token back to Ethereum message was queue in the Ethereum
-		// Outbound Queue
+		type Runtime = <BridgeHubRococo as Chain>::Runtime;
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
 				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
+			]
+		);
+		let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+		let token_id = token_id_of(&asset_id);
+
+		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, asset_id);
+
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::TransferToken {
+				token_id,
+				destination: Destination::ForeignAccountId32 {
+					para_id: AssetHubRococo::para_id().into(),
+					id: AssetHubRococoReceiver::get().into(),
+					fee: XCM_FEE,
+				},
+				amount: ROC_AMOUNT,
+			},
+		});
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
+		// Check that the token was received and issued as a foreign asset on AssetHub
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::Balances(pallet_balances::Event::Minted { .. }) => {},
 			]
 		);
 	});
