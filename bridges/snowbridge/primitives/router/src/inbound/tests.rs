@@ -1,4 +1,4 @@
-use super::{ConvertMessageError, GlobalConsensusEthereumConvertsFor};
+use super::GlobalConsensusEthereumConvertsFor;
 use crate::inbound::CallIndex;
 use frame_support::{assert_ok, parameter_types};
 use hex_literal::hex;

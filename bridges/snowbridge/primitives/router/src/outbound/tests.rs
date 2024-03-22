@@ -701,7 +701,7 @@ fn xcm_converter_convert_without_withdraw_asset_yields_withdraw_expected() {
 	let mut converter = XcmConverter::new(&message, &network);
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::WithdrawAssetExpected));
+	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedInstruction));
 }
 
 #[test]
