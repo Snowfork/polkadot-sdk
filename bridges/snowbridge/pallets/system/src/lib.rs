@@ -63,8 +63,8 @@ use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	meth,
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
-	sibling_sovereign_account, AgentId, AssetRegistrarMetadata, Channel, ChannelId, ParaId,
-	PricingParameters as PricingParametersRecord, PRIMARY_GOVERNANCE_CHANNEL,
+	sibling_sovereign_account, token_id_of, AgentId, AssetRegistrarMetadata, Channel, ChannelId,
+	ParaId, PricingParameters as PricingParametersRecord, PRIMARY_GOVERNANCE_CHANNEL,
 	SECONDARY_GOVERNANCE_CHANNEL,
 };
 use sp_core::{RuntimeDebug, H160, H256};
@@ -99,12 +99,8 @@ where
 }
 
 /// Hash the location to produce an agent id
-fn agent_id_of<T: Config>(location: &Location) -> Result<H256, DispatchError> {
+pub fn agent_id_of<T: Config>(location: &Location) -> Result<H256, DispatchError> {
 	T::AgentIdOf::convert_location(location).ok_or(Error::<T>::LocationConversionFailed.into())
-}
-
-fn token_id_of<T: Config>(location: &Location) -> Result<H256, DispatchError> {
-	Ok(blake2_256(&location.encode()).into())
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -217,6 +213,7 @@ pub mod pallet {
 		},
 		/// Register token
 		RegisterToken {
+			asset_id: Location,
 			token_id: H256,
 			agent_id: AgentId,
 		},
@@ -255,7 +252,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn tokens)]
-	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, H256, (), OptionQuery>;
+	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, H256, Location, OptionQuery>;
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -737,16 +734,15 @@ pub mod pallet {
 		) -> Result<(), DispatchError> {
 			// Check that the channel exists
 			let channel_id: ChannelId = para_id.into();
-			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 			ensure!(!Channels::<T>::contains_key(channel_id), Error::<T>::ChannelAlreadyCreated);
 
 			// Check that the agent exists
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 
 			// Record the token id or fail if it has already been created
-			let token_id = token_id_of::<T>(&asset_id).map_err(|_| Error::<T>::InvalidLocation)?;
+			let token_id = token_id_of(&asset_id);
 			ensure!(!Tokens::<T>::contains_key(token_id), Error::<T>::TokenExists);
-			Tokens::<T>::insert(token_id, ());
+			Tokens::<T>::insert(token_id, asset_id.clone());
 
 			let command = Command::AgentExecute {
 				agent_id,
@@ -760,7 +756,7 @@ pub mod pallet {
 			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
 			Self::send(channel_id, command, pays_fee)?;
 
-			Self::deposit_event(Event::<T>::RegisterToken { token_id, agent_id });
+			Self::deposit_event(Event::<T>::RegisterToken { asset_id, token_id, agent_id });
 
 			Ok(())
 		}

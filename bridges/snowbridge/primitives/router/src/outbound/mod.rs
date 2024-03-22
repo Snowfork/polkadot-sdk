@@ -12,7 +12,7 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{
 	outbound::{AgentExecuteCommand, Command, Message, SendMessage},
-	ChannelId, ParaId,
+	token_id_of, ChannelId, ParaId,
 };
 use sp_core::{H160, H256};
 use sp_std::{iter::Peekable, marker::PhantomData, prelude::*};
@@ -154,6 +154,8 @@ enum XcmConverterError {
 	AssetResolutionFailed,
 	InvalidFeeAsset,
 	SetTopicExpected,
+	ReserveAssetDepositedExpected,
+	UnexpectedInstruction,
 }
 
 macro_rules! match_expression {
@@ -175,8 +177,13 @@ impl<'a, Call> XcmConverter<'a, Call> {
 	}
 
 	fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
-		// Get withdraw/deposit and make native tokens create message.
-		let result = self.native_tokens_unlock_message()?;
+		let result = match self.peek() {
+			Ok(ReserveAssetDeposited { .. }) => self.reserve_tokens_transfer_message(),
+			// Get withdraw/deposit and make native tokens create message.
+			Ok(WithdrawAsset { .. }) => self.native_tokens_unlock_message(),
+			Err(e) => Err(e),
+			_ => return Err(XcmConverterError::UnexpectedInstruction),
+		}?;
 
 		// All xcm instructions must be consumed before exit.
 		if self.next().is_ok() {
@@ -279,5 +286,82 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		} else {
 			true
 		}
+	}
+
+	fn reserve_tokens_transfer_message(
+		&mut self,
+	) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+		use XcmConverterError::*;
+
+		// Get the reserve assets.
+		let reserve_assets =
+			match_expression!(self.next()?, ReserveAssetDeposited(reserve_assets), reserve_assets)
+				.ok_or(ReserveAssetDepositedExpected)?;
+
+		// Check if clear origin exists and skip over it.
+		if match_expression!(self.peek(), Ok(ClearOrigin), ()).is_some() {
+			let _ = self.next();
+		}
+
+		// Get the fee asset item from BuyExecution or continue parsing.
+		let fee_asset = match_expression!(self.peek(), Ok(BuyExecution { fees, .. }), fees);
+		if fee_asset.is_some() {
+			let _ = self.next();
+		}
+
+		let (deposit_assets, beneficiary) = match_expression!(
+			self.next()?,
+			DepositAsset { assets, beneficiary },
+			(assets, beneficiary)
+		)
+		.ok_or(DepositAssetExpected)?;
+
+		// assert that the beneficiary is AccountKey20.
+		let recipient = match_expression!(
+			beneficiary.unpack(),
+			(0, [AccountKey20 { network, key }])
+				if self.network_matches(network),
+			H160(*key)
+		)
+		.ok_or(BeneficiaryResolutionFailed)?;
+
+		// Make sure there are reserved assets.
+		if reserve_assets.len() == 0 {
+			return Err(NoReserveAssets)
+		}
+
+		// Check the the deposit asset filter matches what was reserved.
+		if reserve_assets.inner().iter().any(|asset| !deposit_assets.matches(asset)) {
+			return Err(FilterDoesNotConsumeAllAssets)
+		}
+
+		// We only support a single asset at a time.
+		ensure!(reserve_assets.len() == 1, TooManyAssets);
+		let reserve_asset = reserve_assets.get(0).ok_or(AssetResolutionFailed)?;
+
+		// If there was a fee specified verify it.
+		if let Some(fee_asset) = fee_asset {
+			// The fee asset must be the same as the reserve asset.
+			if fee_asset.id != reserve_asset.id || fee_asset.fun > reserve_asset.fun {
+				return Err(InvalidFeeAsset)
+			}
+		}
+
+		let (asset_id, amount) = match reserve_asset {
+			Asset { id: AssetId(inner_location), fun: Fungible(amount) } =>
+				Some((inner_location.clone(), *amount)),
+			_ => None,
+		}
+		.ok_or(AssetResolutionFailed)?;
+
+		// transfer amount must be greater than 0.
+		ensure!(amount > 0, ZeroAssetTransfer);
+
+		let token_id = token_id_of(&asset_id);
+
+		// Check if there is a SetTopic and skip over it if found.
+		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
+
+		Ok((AgentExecuteCommand::MintToken { token_id, recipient, amount }, *topic_id))
 	}
 }

@@ -25,7 +25,7 @@ use frame_support::traits::Contains;
 use hex_literal::hex;
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_io::hashing::keccak_256;
+use sp_io::hashing::{blake2_256, keccak_256};
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use sp_std::prelude::*;
 use xcm::prelude::{Junction::Parachain, Location};
@@ -170,4 +170,8 @@ pub struct AssetRegistrarMetadata {
 	pub name: Vec<u8>,
 	pub symbol: Vec<u8>,
 	pub decimals: u8,
+}
+
+pub fn token_id_of(location: &Location) -> H256 {
+	blake2_256(&location.encode()).into()
 }
