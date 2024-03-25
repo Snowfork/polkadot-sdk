@@ -230,7 +230,8 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 					snowbridge_pallet_system::Call::set_pricing_parameters { .. } |
 					snowbridge_pallet_system::Call::force_update_channel { .. } |
 					snowbridge_pallet_system::Call::force_transfer_native_from_agent { .. } |
-					snowbridge_pallet_system::Call::set_token_transfer_fees { .. },
+					snowbridge_pallet_system::Call::set_token_transfer_fees { .. } |
+					snowbridge_pallet_system::Call::force_register_token { .. }
 			)
 		)
 	}

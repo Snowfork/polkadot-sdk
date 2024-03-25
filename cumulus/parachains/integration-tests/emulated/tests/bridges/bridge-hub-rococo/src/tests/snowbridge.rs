@@ -20,7 +20,8 @@ use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::{
-	inbound::InboundQueueFixture, outbound::OperatingMode, token_id_of, Channel, ChannelId,
+	inbound::InboundQueueFixture, outbound::OperatingMode, token_id_of, AssetRegistrarMetadata,
+	Channel, ChannelId,
 };
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message, send_token::make_send_token_message,
@@ -49,6 +50,12 @@ pub enum ControlCall {
 	CreateAgent,
 	#[codec(index = 4)]
 	CreateChannel { mode: OperatingMode },
+	#[codec(index = 11)]
+	ForceRegisterToken {
+		location: Box<VersionedLocation>,
+		asset: Box<VersionedLocation>,
+		metadata: AssetRegistrarMetadata,
+	},
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -546,6 +553,70 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 			AssetHubRococo,
 			vec![
 				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:false, .. }) => {},
+			]
+		);
+	});
+}
+
+#[test]
+fn register_relay_token() {
+	let origin_para: u32 = AssetHubRococo::para_id().into();
+	// Fund the origin parachain sovereign account so that it can pay execution fees.
+	BridgeHubRococo::fund_para_sovereign(origin_para.into(), INITIAL_FUND);
+
+	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
+	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
+
+	let register_relay_token_call = SnowbridgeControl::Control(ControlCall::ForceRegisterToken {
+		location: Box::new(VersionedLocation::V4(Location::new(
+			1,
+			[Parachain(AssetHubRococo::para_id().into())],
+		))),
+		asset: Box::new(VersionedLocation::V4(Location::parent())),
+		metadata: AssetRegistrarMetadata {
+			name: "roc".as_bytes().to_vec(),
+			symbol: "roc".as_bytes().to_vec(),
+			decimals: 12,
+		},
+	});
+	// Construct XCM to create an agent for para 1001
+	let remote_xcm = VersionedXcm::from(Xcm(vec![
+		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
+		Transact {
+			require_weight_at_most: 3000000000.into(),
+			origin_kind: OriginKind::Superuser,
+			call: register_relay_token_call.encode().into(),
+		},
+	]));
+
+	// Rococo Global Consensus
+	// Send XCM message from Relay Chain to Bridge Hub source Parachain
+	Rococo::execute_with(|| {
+		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
+			sudo_origin,
+			bx!(destination),
+			bx!(remote_xcm),
+		));
+
+		type RuntimeEvent = <Rococo as Chain>::RuntimeEvent;
+		// Check that the Transact message was sent
+		assert_expected_events!(
+			Rococo,
+			vec![
+				RuntimeEvent::XcmPallet(pallet_xcm::Event::Sent { .. }) => {},
+			]
+		);
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		// Check that a message was sent to Ethereum to create the agent
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::RegisterToken {
+					..
+				}) => {},
 			]
 		);
 	});

@@ -737,7 +737,7 @@ pub mod pallet {
 		) -> Result<(), DispatchError> {
 			// Check that the channel exists
 			let channel_id: ChannelId = para_id.into();
-			ensure!(!Channels::<T>::contains_key(channel_id), Error::<T>::ChannelAlreadyCreated);
+			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::NoChannel);
 
 			// Check that the agent exists
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
