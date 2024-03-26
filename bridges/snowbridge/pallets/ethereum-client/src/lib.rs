@@ -41,7 +41,8 @@ use frame_support::{
 use frame_system::ensure_signed;
 use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
-	CompactBeaconState, ForkData, ForkVersion, ForkVersions, PublicKeyPrepared, SigningData,
+	CompactBeaconState, CompactExecutionHeader, ExecutionHeaderState, ForkData, ForkVersion,
+	ForkVersions, PublicKeyPrepared, SigningData,
 };
 use snowbridge_core::{BasicOperatingMode, RingBufferMap};
 use sp_core::H256;
@@ -51,7 +52,11 @@ pub use weights::WeightInfo;
 use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
-use types::{CheckpointUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared, Update};
+pub use types::ExecutionHeaderBuffer;
+use types::{
+	CheckpointUpdate, ExecutionHeaderUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared,
+	Update,
+};
 
 pub use pallet::*;
 
@@ -179,6 +184,25 @@ pub mod pallet {
 	#[pallet::storage]
 	pub(super) type NextSyncCommittee<T: Config> =
 		StorageValue<_, SyncCommitteePrepared, ValueQuery>;
+
+	/// Latest imported execution header
+	#[pallet::storage]
+	#[pallet::getter(fn latest_execution_state)]
+	pub(super) type LatestExecutionState<T: Config> =
+		StorageValue<_, ExecutionHeaderState, ValueQuery>;
+
+	/// Execution Headers
+	#[pallet::storage]
+	pub type ExecutionHeaders<T: Config> =
+		StorageMap<_, Identity, H256, CompactExecutionHeader, OptionQuery>;
+
+	/// Execution Headers: Current position in ring buffer
+	#[pallet::storage]
+	pub type ExecutionHeaderIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	/// Execution Headers: Mapping of ring buffer index to a pruning candidate
+	#[pallet::storage]
+	pub type ExecutionHeaderMapping<T: Config> = StorageMap<_, Identity, u32, H256, ValueQuery>;
 
 	/// The current operating mode of the pallet.
 	#[pallet::storage]

@@ -34,21 +34,8 @@ pub mod v1 {
             // ExecutionHeaderIndex
             // ExecutionHeaderMapping
             log::info!(target: LOG_TARGET, "Running migration v1.");
-
-            let prefix = storage_prefix(<Pallet<T>>::name().as_bytes(), b"LatestExecutionState");
-            if sp_io::storage::get(&prefix).is_some() {
-                let res = clear_storage_prefix(
-                    <Pallet<T>>::name().as_bytes(),
-                    b"LatestExecutionState",
-                    b"",
-                    None,
-                    None,
-                );
-
-                log::info!(
-                    target: LOG_TARGET,
-                    "Storage prefix LatestExecutionState was cleared."
-                );
+            if sp_io::storage::get(&LatestExecutionState::<T>::hashed_key()).is_some() {
+                LatestExecutionState::<T>::kill();
 
                 return T::DbWeight::get().reads_writes(1, 1);
             } else {
@@ -58,29 +45,17 @@ pub mod v1 {
                 );
             }
 
-            let prefix = storage_prefix(<Pallet<T>>::name().as_bytes(), b"ExecutionHeaders");
-            let next_key = storage_iter::<i32>(<Pallet<T>>::name().as_bytes(), b"ExecutionHeaders").next();
-            //let next_key = sp_io::storage::next_key(&prefix)
-            if next_key.is_some() {
-                let next = next_key.clone().unwrap();
+            let mut iter = ExecutionHeaders::<T>::iter();
 
-                sp_io::storage::clear(&next.0);
+            let next_item = iter.next();
+            if next_item.is_some() {
+                let key = next_item.unwrap().0;
+                ExecutionHeaders::<T>::remove(&key);
                 log::info!(
                     target: LOG_TARGET,
-                    "Value is {:?}",
-                    next_key.unwrap()
-                );
-
-
-                return T::DbWeight::get().reads_writes(1, 1);
-            } else {
-                log::info!(
-                    target: LOG_TARGET,
-                    "ExecutionHeaders was already cleared",
+                    "Cleared execution header: {}", key
                 );
             }
-
-
 
             T::DbWeight::get().reads_writes(1, 1)
         }

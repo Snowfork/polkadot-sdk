@@ -111,6 +111,14 @@ impl<'de> Deserialize<'de> for Signature {
 }
 
 #[derive(Copy, Clone, Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
+pub struct ExecutionHeaderState {
+	pub beacon_block_root: H256,
+	pub beacon_slot: u64,
+	pub block_hash: H256,
+	pub block_number: u64,
+}
+
+#[derive(Copy, Clone, Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct FinalizedHeaderState {
 	pub beacon_block_root: H256,
 	pub beacon_slot: u64,
@@ -342,6 +350,35 @@ impl ExecutionPayloadHeader {
 	Default,
 	Encode,
 	Decode,
+	CloneNoBound,
+	PartialEqNoBound,
+	RuntimeDebugNoBound,
+	TypeInfo,
+	MaxEncodedLen,
+)]
+pub struct CompactExecutionHeader {
+	pub parent_hash: H256,
+	#[codec(compact)]
+	pub block_number: u64,
+	pub state_root: H256,
+	pub receipts_root: H256,
+}
+
+impl From<ExecutionPayloadHeader> for CompactExecutionHeader {
+	fn from(execution_payload: ExecutionPayloadHeader) -> Self {
+		Self {
+			parent_hash: execution_payload.parent_hash,
+			block_number: execution_payload.block_number,
+			state_root: execution_payload.state_root,
+			receipts_root: execution_payload.receipts_root,
+		}
+	}
+}
+
+#[derive(
+	Default,
+	Encode,
+	Decode,
 	Copy,
 	Clone,
 	PartialEqNoBound,
@@ -366,6 +403,18 @@ pub struct CompactBeaconState {
 pub enum VersionedExecutionPayloadHeader {
 	Capella(ExecutionPayloadHeader),
 	Deneb(deneb::ExecutionPayloadHeader),
+}
+
+/// Convert VersionedExecutionPayloadHeader to CompactExecutionHeader
+impl From<VersionedExecutionPayloadHeader> for CompactExecutionHeader {
+	fn from(versioned_execution_header: VersionedExecutionPayloadHeader) -> Self {
+		match versioned_execution_header {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.into(),
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
+				execution_payload_header.into(),
+		}
+	}
 }
 
 impl VersionedExecutionPayloadHeader {
@@ -566,6 +615,7 @@ pub enum Mode {
 }
 
 pub mod deneb {
+	use crate::CompactExecutionHeader;
 	use codec::{Decode, Encode};
 	use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 	use scale_info::TypeInfo;
@@ -575,7 +625,7 @@ pub mod deneb {
 	use sp_std::prelude::*;
 
 	/// ExecutionPayloadHeader
-	/// https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/beacon-chain.md#executionpayloadheader
+	/// <https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/beacon-chain.md#executionpayloadheader>
 	#[derive(
 		Default, Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 	)]
@@ -615,5 +665,16 @@ pub mod deneb {
 		pub withdrawals_root: H256,
 		pub blob_gas_used: u64,   // [New in Deneb:EIP4844]
 		pub excess_blob_gas: u64, // [New in Deneb:EIP4844]
+	}
+
+	impl From<ExecutionPayloadHeader> for CompactExecutionHeader {
+		fn from(execution_payload: ExecutionPayloadHeader) -> Self {
+			Self {
+				parent_hash: execution_payload.parent_hash,
+				block_number: execution_payload.block_number,
+				state_root: execution_payload.state_root,
+				receipts_root: execution_payload.receipts_root,
+			}
+		}
 	}
 }

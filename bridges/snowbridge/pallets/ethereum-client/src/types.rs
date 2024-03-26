@@ -15,7 +15,17 @@ pub type CheckpointUpdate = primitives::CheckpointUpdate<SC_SIZE>;
 pub type Update = primitives::Update<SC_SIZE, SC_BITS_SIZE>;
 pub type NextSyncCommitteeUpdate = primitives::NextSyncCommitteeUpdate<SC_SIZE>;
 
-pub use primitives::{AncestryProof, ExecutionProof};
+pub use primitives::ExecutionHeaderUpdate;
+
+/// ExecutionHeader ring buffer implementation
+pub type ExecutionHeaderBuffer<T> = RingBufferMapImpl<
+	u32,
+	<T as crate::Config>::MaxExecutionHeadersToKeep,
+	crate::ExecutionHeaderIndex<T>,
+	crate::ExecutionHeaderMapping<T>,
+	crate::ExecutionHeaders<T>,
+	OptionQuery,
+>;
 
 /// FinalizedState ring buffer implementation
 pub(crate) type FinalizedBeaconStateBuffer<T> = RingBufferMapImpl<

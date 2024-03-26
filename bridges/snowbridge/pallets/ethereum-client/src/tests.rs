@@ -847,60 +847,74 @@ fn verify_execution_proof_not_finalized() {
 use frame_support::traits::OnRuntimeUpgrade;
 use crate::migration::v1;
 
+use crate::ExecutionHeaders;
+use primitives::CompactExecutionHeader;
+use primitives::ExecutionHeaderState;
+use crate::LatestExecutionState;
+
 #[test]
 fn test_migration_process() {
 	new_tester().execute_with(|| {
 		// Set ExecutionHeaderMapping storage
-		let storage_prefix = sp_io::hashing::twox_128(<Pallet<Test>>::name().as_bytes());
-		let execution_header_item = sp_io::hashing::twox_128(b"LatestExecutionState");
-		let mut execution_header_state_key = Vec::new();
-		execution_header_state_key.extend_from_slice(&storage_prefix);
-		execution_header_state_key.extend_from_slice(&execution_header_item);
-		// The value doesn't make a difference here
-		let value: Vec<u8> = vec![0, 1, 2, 3];
-		unhashed::put(&execution_header_state_key, &value);
+		LatestExecutionState::<Test>::set(ExecutionHeaderState{
+			beacon_block_root: H256::random(),
+			beacon_slot: 54034,
+			block_hash: H256::random(),
+			block_number: 54034,
+		});
 
+		let executionHeader1 = H256::random();
+		let executionHeader2 = H256::random();
+		let executionHeader3 = H256::random();
+		let executionHeader4 = H256::random();
 		// Set ExecutionHeaders storage
-		let execution_headers_item = sp_io::hashing::twox_128(b"ExecutionHeaders");
-		let execution_hash_1 = sp_io::hashing::twox_128(H256::random().as_bytes());
-		let execution_hash_2 = sp_io::hashing::twox_128(H256::random().as_bytes());
-		let execution_hash_3 = sp_io::hashing::twox_128(H256::random().as_bytes());
-		let mut execution_header_key_1 = Vec::new();
-		execution_header_key_1.extend_from_slice(&storage_prefix);
-		execution_header_key_1.extend_from_slice(&execution_headers_item);
-		execution_header_key_1.extend_from_slice(&execution_hash_1);
-		let mut execution_header_key_2 = Vec::new();
-		execution_header_key_2.extend_from_slice(&storage_prefix);
-		execution_header_key_2.extend_from_slice(&execution_headers_item);
-		execution_header_key_2.extend_from_slice(&execution_hash_2);
-		let mut execution_header_key_3 = Vec::new();
-		execution_header_key_3.extend_from_slice(&storage_prefix);
-		execution_header_key_3.extend_from_slice(&execution_headers_item);
-		execution_header_key_3.extend_from_slice(&execution_hash_3);
-		unhashed::put(&execution_header_key_1, &value);
-		unhashed::put(&execution_header_key_2, &value);
-		unhashed::put(&execution_header_key_3, &value);
+		ExecutionHeaders::<Test>::insert(executionHeader1, CompactExecutionHeader{
+			block_number: Default::default(),
+			parent_hash: H256::random(),
+			receipts_root: H256::random(),
+			state_root: H256::random(),
+		});
 
-		println!("execution header key: {:?}", execution_header_key_1);
+		ExecutionHeaders::<Test>::insert(executionHeader2, CompactExecutionHeader{
+			block_number: Default::default(),
+			parent_hash: H256::random(),
+			receipts_root: H256::random(),
+			state_root: H256::random(),
+		});
+
+		ExecutionHeaders::<Test>::insert(executionHeader3, CompactExecutionHeader{
+			block_number: Default::default(),
+			parent_hash: H256::random(),
+			receipts_root: H256::random(),
+			state_root: H256::random(),
+		});
+
+		ExecutionHeaders::<Test>::insert(executionHeader4, CompactExecutionHeader{
+			block_number: Default::default(),
+			parent_hash: H256::random(),
+			receipts_root: H256::random(),
+			state_root: H256::random(),
+		});
 
 		// Check storage is set
-		assert!(sp_io::storage::get(execution_header_state_key.as_byte_slice()).is_some());
+		assert!(LatestExecutionState::<Test>::get().beacon_slot != 0);
 		// Run migration
 		v1::ExecutionHeaderCleanupOnUpgrade::<Test>::on_runtime_upgrade();
 
 		// Assert storage is cleared
-		assert!(sp_io::storage::get(execution_header_state_key.as_byte_slice()).is_none());
+		assert!(LatestExecutionState::<Test>::get().beacon_slot == 0);
 
-		// Check storage is set
-		assert!(sp_io::storage::get(execution_header_key_1.as_byte_slice()).is_some());
-		assert!(sp_io::storage::get(execution_header_key_2.as_byte_slice()).is_some());
-		assert!(sp_io::storage::get(execution_header_key_3.as_byte_slice()).is_some());
+		// Assert Header is populated
+		assert!(ExecutionHeaders::<Test>::get(executionHeader1).is_some());
+
+		assert_eq!(ExecutionHeaders::<Test>::iter().count(), 4);
 
 		v1::ExecutionHeaderCleanupOnUpgrade::<Test>::on_runtime_upgrade();
 
-		// Check the first header item is deleted
-		assert!(sp_io::storage::get(execution_header_key_1.as_byte_slice()).is_none());
-		assert!(sp_io::storage::get(execution_header_key_2.as_byte_slice()).is_some());
-		assert!(sp_io::storage::get(execution_header_key_3.as_byte_slice()).is_some());
+		assert_eq!(ExecutionHeaders::<Test>::iter().count(), 3);
+
+		v1::ExecutionHeaderCleanupOnUpgrade::<Test>::on_runtime_upgrade();
+
+		assert_eq!(ExecutionHeaders::<Test>::iter().count(), 2);
 	});
 }
