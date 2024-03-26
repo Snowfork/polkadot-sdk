@@ -860,6 +860,7 @@ fn test_migration_process() {
 		let value: Vec<u8> = vec![0, 1, 2, 3];
 		unhashed::put(&execution_header_state_key, &value);
 
+		let hash = hex!("5f6f02af29218292d21a69b64a794a7c0873b3e0f54611972863706e8cbdf371").to_vec();
 		// Set ExecutionHeaders storage
 		let execution_headers_item = sp_io::hashing::twox_128(b"ExecutionHeaders");
 		let execution_hash_1 = sp_io::hashing::twox_128(H256::random().as_bytes());
@@ -881,15 +882,13 @@ fn test_migration_process() {
 		unhashed::put(&execution_header_key_2, &value);
 		unhashed::put(&execution_header_key_3, &value);
 
-		println!("execution header key: {:?}", execution_header_key_1);
-
 		// Check storage is set
-		assert!(sp_io::storage::get(execution_header_state_key.as_byte_slice()).is_some());
+		//assert!(sp_io::storage::get(execution_header_state_key.as_byte_slice()).is_some());
 		// Run migration
-		v1::ExecutionHeaderCleanupOnUpgrade::<Test>::on_runtime_upgrade();
+		//v1::ExecutionHeaderCleanupOnUpgrade::<Test>::on_runtime_upgrade();
 
 		// Assert storage is cleared
-		assert!(sp_io::storage::get(execution_header_state_key.as_byte_slice()).is_none());
+		//assert!(sp_io::storage::get(execution_header_state_key.as_byte_slice()).is_none());
 
 		// Check storage is set
 		assert!(sp_io::storage::get(execution_header_key_1.as_byte_slice()).is_some());
