@@ -1,10 +1,7 @@
+use byte_slice_cast::AsByteSlice;
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use crate::{
-	functions::compute_period, sync_committee_sum, verify_merkle_branch, BeaconHeader,
-	CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee,
-	SyncCommitteePrepared,
-};
+use crate::{functions::compute_period, sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared, Pallet};
 
 use crate::mock::{
 	get_message_verification_payload, load_checkpoint_update_fixture,
@@ -17,12 +14,15 @@ pub use crate::mock::*;
 use crate::config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT};
 use frame_support::{assert_err, assert_noop, assert_ok};
 use hex_literal::hex;
+use frame_support::pallet_prelude::StorageVersion;
+use frame_support::storage::unhashed;
 use primitives::{
 	types::deneb, Fork, ForkVersions, NextSyncCommitteeUpdate, VersionedExecutionPayloadHeader,
 };
 use snowbridge_core::inbound::{VerificationError, Verifier};
 use sp_core::H256;
 use sp_runtime::DispatchError;
+use frame_support::traits::PalletInfoAccess;
 
 /// Arbitrary hash used for tests and invalid hashes.
 const TEST_HASH: [u8; 32] =
@@ -840,5 +840,37 @@ fn verify_execution_proof_not_finalized() {
 			EthereumBeaconClient::verify_execution_proof(&update),
 			Error::<Test>::HeaderNotFinalized
 		);
+	});
+}
+
+//use frame_support::traits::Hooks;
+use frame_support::traits::OnRuntimeUpgrade;
+use crate::migration::v1;
+
+#[test]
+fn test_migration_process() {
+	new_tester().execute_with(|| {
+		let storage_version = StorageVersion::new(0);
+		storage_version.put::<Pallet<Test>>();
+
+		let storage_prefix = sp_io::hashing::twox_128(<Pallet<Test>>::name().as_bytes());
+		let storage_map_prefix = sp_io::hashing::twox_128(b"LatestExecutionState");
+
+		let mut full_storage_key = Vec::new();
+		full_storage_key.extend_from_slice(&storage_prefix);
+		full_storage_key.extend_from_slice(&storage_map_prefix);
+
+		let value: Vec<u8> = vec![0, 1, 2, 3];
+
+		unhashed::put(&full_storage_key, &value);
+
+		assert!(sp_io::storage::get(full_storage_key.as_byte_slice()).is_some());
+		// Simulate first upgrade
+		//let weight = EthereumBeaconClient::on_runtime_upgrade();
+
+		v1::InitializeOnUpgrade::<Test>::on_runtime_upgrade();
+
+		// Assert intermediate state
+		assert!(sp_io::storage::get(full_storage_key.as_byte_slice()).is_none());
 	});
 }
