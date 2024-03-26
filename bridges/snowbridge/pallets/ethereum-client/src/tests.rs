@@ -850,27 +850,57 @@ use crate::migration::v1;
 #[test]
 fn test_migration_process() {
 	new_tester().execute_with(|| {
-		let storage_version = StorageVersion::new(0);
-		storage_version.put::<Pallet<Test>>();
-
+		// Set ExecutionHeaderMapping storage
 		let storage_prefix = sp_io::hashing::twox_128(<Pallet<Test>>::name().as_bytes());
-		let storage_map_prefix = sp_io::hashing::twox_128(b"LatestExecutionState");
-
-		let mut full_storage_key = Vec::new();
-		full_storage_key.extend_from_slice(&storage_prefix);
-		full_storage_key.extend_from_slice(&storage_map_prefix);
-
+		let execution_header_item = sp_io::hashing::twox_128(b"LatestExecutionState");
+		let mut execution_header_state_key = Vec::new();
+		execution_header_state_key.extend_from_slice(&storage_prefix);
+		execution_header_state_key.extend_from_slice(&execution_header_item);
+		// The value doesn't make a difference here
 		let value: Vec<u8> = vec![0, 1, 2, 3];
+		unhashed::put(&execution_header_state_key, &value);
 
-		unhashed::put(&full_storage_key, &value);
+		// Set ExecutionHeaders storage
+		let execution_headers_item = sp_io::hashing::twox_128(b"ExecutionHeaders");
+		let execution_hash_1 = sp_io::hashing::twox_128(H256::random().as_bytes());
+		let execution_hash_2 = sp_io::hashing::twox_128(H256::random().as_bytes());
+		let execution_hash_3 = sp_io::hashing::twox_128(H256::random().as_bytes());
+		let mut execution_header_key_1 = Vec::new();
+		execution_header_key_1.extend_from_slice(&storage_prefix);
+		execution_header_key_1.extend_from_slice(&execution_headers_item);
+		execution_header_key_1.extend_from_slice(&execution_hash_1);
+		let mut execution_header_key_2 = Vec::new();
+		execution_header_key_2.extend_from_slice(&storage_prefix);
+		execution_header_key_2.extend_from_slice(&execution_headers_item);
+		execution_header_key_2.extend_from_slice(&execution_hash_2);
+		let mut execution_header_key_3 = Vec::new();
+		execution_header_key_3.extend_from_slice(&storage_prefix);
+		execution_header_key_3.extend_from_slice(&execution_headers_item);
+		execution_header_key_3.extend_from_slice(&execution_hash_3);
+		unhashed::put(&execution_header_key_1, &value);
+		unhashed::put(&execution_header_key_2, &value);
+		unhashed::put(&execution_header_key_3, &value);
 
-		assert!(sp_io::storage::get(full_storage_key.as_byte_slice()).is_some());
-		// Simulate first upgrade
-		//let weight = EthereumBeaconClient::on_runtime_upgrade();
+		println!("execution header key: {:?}", execution_header_key_1);
 
-		v1::InitializeOnUpgrade::<Test>::on_runtime_upgrade();
+		// Check storage is set
+		assert!(sp_io::storage::get(execution_header_state_key.as_byte_slice()).is_some());
+		// Run migration
+		v1::ExecutionHeaderCleanupOnUpgrade::<Test>::on_runtime_upgrade();
 
-		// Assert intermediate state
-		assert!(sp_io::storage::get(full_storage_key.as_byte_slice()).is_none());
+		// Assert storage is cleared
+		assert!(sp_io::storage::get(execution_header_state_key.as_byte_slice()).is_none());
+
+		// Check storage is set
+		assert!(sp_io::storage::get(execution_header_key_1.as_byte_slice()).is_some());
+		assert!(sp_io::storage::get(execution_header_key_2.as_byte_slice()).is_some());
+		assert!(sp_io::storage::get(execution_header_key_3.as_byte_slice()).is_some());
+
+		v1::ExecutionHeaderCleanupOnUpgrade::<Test>::on_runtime_upgrade();
+
+		// Check the first header item is deleted
+		assert!(sp_io::storage::get(execution_header_key_1.as_byte_slice()).is_none());
+		assert!(sp_io::storage::get(execution_header_key_2.as_byte_slice()).is_some());
+		assert!(sp_io::storage::get(execution_header_key_3.as_byte_slice()).is_some());
 	});
 }
