@@ -631,6 +631,9 @@ fn send_relay_token_back_and_forth() {
 		[Parachain(AssetHubRococo::para_id().into())],
 	));
 
+	let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+	let token_id = token_id_of(&asset_id);
+
 	AssetHubRococo::force_default_xcm_version(Some(XCM_VERSION));
 	BridgeHubRococo::force_default_xcm_version(Some(XCM_VERSION));
 	AssetHubRococo::force_xcm_version(
@@ -655,6 +658,8 @@ fn send_relay_token_back_and_forth() {
 			channel_id,
 			Channel { agent_id, para_id: AssetHubRococo::para_id() },
 		);
+
+		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, asset_id);
 	});
 
 	AssetHubRococo::execute_with(|| {
@@ -686,17 +691,13 @@ fn send_relay_token_back_and_forth() {
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-		type Runtime = <BridgeHubRococo as Chain>::Runtime;
+
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
 				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
 			]
 		);
-		let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
-		let token_id = token_id_of(&asset_id);
-
-		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, asset_id);
 
 		let message_id: H256 = [0; 32].into();
 		let message = VersionedMessage::V1(MessageV1 {

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{xcm_config::UniversalLocation, Runtime};
+use crate::{xcm_config::UniversalLocation, EthereumSystem, Runtime};
 use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 
@@ -24,4 +24,5 @@ pub type SnowbridgeExporter = EthereumBlobExporter<
 	EthereumNetwork,
 	snowbridge_pallet_outbound_queue::Pallet<Runtime>,
 	snowbridge_core::AgentIdOf,
+	EthereumSystem,
 >;

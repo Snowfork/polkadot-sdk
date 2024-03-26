@@ -12,9 +12,10 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{
 	outbound::{AgentExecuteCommand, Command, Message, SendMessage},
-	token_id_of, ChannelId, ParaId,
+	token_id_of, ChannelId, ParaId, TokenId,
 };
 use sp_core::{H160, H256};
+use sp_runtime::traits::MaybeEquivalence;
 use sp_std::{iter::Peekable, marker::PhantomData, prelude::*};
 use xcm::prelude::*;
 use xcm_executor::traits::{ConvertLocation, ExportXcm};
@@ -24,15 +25,31 @@ pub struct EthereumBlobExporter<
 	EthereumNetwork,
 	OutboundQueue,
 	AgentHashedDescription,
->(PhantomData<(UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription)>);
+	ConvertAssetId,
+>(
+	PhantomData<(
+		UniversalLocation,
+		EthereumNetwork,
+		OutboundQueue,
+		AgentHashedDescription,
+		ConvertAssetId,
+	)>,
+);
 
-impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription> ExportXcm
-	for EthereumBlobExporter<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription>
-where
+impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription, ConvertAssetId>
+	ExportXcm
+	for EthereumBlobExporter<
+		UniversalLocation,
+		EthereumNetwork,
+		OutboundQueue,
+		AgentHashedDescription,
+		ConvertAssetId,
+	> where
 	UniversalLocation: Get<InteriorLocation>,
 	EthereumNetwork: Get<NetworkId>,
 	OutboundQueue: SendMessage<Balance = u128>,
 	AgentHashedDescription: ConvertLocation<H256>,
+	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
 {
 	type Ticket = (Vec<u8>, XcmHash);
 
@@ -87,7 +104,7 @@ where
 			SendError::MissingArgument
 		})?;
 
-		let mut converter = XcmConverter::new(&message, &expected_network);
+		let mut converter = XcmConverter::<ConvertAssetId, ()>::new(&message, &expected_network);
 		let (agent_execute_command, message_id) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
@@ -155,6 +172,7 @@ enum XcmConverterError {
 	InvalidFeeAsset,
 	SetTopicExpected,
 	ReserveAssetDepositedExpected,
+	InvalidAsset,
 	UnexpectedInstruction,
 }
 
@@ -167,13 +185,21 @@ macro_rules! match_expression {
 	};
 }
 
-struct XcmConverter<'a, Call> {
+struct XcmConverter<'a, ConvertAssetId, Call> {
 	iter: Peekable<Iter<'a, Instruction<Call>>>,
 	ethereum_network: &'a NetworkId,
+	_marker: sp_std::marker::PhantomData<ConvertAssetId>,
 }
-impl<'a, Call> XcmConverter<'a, Call> {
+impl<'a, ConvertAssetId, Call> XcmConverter<'a, ConvertAssetId, Call>
+where
+	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+{
 	fn new(message: &'a Xcm<Call>, ethereum_network: &'a NetworkId) -> Self {
-		Self { iter: message.inner().iter().peekable(), ethereum_network }
+		Self {
+			iter: message.inner().iter().peekable(),
+			ethereum_network,
+			_marker: Default::default(),
+		}
 	}
 
 	fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
@@ -358,6 +384,10 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		ensure!(amount > 0, ZeroAssetTransfer);
 
 		let token_id = token_id_of(&asset_id);
+
+		let expected_asset_id = ConvertAssetId::convert(&token_id).ok_or(InvalidAsset)?;
+
+		ensure!(asset_id == expected_asset_id, InvalidAsset);
 
 		// Check if there is a SetTopic and skip over it if found.
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
