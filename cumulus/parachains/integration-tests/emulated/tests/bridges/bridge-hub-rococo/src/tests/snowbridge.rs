@@ -702,7 +702,7 @@ fn send_relay_token_back_and_forth() {
 		let message_id: H256 = [0; 32].into();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
-			command: Command::TransferToken {
+			command: Command::SendForeignToken {
 				token_id,
 				destination: Destination::ForeignAccountId32 {
 					para_id: AssetHubRococo::para_id().into(),
