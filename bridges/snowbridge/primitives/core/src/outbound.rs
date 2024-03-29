@@ -431,7 +431,7 @@ impl GasMeter for ConstantGasMeter {
 				// * ERC20.transferFrom possibly does other business logic besides updating balances
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
 				AgentExecuteCommand::RegisterToken { .. } => 1_500_000,
-				AgentExecuteCommand::MintToken { .. } => 1_300_000,
+				AgentExecuteCommand::MintToken { .. } => 150_000,
 			},
 			Command::Upgrade { initializer, .. } => {
 				let initializer_max_gas = match *initializer {
