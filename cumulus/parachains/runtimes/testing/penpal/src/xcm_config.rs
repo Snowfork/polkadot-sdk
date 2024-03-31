@@ -223,6 +223,7 @@ where
 {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
 		let loc = Origin::get();
+		log::trace!(target: "xcm::contains", "AssetPrefixFrom asset: {:?}, origin: {:?}", asset, origin);
 		&loc == origin &&
 			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
 			if asset_loc.starts_with(&Prefix::get()))
@@ -236,6 +237,7 @@ pub struct NativeAssetFrom<T>(PhantomData<T>);
 impl<T: Get<Location>> ContainsPair<Asset, Location> for NativeAssetFrom<T> {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
 		let loc = T::get();
+		log::trace!(target: "xcm::contains", "NativeAssetFrom asset: {:?}, origin: {:?}", asset, origin);
 		&loc == origin &&
 			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
 			if *asset_loc == Location::from(Parent))
@@ -268,12 +270,7 @@ parameter_types! {
 		[Parachain(ASSET_HUB_ID), PalletInstance(ASSETS_PALLET_ID), GeneralIndex(RESERVABLE_ASSET_ID.into())]
 	);
 
-	/// The Penpal runtime is utilized for testing with various environment setups.
-	/// This storage item provides the opportunity to customize testing scenarios
-	/// by configuring the trusted asset from the `SystemAssetHub`.
-	///
-	/// By default, it is configured as a `SystemAssetHubLocation` and can be modified using `System::set_storage`.
-	pub storage CustomizableAssetFromSystemAssetHub: Location = SystemAssetHubLocation::get();
+	pub ForeignAssetPrefix: Location = (Parent, Parent).into();
 }
 
 /// Accepts asset with ID `AssetLocation` and is coming from `Origin` chain.
@@ -292,7 +289,7 @@ pub type TrustedReserves = (
 	NativeAsset,
 	AssetsFrom<SystemAssetHubLocation>,
 	NativeAssetFrom<SystemAssetHubLocation>,
-	AssetPrefixFrom<CustomizableAssetFromSystemAssetHub, SystemAssetHubLocation>,
+	AssetPrefixFrom<ForeignAssetPrefix, SystemAssetHubLocation>,
 );
 pub type TrustedTeleporters =
 	(AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,);
