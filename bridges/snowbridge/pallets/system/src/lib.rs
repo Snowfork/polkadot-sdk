@@ -544,7 +544,8 @@ pub mod pallet {
 		/// - `transfer_asset_xcm`: The XCM execution cost for performing a reserve transfer on
 		///   AssetHub, in DOT
 		/// - `register_token`: The Ether fee for registering a new token, to discourage spamming
-		/// - `destination_max_transfer_asset_xcm`: The maximum fee that can be sent to a parachain via reserve transfer, in DOT
+		/// - `destination_max_transfer_asset_xcm`: The maximum fee that can be sent to a parachain
+		///   via reserve transfer, in DOT
 		#[pallet::call_index(9)]
 		#[pallet::weight((T::WeightInfo::set_token_transfer_fees(), DispatchClass::Operational))]
 		pub fn set_token_transfer_fees(
