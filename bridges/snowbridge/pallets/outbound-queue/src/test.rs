@@ -51,14 +51,6 @@ fn submit_message_fail_too_large() {
 }
 
 #[test]
-fn convert_from_ether_decimals() {
-	assert_eq!(
-		OutboundQueue::convert_from_ether_decimals(1_000_000_000_000_000_000),
-		1_000_000_000_000
-	);
-}
-
-#[test]
 fn commit_exits_early_if_no_processed_messages() {
 	new_tester().execute_with(|| {
 		// on_finalize should do nothing, nor should it panic

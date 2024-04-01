@@ -176,6 +176,7 @@ pub fn mock_message(sibling_para_id: u32) -> Message {
 				recipient: Default::default(),
 				amount: 0,
 			},
+			remote_fee: (Default::default(), 0),
 		},
 	}
 }

@@ -588,11 +588,10 @@ impl From<Vec<Asset>> for Assets {
 			let mut iter = assets.into_iter();
 			if let Some(first) = iter.next() {
 				let last = iter.fold(first, |a, b| -> Asset {
-					match (a, b) {
-						(to_push, to_remember) => {
-							res.push(to_push);
-							to_remember
-						},
+					let (to_push, to_remember) = (a, b);
+					{
+						res.push(to_push);
+						to_remember
 					}
 				});
 				res.push(last);

@@ -169,6 +169,7 @@ macro_rules! match_expression {
 	};
 }
 
+#[derive(Debug)]
 pub struct CommandWithFee {
 	pub command: AgentExecuteCommand,
 	pub remote_fee: (H160, u128),

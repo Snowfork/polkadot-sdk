@@ -417,7 +417,7 @@ fn xcm_converter_convert_success() {
 		amount: 1000,
 	};
 	let result = converter.convert();
-	assert_eq!(result, Ok((expected_payload, [0; 32])));
+	assert_eq!(result.unwrap().command, expected_payload);
 }
 
 #[test]
@@ -450,7 +450,7 @@ fn xcm_converter_convert_without_buy_execution_yields_success() {
 		amount: 1000,
 	};
 	let result = converter.convert();
-	assert_eq!(result, Ok((expected_payload, [0; 32])));
+	assert_eq!(result.unwrap().command, expected_payload);
 }
 
 #[test]
@@ -485,7 +485,7 @@ fn xcm_converter_convert_with_wildcard_all_asset_filter_succeeds() {
 		amount: 1000,
 	};
 	let result = converter.convert();
-	assert_eq!(result, Ok((expected_payload, [0; 32])));
+	assert_eq!(result.unwrap().command, expected_payload);
 }
 
 #[test]
@@ -520,7 +520,7 @@ fn xcm_converter_convert_with_fees_less_than_reserve_yields_success() {
 		amount: 1000,
 	};
 	let result = converter.convert();
-	assert_eq!(result, Ok((expected_payload, [0; 32])));
+	assert_eq!(result.unwrap().command, expected_payload);
 }
 
 #[test]
