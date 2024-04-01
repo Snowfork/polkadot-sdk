@@ -211,7 +211,7 @@ fn set_token_transfer_fees() {
 	new_test_ext(true).execute_with(|| {
 		let origin = RuntimeOrigin::root();
 
-		assert_ok!(EthereumSystem::set_token_transfer_fees(origin, 1, 1, eth(1)));
+		assert_ok!(EthereumSystem::set_token_transfer_fees(origin, 1, 1, 1, eth(1)));
 	});
 }
 
@@ -220,7 +220,7 @@ fn set_token_transfer_fees_root_only() {
 	new_test_ext(true).execute_with(|| {
 		let origin = RuntimeOrigin::signed([14; 32].into());
 
-		assert_noop!(EthereumSystem::set_token_transfer_fees(origin, 1, 1, 1.into()), BadOrigin);
+		assert_noop!(EthereumSystem::set_token_transfer_fees(origin, 1, 1, 1, eth(1)), BadOrigin);
 	});
 }
 
@@ -230,7 +230,7 @@ fn set_token_transfer_fees_invalid() {
 		let origin = RuntimeOrigin::root();
 
 		assert_noop!(
-			EthereumSystem::set_token_transfer_fees(origin, 0, 0, 0.into()),
+			EthereumSystem::set_token_transfer_fees(origin, 0, 0, 0,  eth(0)),
 			Error::<Test>::InvalidTokenTransferFees
 		);
 	});

@@ -206,6 +206,7 @@ pub mod pallet {
 		SetTokenTransferFees {
 			create_asset_xcm: u128,
 			transfer_asset_xcm: u128,
+			destination_max_transfer_asset_xcm: u128,
 			register_token: U256,
 		},
 		PricingParametersChanged {
@@ -549,6 +550,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			create_asset_xcm: u128,
 			transfer_asset_xcm: u128,
+			destination_max_transfer_asset_xcm: u128,
 			register_token: U256,
 		) -> DispatchResult {
 			ensure_root(origin)?;
@@ -563,6 +565,7 @@ pub mod pallet {
 			let command = Command::SetTokenTransferFees {
 				create_asset_xcm,
 				transfer_asset_xcm,
+				destination_max_transfer_asset_xcm,
 				register_token,
 			};
 			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
@@ -570,6 +573,7 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::SetTokenTransferFees {
 				create_asset_xcm,
 				transfer_asset_xcm,
+				destination_max_transfer_asset_xcm,
 				register_token,
 			});
 			Ok(())
