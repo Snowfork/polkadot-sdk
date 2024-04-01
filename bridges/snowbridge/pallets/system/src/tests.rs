@@ -558,7 +558,7 @@ fn charge_fee_for_create_agent() {
 			command: Command::CreateAgent { agent_id },
 		};
 		let (_, fee) = OutboundQueue::validate(&message).unwrap();
-		assert_eq!(fee.local + fee.remote, fee_charged);
+		assert_eq!(fee.local, fee_charged);
 
 		// and treasury_balance increased
 		let treasury_balance = Balances::balance(&TreasuryAccount::get());
