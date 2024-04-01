@@ -154,7 +154,7 @@ mod benchmarks {
 	#[benchmark]
 	fn set_token_transfer_fees() -> Result<(), BenchmarkError> {
 		#[extrinsic_call]
-		_(RawOrigin::Root, 1, 1, eth(1));
+		_(RawOrigin::Root, 1, 1, eth(1), 1);
 
 		Ok(())
 	}
