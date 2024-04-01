@@ -127,10 +127,10 @@ mod v1 {
 			create_asset_xcm: u128,
 			/// The fee(DOT) for the cost of sending asset on AssetHub
 			transfer_asset_xcm: u128,
-			/// The maximum fee(DOT) for the cost of sending an asset to a destination parachain
-			destination_max_transfer_asset_xcm: u128,
 			/// The fee(Ether) for register token to discourage spamming
 			register_token: U256,
+			/// The maximum fee(DOT) for the cost of sending an asset to a destination parachain
+			destination_max_transfer_asset_xcm: u128,
 		},
 		/// Set pricing parameters
 		SetPricingParameters {
@@ -201,13 +201,13 @@ mod v1 {
 				Command::SetTokenTransferFees {
 					create_asset_xcm,
 					transfer_asset_xcm,
-					destination_max_transfer_asset_xcm,
 					register_token,
+					destination_max_transfer_asset_xcm,
 				} => ethabi::encode(&[Token::Tuple(vec![
 					Token::Uint(U256::from(*create_asset_xcm)),
 					Token::Uint(U256::from(*transfer_asset_xcm)),
-					Token::Uint(U256::from(*destination_max_transfer_asset_xcm)),
 					Token::Uint(*register_token),
+					Token::Uint(U256::from(*destination_max_transfer_asset_xcm)),
 				])]),
 				Command::SetPricingParameters { exchange_rate, delivery_cost, multiplier } =>
 					ethabi::encode(&[Token::Tuple(vec![

@@ -206,8 +206,8 @@ pub mod pallet {
 		SetTokenTransferFees {
 			create_asset_xcm: u128,
 			transfer_asset_xcm: u128,
-			destination_max_transfer_asset_xcm: u128,
 			register_token: U256,
+			destination_max_transfer_asset_xcm: u128,
 		},
 		PricingParametersChanged {
 			params: PricingParametersOf<T>,
@@ -544,14 +544,15 @@ pub mod pallet {
 		/// - `transfer_asset_xcm`: The XCM execution cost for performing a reserve transfer on
 		///   AssetHub, in DOT
 		/// - `register_token`: The Ether fee for registering a new token, to discourage spamming
+		/// - `destination_max_transfer_asset_xcm`: The maximum fee that can be sent to a parachain via reserve transfer, in DOT
 		#[pallet::call_index(9)]
 		#[pallet::weight((T::WeightInfo::set_token_transfer_fees(), DispatchClass::Operational))]
 		pub fn set_token_transfer_fees(
 			origin: OriginFor<T>,
 			create_asset_xcm: u128,
 			transfer_asset_xcm: u128,
-			destination_max_transfer_asset_xcm: u128,
 			register_token: U256,
+			destination_max_transfer_asset_xcm: u128,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -565,16 +566,16 @@ pub mod pallet {
 			let command = Command::SetTokenTransferFees {
 				create_asset_xcm,
 				transfer_asset_xcm,
-				destination_max_transfer_asset_xcm,
 				register_token,
+				destination_max_transfer_asset_xcm,
 			};
 			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 
 			Self::deposit_event(Event::<T>::SetTokenTransferFees {
 				create_asset_xcm,
 				transfer_asset_xcm,
-				destination_max_transfer_asset_xcm,
 				register_token,
+				destination_max_transfer_asset_xcm,
 			});
 			Ok(())
 		}
