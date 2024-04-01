@@ -25,7 +25,7 @@ use bridge_hub_rococo_runtime::{
 	SignedExtra, UncheckedExtrinsic,
 };
 use codec::{Decode, Encode};
-use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
+use cumulus_primitives_core::XcmError::FailedToTransactAsset;
 use frame_support::parameter_types;
 use parachains_common::{AccountId, AuraId, Balance};
 use snowbridge_pallet_ethereum_client::WeightInfo;
@@ -35,9 +35,10 @@ use sp_runtime::{
 	generic::{Era, SignedPayload},
 	AccountId32,
 };
+use xcm::prelude::XcmError::Unroutable;
 
 parameter_types! {
-		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+		pub const DefaultBridgeHubEthereumBaseFee: Balance = 7_000_000_000_000_000;//2_750_872_500_000;
 }
 
 fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime> {
@@ -90,8 +91,8 @@ pub fn transfer_token_to_ethereum_fee_not_enough() {
 		H160::random(),
 		H160::random(),
 		// fee not enough
-		1_000_000_000,
-		NotHoldingFees,
+		1_000_000_000_000,
+		Unroutable,
 	)
 }
 

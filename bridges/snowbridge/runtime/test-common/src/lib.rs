@@ -66,12 +66,20 @@ where
 		)),
 		fun: Fungible(1000000000),
 	};
-	let assets = vec![asset.clone()];
+
+	let fee_asset = Asset {
+		id: AssetId(Location::new(
+			0,
+			[AccountKey20 { network: None, key: weth_contract_address.into() }],
+		)),
+		fun: Fungible(fee_amount),
+	};
+	let assets = vec![fee_asset.clone(), asset.clone()];
 
 	let inner_xcm = Xcm(vec![
 		WithdrawAsset(Assets::from(assets.clone())),
 		ClearOrigin,
-		BuyExecution { fees: asset, weight_limit: Unlimited },
+		BuyExecution { fees: fee_asset, weight_limit: Unlimited },
 		DepositAsset {
 			assets: Wild(All),
 			beneficiary: Location::new(
@@ -148,7 +156,7 @@ pub fn send_transfer_token_message_success<Runtime, XcmConfig>(
 			.unwrap();
 
 			// fund asset hub sovereign account enough so it can pay fees
-			initial_fund::<Runtime>(assethub_parachain_id, 5_000_000_000_000);
+			initial_fund::<Runtime>(assethub_parachain_id, 8_000_000_000_000_000);
 
 			let outcome = send_transfer_token_message::<Runtime, XcmConfig>(
 				ethereum_chain_id,
@@ -250,7 +258,7 @@ pub fn ethereum_outbound_queue_processes_messages_before_message_queue_works<
 			.unwrap();
 
 			// fund asset hub sovereign account enough so it can pay fees
-			initial_fund::<Runtime>(assethub_parachain_id, 5_000_000_000_000);
+			initial_fund::<Runtime>(assethub_parachain_id, 8_000_000_000_000_000);
 
 			let outcome = send_transfer_token_message::<Runtime, XcmConfig>(
 				ethereum_chain_id,
