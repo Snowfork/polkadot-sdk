@@ -843,6 +843,9 @@ pub mod bridging {
 		use super::*;
 
 		parameter_types! {
+			/// Only for the legacy tests and will not need it any more.
+			pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 			/// Fee for the execution cost on BH in relay token(covers the first hop only and not including the destination cost on Ethereum)
 			pub const DefaultBridgeHubToEthereumForwardFee: Balance = 3_000_000_000;
 			pub storage BridgeHubToEthereumForwardFee: Balance = DefaultBridgeHubToEthereumForwardFee::get();
