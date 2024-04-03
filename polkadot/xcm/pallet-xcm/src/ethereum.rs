@@ -1,4 +1,6 @@
-use crate::{Box, Config, Error, Event, FeesHandling, Instruction::BurnAsset, Pallet, Vec, Xcm};
+use crate::{
+	vec, Box, Config, Error, Event, FeesHandling, Instruction::BurnAsset, Pallet, Vec, Xcm,
+};
 use codec::Encode;
 use frame_support::{
 	dispatch::DispatchResult,
@@ -170,10 +172,15 @@ impl<T: Config> Pallet<T> {
 		})?;
 
 		if let Some(remote_xcm) = remote_xcm {
-			let (ticket, _) = validate_send::<T::XcmRouter>(dest.clone(), remote_xcm.clone())
+			let (ticket, price) = validate_send::<T::XcmRouter>(dest.clone(), remote_xcm.clone())
 				.map_err(Error::<T>::from)?;
 			if origin != Here.into_location() {
-				Self::charge_fees(origin.clone(), fees).map_err(|error| {
+				let total_fees: Assets = vec![fees, price]
+					.iter()
+					.flat_map(|s| s.clone().into_inner())
+					.collect::<Vec<Asset>>()
+					.into();
+				Self::charge_fees(origin.clone(), total_fees).map_err(|error| {
 					log::error!(
 						target: "xcm::pallet_xcm::execute_xcm_transfer",
 						"Unable to charge fee with error {:?}", error
