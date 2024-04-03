@@ -57,10 +57,9 @@ use xcm_builder::{
 	IsConcrete, LocalMint, NetworkExportTableItem, NoChecking, NonFungiblesAdapter,
 	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignPaidRemoteExporter, SovereignSignedViaLocation, StartsWith,
-	StartsWithExplicitGlobalConsensus, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
-	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
-	XcmFeeToAccount,
+	SovereignSignedViaLocation, StartsWith, StartsWithExplicitGlobalConsensus, TakeWeightCredit,
+	TrailingSetTopicAsId, UnpaidRemoteExporter, UsingComponents, WeightInfoBounds,
+	WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents, XcmFeeToAccount,
 };
 use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
 
@@ -657,7 +656,7 @@ pub type XcmRouter = WithUniqueTopic<(
 	ToWestendXcmRouter,
 	// Router which wraps and sends xcm to BridgeHub to be delivered to the Ethereum
 	// GlobalConsensus
-	SovereignPaidRemoteExporter<bridging::EthereumNetworkExportTable, XcmpQueue, UniversalLocation>,
+	UnpaidRemoteExporter<bridging::EthereumNetworkExportTable, XcmpQueue, UniversalLocation>,
 )>;
 
 impl pallet_xcm::Config for Runtime {
@@ -864,10 +863,7 @@ pub mod bridging {
 					EthereumNetwork::get(),
 					Some(sp_std::vec![Junctions::Here]),
 					SiblingBridgeHub::get(),
-					Some((
-						XcmBridgeHubRouterFeeAssetId::get(),
-						BridgeHubEthereumBaseFee::get(),
-					).into())
+					None,
 				),
 			];
 

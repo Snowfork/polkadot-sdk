@@ -201,7 +201,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			let _ = self.next();
 		}
 
-		// Get the fee asset item from BuyExecution or continue parsing.
+		// Todo: Get the fee asset item from BuyExecution and verify against remote_fee.
 		let fee_asset = match_expression!(self.peek(), Ok(BuyExecution { fees, .. }), fees);
 		if fee_asset.is_some() {
 			let _ = self.next();
@@ -258,6 +258,13 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 		// transfer amount must be greater than 0.
 		ensure!(amount > 0, ZeroAssetTransfer);
+
+		// Todo: Get the fee asset item from BurnAsset and verify against local_fee.
+		let local_assets =
+			match_expression!(self.peek(), Ok(BurnAsset(local_assets)), Some(local_assets));
+		if local_assets.is_some() {
+			let _ = self.next();
+		}
 
 		// Check if there is a SetTopic and skip over it if found.
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;

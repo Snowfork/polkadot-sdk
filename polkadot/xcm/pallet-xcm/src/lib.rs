@@ -25,6 +25,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod ethereum;
 pub mod migration;
 
 use codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
@@ -1543,6 +1544,69 @@ pub mod pallet {
 		) -> DispatchResult {
 			<Self as SendController<_>>::send_blob(origin, dest, encoded_message)?;
 			Ok(())
+		}
+
+		/// Transfer some assets from the local chain to the destination chain through their local,
+		/// destination or remote reserve.
+		///
+		/// `assets` must have same reserve location and may not be teleportable to `dest`.
+		///  - `assets` have local reserve: transfer assets to sovereign account of destination
+		///    chain and forward a notification XCM to `dest` to mint and deposit reserve-based
+		///    assets to `beneficiary`.
+		///  - `assets` have destination reserve: burn local assets and forward a notification to
+		///    `dest` chain to withdraw the reserve assets from this chain's sovereign account and
+		///    deposit them to `beneficiary`.
+		///  - `assets` have remote reserve: burn local assets, forward XCM to reserve chain to move
+		///    reserves from this chain's SA to `dest` chain's SA, and forward another XCM to `dest`
+		///    to mint and deposit reserve-based assets to `beneficiary`.
+		///
+		/// **This function is deprecated: Use `limited_reserve_transfer_assets` instead.**
+		///
+		/// Fee payment on the destination side is made from the asset in the `assets` vector of
+		/// index `fee_asset_item`. The weight limit for fees is not provided and thus is unlimited,
+		/// with all fees taken as needed from the asset.
+		///
+		/// - `origin`: Must be capable of withdrawing the `assets` and executing XCM.
+		/// - `dest`: Destination context for the assets. Will typically be `[Parent,
+		///   Parachain(..)]` to send from parachain to parachain, or `[Parachain(..)]` to send from
+		///   relay to parachain.
+		/// - `beneficiary`: A beneficiary location for the assets in the context of `dest`. Will
+		///   generally be an `AccountId32` value.
+		/// - `assets`: The assets to be withdrawn.
+		/// - `fees`: The assets used to pay fees.
+		#[pallet::call_index(15)]
+		#[pallet::weight({
+			let maybe_assets: Result<Assets, ()> = (*assets.clone()).try_into();
+			let maybe_dest: Result<Location, ()> = (*dest.clone()).try_into();
+			match (maybe_assets, maybe_dest) {
+			(Ok(assets), Ok(dest)) => {
+			use sp_std::vec;
+			// heaviest version of locally executed XCM program: equivalent in weight to
+			// transfer assets to SA, reanchor them, extend XCM program, and send onward XCM
+			let mut message = Xcm(vec![
+			SetFeesMode { jit_withdraw: true },
+			TransferReserveAsset { assets, dest, xcm: Xcm(vec![]) }
+			]);
+			T::Weigher::weight(&mut message).map_or(Weight::MAX, |w| T::WeightInfo::reserve_transfer_assets().saturating_add(w))
+			}
+			_ => Weight::MAX,
+		}
+		})]
+		pub fn reserve_transfer_ethereum_assets(
+			origin: OriginFor<T>,
+			dest: Box<VersionedLocation>,
+			beneficiary: Box<VersionedLocation>,
+			assets: Box<VersionedAssets>,
+			fees: Box<VersionedAssets>,
+		) -> DispatchResult {
+			Self::do_reserve_transfer_ethereum_assets(
+				origin,
+				dest,
+				beneficiary,
+				assets,
+				fees,
+				Unlimited,
+			)
 		}
 	}
 }

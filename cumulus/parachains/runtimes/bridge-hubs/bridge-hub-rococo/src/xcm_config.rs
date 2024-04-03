@@ -48,7 +48,6 @@ use parachains_common::{
 };
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
-use snowbridge_runtime_common::XcmExportFeeToSibling;
 use sp_core::Get;
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::marker::PhantomData;
@@ -61,7 +60,8 @@ use xcm_builder::{
 	FungibleAdapter, HandleFee, IsConcrete, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
-	UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeToAccount,
+	UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
+	XcmFeeManagerFromComponents, XcmFeeToAccount,
 };
 use xcm_executor::{
 	traits::{FeeManager, FeeReason, FeeReason::Export, TransactAsset, WithOriginFilter},
@@ -79,6 +79,7 @@ parameter_types! {
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(rococo_runtime_constants::TREASURY_PALLET_ID)).into();
 	pub SiblingPeople: Location = (Parent, Parachain(rococo_runtime_constants::system_parachain::PEOPLE_ID)).into();
+	pub SiblingAssetHub: Location = (Parent, Parachain(rococo_runtime_constants::system_parachain::ASSET_HUB_ID)).into();
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -255,6 +256,7 @@ pub type Barrier = TrailingSetTopicAsId<
 						ParentOrParentsPlurality,
 						Equals<RelayTreasuryLocation>,
 						Equals<SiblingPeople>,
+						Equals<SiblingAssetHub>,
 					)>,
 					// Subscriptions for version tracking are OK.
 					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
@@ -305,26 +307,9 @@ impl xcm_executor::Config for XcmConfig {
 	type SubscriptionService = PolkadotXcm;
 	type PalletInstancesInfo = AllPalletsWithSystem;
 	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
-	type FeeManager = XcmFeeManagerFromComponentsBridgeHub<
+	type FeeManager = XcmFeeManagerFromComponents<
 		WaivedLocations,
-		(
-			XcmExportFeeToRelayerRewardAccounts<
-				Self::AssetTransactor,
-				crate::bridge_to_westend_config::WestendGlobalConsensusNetwork,
-				crate::bridge_to_westend_config::AssetHubWestendParaId,
-				crate::bridge_to_westend_config::BridgeHubWestendChainId,
-				crate::bridge_to_westend_config::AssetHubRococoToAssetHubWestendMessagesLane,
-			>,
-			XcmExportFeeToSibling<
-				bp_rococo::Balance,
-				AccountId,
-				TokenLocation,
-				EthereumNetwork,
-				Self::AssetTransactor,
-				crate::EthereumOutboundQueue,
-			>,
-			XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
-		),
+		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 	>;
 	type MessageExporter = (
 		crate::bridge_to_westend_config::ToBridgeHubWestendHaulBlobExporter,
