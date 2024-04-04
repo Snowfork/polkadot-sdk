@@ -130,7 +130,7 @@ where
 
 #[frame_support::pallet]
 pub mod pallet {
-	use snowbridge_core::{outbound::AgentExecuteCommand, StaticLookup};
+	use snowbridge_core::StaticLookup;
 	use sp_core::U256;
 
 	use super::*;
@@ -747,14 +747,12 @@ pub mod pallet {
 			ensure!(!Tokens::<T>::contains_key(token_id), Error::<T>::TokenExists);
 			Tokens::<T>::insert(token_id, asset_id.clone());
 
-			let command = Command::AgentExecute {
+			let command = Command::RegisterToken {
 				agent_id,
-				command: AgentExecuteCommand::RegisterToken {
-					token_id,
-					name: metadata.name,
-					symbol: metadata.symbol,
-					decimals: metadata.decimals,
-				},
+				token_id,
+				name: metadata.name,
+				symbol: metadata.symbol,
+				decimals: metadata.decimals,
 			};
 			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
 			Self::send(channel_id, command, pays_fee)?;

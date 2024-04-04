@@ -139,6 +139,19 @@ mod v1 {
 			// Fee multiplier
 			multiplier: UD60x18,
 		},
+		/// Register token from polkadot
+		RegisterToken {
+			/// ID of the agent
+			agent_id: H256,
+			/// ID for the token
+			token_id: H256,
+			/// Name of the token
+			name: Vec<u8>,
+			/// Short symbol for the token
+			symbol: Vec<u8>,
+			/// Number of decimal places
+			decimals: u8,
+		},
 	}
 
 	impl Command {
@@ -154,6 +167,7 @@ mod v1 {
 				Command::TransferNativeFromAgent { .. } => 6,
 				Command::SetTokenTransferFees { .. } => 7,
 				Command::SetPricingParameters { .. } => 8,
+				Command::RegisterToken { .. } => 9,
 			}
 		}
 
@@ -211,6 +225,14 @@ mod v1 {
 						Token::Uint(U256::from(*delivery_cost)),
 						Token::Uint(multiplier.clone().into_inner()),
 					])]),
+				Command::RegisterToken { agent_id, token_id, name, symbol, decimals } =>
+					ethabi::encode(&[Token::Tuple(vec![
+						Token::FixedBytes(agent_id.as_bytes().to_owned()),
+						Token::FixedBytes(token_id.as_bytes().to_owned()),
+						Token::String(name.to_owned()),
+						Token::String(symbol.to_owned()),
+						Token::Uint(U256::from(*decimals)),
+					])]),
 			}
 		}
 	}
@@ -238,16 +260,6 @@ mod v1 {
 			/// The amount of tokens to transfer
 			amount: u128,
 		},
-		RegisterToken {
-			/// ID for the token
-			token_id: H256,
-			/// Name of the token
-			name: Vec<u8>,
-			/// Short symbol for the token
-			symbol: Vec<u8>,
-			/// Number of decimal places
-			decimals: u8,
-		},
 		MintToken {
 			/// ID for the token
 			token_id: H256,
@@ -262,8 +274,7 @@ mod v1 {
 		fn index(&self) -> u8 {
 			match self {
 				AgentExecuteCommand::TransferToken { .. } => 0,
-				AgentExecuteCommand::RegisterToken { .. } => 1,
-				AgentExecuteCommand::MintToken { .. } => 2,
+				AgentExecuteCommand::MintToken { .. } => 1,
 			}
 		}
 
@@ -277,16 +288,6 @@ mod v1 {
 							Token::Address(*token),
 							Token::Address(*recipient),
 							Token::Uint(U256::from(*amount)),
-						])),
-					]),
-				AgentExecuteCommand::RegisterToken { token_id, name, symbol, decimals } =>
-					ethabi::encode(&[
-						Token::Uint(self.index().into()),
-						Token::Bytes(ethabi::encode(&[
-							Token::FixedBytes(token_id.as_bytes().to_owned()),
-							Token::String(name.to_owned()),
-							Token::String(symbol.to_owned()),
-							Token::Uint(U256::from(*decimals)),
 						])),
 					]),
 				AgentExecuteCommand::MintToken { token_id, recipient, amount } =>
@@ -430,7 +431,6 @@ impl GasMeter for ConstantGasMeter {
 				// * Assume dest account in ERC20 contract does not yet have a storage slot
 				// * ERC20.transferFrom possibly does other business logic besides updating balances
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
-				AgentExecuteCommand::RegisterToken { .. } => 1_500_000,
 				AgentExecuteCommand::MintToken { .. } => 150_000,
 			},
 			Command::Upgrade { initializer, .. } => {
@@ -444,6 +444,7 @@ impl GasMeter for ConstantGasMeter {
 			},
 			Command::SetTokenTransferFees { .. } => 60_000,
 			Command::SetPricingParameters { .. } => 60_000,
+			Command::RegisterToken { .. } => 1_500_000,
 		}
 	}
 }
