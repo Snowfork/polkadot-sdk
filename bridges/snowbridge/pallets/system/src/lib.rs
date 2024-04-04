@@ -255,7 +255,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn tokens)]
-	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, TokenId, Location, OptionQuery>;
+	pub type Tokens<T: Config> =
+		StorageMap<_, Twox64Concat, TokenId, VersionedLocation, OptionQuery>;
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -745,7 +746,8 @@ pub mod pallet {
 			// Record the token id or fail if it has already been created
 			let token_id = token_id_of(&asset_id);
 			ensure!(!Tokens::<T>::contains_key(token_id), Error::<T>::TokenExists);
-			Tokens::<T>::insert(token_id, asset_id.clone());
+			let versioned_asset_id: VersionedLocation = asset_id.clone().into();
+			Tokens::<T>::insert(token_id, versioned_asset_id);
 
 			let command = Command::RegisterToken {
 				agent_id,
@@ -785,7 +787,10 @@ pub mod pallet {
 
 	impl<T: Config> MaybeEquivalence<TokenId, Location> for Pallet<T> {
 		fn convert(id: &TokenId) -> Option<Location> {
-			Tokens::<T>::get(id)
+			match Tokens::<T>::get(id) {
+				Some(loc) => Location::try_from(loc).ok(),
+				_ => None,
+			}
 		}
 		fn convert_back(_loc: &Location) -> Option<TokenId> {
 			None

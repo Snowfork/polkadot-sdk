@@ -658,8 +658,8 @@ fn send_relay_token_back_and_forth() {
 			channel_id,
 			Channel { agent_id, para_id: AssetHubRococo::para_id() },
 		);
-
-		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, asset_id);
+		let versioned_asset_id: VersionedLocation = asset_id.into();
+		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, versioned_asset_id);
 	});
 
 	AssetHubRococo::execute_with(|| {
