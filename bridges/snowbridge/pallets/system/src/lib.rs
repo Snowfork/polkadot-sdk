@@ -216,7 +216,7 @@ pub mod pallet {
 		},
 		/// Register token
 		RegisterToken {
-			asset_id: Location,
+			asset_id: VersionedLocation,
 			token_id: H256,
 			agent_id: AgentId,
 		},
@@ -759,7 +759,11 @@ pub mod pallet {
 			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
 			Self::send(channel_id, command, pays_fee)?;
 
-			Self::deposit_event(Event::<T>::RegisterToken { asset_id, token_id, agent_id });
+			Self::deposit_event(Event::<T>::RegisterToken {
+				asset_id: asset_id.into(),
+				token_id,
+				agent_id,
+			});
 
 			Ok(())
 		}
