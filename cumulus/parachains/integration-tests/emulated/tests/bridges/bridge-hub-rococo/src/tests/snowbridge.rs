@@ -12,12 +12,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use crate::*;
+use crate::imports::*;
 use bridge_hub_rococo_runtime::{EthereumBeaconClient, EthereumInboundQueue, RuntimeOrigin};
 use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
+use rococo_system_emulated_network::penpal_emulated_chain::CustomizableAssetFromSystemAssetHub;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::{
 	inbound::InboundQueueFixture, outbound::OperatingMode, AssetRegistrarMetadata, Channel,
@@ -29,7 +30,8 @@ use snowbridge_pallet_inbound_queue_fixtures::{
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
-	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
+	Command, ConvertMessage, Destination, GlobalConsensusEthereumConvertsFor, MessageV1,
+	VersionedMessage,
 };
 use sp_core::H256;
 use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
@@ -91,7 +93,7 @@ fn create_agent() {
 
 	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
 	// Construct XCM to create an agent for para 1001
-	let remote_xcm = VersionedXcm::from(Xcm(vec![
+	let remote_xcm = VersionedXcm::from(Xcm::<()>(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(Parachain(origin_para).into()),
 		Transact {
@@ -104,10 +106,10 @@ fn create_agent() {
 	// Rococo Global Consensus
 	// Send XCM message from Relay Chain to Bridge Hub source Parachain
 	Rococo::execute_with(|| {
-		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
+		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send_blob(
 			sudo_origin,
 			bx!(destination),
-			bx!(remote_xcm),
+			remote_xcm.encode().try_into().unwrap(),
 		));
 
 		type RuntimeEvent = <Rococo as Chain>::RuntimeEvent;
@@ -149,7 +151,7 @@ fn create_channel() {
 
 	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
 	// Construct XCM to create an agent for para 1001
-	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
+	let create_agent_xcm = VersionedXcm::from(Xcm::<()>(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(Parachain(origin_para).into()),
 		Transact {
@@ -162,7 +164,7 @@ fn create_channel() {
 	let create_channel_call =
 		SnowbridgeControl::Control(ControlCall::CreateChannel { mode: OperatingMode::Normal });
 	// Construct XCM to create a channel for para 1001
-	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
+	let create_channel_xcm = VersionedXcm::from(Xcm::<()>(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		DescendOrigin(Parachain(origin_para).into()),
 		Transact {
@@ -175,16 +177,16 @@ fn create_channel() {
 	// Rococo Global Consensus
 	// Send XCM message from Relay Chain to Bridge Hub source Parachain
 	Rococo::execute_with(|| {
-		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
+		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send_blob(
 			sudo_origin.clone(),
 			bx!(destination.clone()),
-			bx!(create_agent_xcm),
+			create_agent_xcm.encode().try_into().unwrap(),
 		));
 
-		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
+		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send_blob(
 			sudo_origin,
 			bx!(destination),
-			bx!(create_channel_xcm),
+			create_channel_xcm.encode().try_into().unwrap(),
 		));
 
 		type RuntimeEvent = <Rococo as Chain>::RuntimeEvent;
@@ -301,6 +303,16 @@ fn send_token_from_ethereum_to_penpal() {
 		(PenpalAReceiver::get(), INITIAL_FUND),
 		(PenpalASender::get(), INITIAL_FUND),
 	]);
+
+	PenpalA::execute_with(|| {
+		assert_ok!(<PenpalA as Chain>::System::set_storage(
+			<PenpalA as Chain>::RuntimeOrigin::root(),
+			vec![(
+				CustomizableAssetFromSystemAssetHub::key().to_vec(),
+				Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]).encode(),
+			)],
+		));
+	});
 
 	// The Weth asset location, identified by the contract address on Ethereum
 	let weth_asset_location: Location =
@@ -526,6 +538,8 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 		type EthereumInboundQueue =
 			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		type Converter = <bridge_hub_rococo_runtime::Runtime as snowbridge_pallet_inbound_queue::Config>::MessageConverter;
+
 		let message_id: H256 = [0; 32].into();
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
@@ -535,7 +549,7 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 				fee: INSUFFICIENT_XCM_FEE,
 			},
 		});
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let (xcm, _) = Converter::convert(message_id, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
 		assert_expected_events!(
@@ -552,7 +566,7 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 		assert_expected_events!(
 			AssetHubRococo,
 			vec![
-				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:false, .. }) => {},
+				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:false, .. }) => { },
 			]
 		);
 	});
@@ -567,12 +581,15 @@ fn register_relay_token() {
 	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
 	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
+	let relay_token_asset_id: Location =
+		Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+
 	let register_relay_token_call = SnowbridgeControl::Control(ControlCall::ForceRegisterToken {
 		location: Box::new(VersionedLocation::V4(Location::new(
 			1,
 			[Parachain(AssetHubRococo::para_id().into())],
 		))),
-		asset: Box::new(VersionedLocation::V4(Location::parent())),
+		asset: Box::new(VersionedLocation::V4(relay_token_asset_id)),
 		metadata: AssetRegistrarMetadata {
 			name: "roc".as_bytes().to_vec(),
 			symbol: "roc".as_bytes().to_vec(),
@@ -580,7 +597,7 @@ fn register_relay_token() {
 		},
 	});
 	// Construct XCM to create an agent for para 1001
-	let remote_xcm = VersionedXcm::from(Xcm(vec![
+	let remote_xcm = VersionedXcm::from(Xcm::<()>(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		Transact {
 			require_weight_at_most: 3000000000.into(),
@@ -592,10 +609,10 @@ fn register_relay_token() {
 	// Rococo Global Consensus
 	// Send XCM message from Relay Chain to Bridge Hub source Parachain
 	Rococo::execute_with(|| {
-		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
+		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send_blob(
 			sudo_origin,
 			bx!(destination),
-			bx!(remote_xcm),
+			remote_xcm.encode().try_into().unwrap()
 		));
 
 		type RuntimeEvent = <Rococo as Chain>::RuntimeEvent;
@@ -692,6 +709,8 @@ fn send_relay_token_back_and_forth() {
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 
+		type Converter = <bridge_hub_rococo_runtime::Runtime as snowbridge_pallet_inbound_queue::Config>::MessageConverter;
+
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
@@ -712,7 +731,7 @@ fn send_relay_token_back_and_forth() {
 				amount: ROC_AMOUNT,
 			},
 		});
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let (xcm, _) = Converter::convert(message_id, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
 		assert_expected_events!(

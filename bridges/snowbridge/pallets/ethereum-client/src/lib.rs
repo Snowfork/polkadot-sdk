@@ -10,7 +10,7 @@
 //!
 //! * [`Call::force_checkpoint`]: Set the initial trusted consensus checkpoint.
 //! * [`Call::set_operating_mode`]: Set the operating mode of the pallet. Can be used to disable
-//!   processing of conensus updates.
+//!   processing of consensus updates.
 //!
 //! ## Consensus Updates
 //!
@@ -84,9 +84,6 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
-		/// Maximum number of execution headers to keep
-		#[pallet::constant]
-		type MaxExecutionHeadersToKeep: Get<u32>;
 		type WeightInfo: WeightInfo;
 	}
 
