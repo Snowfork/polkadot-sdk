@@ -204,9 +204,9 @@ where
 
 	fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
 		let result = match self.peek() {
-			Ok(ReserveAssetDeposited { .. }) => self.reserve_tokens_transfer_message(),
+			Ok(ReserveAssetDeposited { .. }) => self.send_native_tokens_message(),
 			// Get withdraw/deposit and make native tokens create message.
-			Ok(WithdrawAsset { .. }) => self.native_tokens_unlock_message(),
+			Ok(WithdrawAsset { .. }) => self.send_tokens_message(),
 			Err(e) => Err(e),
 			_ => return Err(XcmConverterError::UnexpectedInstruction),
 		}?;
@@ -219,7 +219,7 @@ where
 		Ok(result)
 	}
 
-	fn native_tokens_unlock_message(
+	fn send_tokens_message(
 		&mut self,
 	) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
 		use XcmConverterError::*;
@@ -314,7 +314,7 @@ where
 		}
 	}
 
-	fn reserve_tokens_transfer_message(
+	fn send_native_tokens_message(
 		&mut self,
 	) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
 		use XcmConverterError::*;

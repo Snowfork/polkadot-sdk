@@ -178,7 +178,8 @@ impl<
 			V1(MessageV1 {
 				chain_id,
 				command: SendNativeToken { token_id, destination, amount },
-			}) => Self::convert_transfer_token(message_id, chain_id, token_id, destination, amount),
+			}) =>
+				Self::convert_send_native_token(message_id, chain_id, token_id, destination, amount),
 		}
 	}
 }
@@ -350,7 +351,7 @@ impl<
 		)
 	}
 
-	fn convert_transfer_token(
+	fn convert_send_native_token(
 		message_id: H256,
 		chain_id: u64,
 		token_id: TokenId,
