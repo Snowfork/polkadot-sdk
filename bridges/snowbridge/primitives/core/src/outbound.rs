@@ -260,7 +260,7 @@ mod v1 {
 			/// The amount of tokens to transfer
 			amount: u128,
 		},
-		MintToken {
+		TransferNativeToken {
 			/// ID for the token
 			token_id: H256,
 			/// The recipient of the newly minted tokens
@@ -274,7 +274,7 @@ mod v1 {
 		fn index(&self) -> u8 {
 			match self {
 				AgentExecuteCommand::TransferToken { .. } => 0,
-				AgentExecuteCommand::MintToken { .. } => 1,
+				AgentExecuteCommand::TransferNativeToken { .. } => 1,
 			}
 		}
 
@@ -290,7 +290,7 @@ mod v1 {
 							Token::Uint(U256::from(*amount)),
 						])),
 					]),
-				AgentExecuteCommand::MintToken { token_id, recipient, amount } =>
+				AgentExecuteCommand::TransferNativeToken { token_id, recipient, amount } =>
 					ethabi::encode(&[
 						Token::Uint(self.index().into()),
 						Token::Bytes(ethabi::encode(&[
@@ -431,7 +431,7 @@ impl GasMeter for ConstantGasMeter {
 				// * Assume dest account in ERC20 contract does not yet have a storage slot
 				// * ERC20.transferFrom possibly does other business logic besides updating balances
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
-				AgentExecuteCommand::MintToken { .. } => 150_000,
+				AgentExecuteCommand::TransferNativeToken { .. } => 150_000,
 			},
 			Command::Upgrade { initializer, .. } => {
 				let initializer_max_gas = match *initializer {

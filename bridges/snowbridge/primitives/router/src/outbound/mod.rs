@@ -392,6 +392,6 @@ where
 		// Check if there is a SetTopic and skip over it if found.
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
-		Ok((AgentExecuteCommand::MintToken { token_id, recipient, amount }, *topic_id))
+		Ok((AgentExecuteCommand::TransferNativeToken { token_id, recipient, amount }, *topic_id))
 	}
 }
