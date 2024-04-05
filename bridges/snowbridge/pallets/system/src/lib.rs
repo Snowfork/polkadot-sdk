@@ -560,7 +560,7 @@ pub mod pallet {
 			// Basic validation of new costs. Particularly for token registration, we want to ensure
 			// its relatively expensive to discourage spamming. Like at least 100 USD.
 			ensure!(
-				create_asset_xcm > 0 && transfer_asset_xcm > 0 && register_token > meth(100),
+				create_asset_xcm > 0 && transfer_asset_xcm > 0 && register_token > meth(100) && destination_max_transfer_asset_xcm > 0,
 				Error::<T>::InvalidTokenTransferFees
 			);
 
