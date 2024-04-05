@@ -58,7 +58,7 @@ pub enum Command {
 		fee: u128,
 	},
 	/// Send Polkadot token back to the original parachain
-	SendForeignToken {
+	SendNativeToken {
 		/// The Id of the token
 		token_id: TokenId,
 		/// The destination for the transfer
@@ -171,7 +171,7 @@ impl<
 				Ok(Self::convert_send_token(chain_id, token, destination, amount, fee)),
 			V1(MessageV1 {
 				chain_id,
-				command: SendForeignToken { token_id, destination, amount },
+				command: SendNativeToken { token_id, destination, amount },
 			}) => Self::convert_transfer_token(chain_id, token_id, destination, amount),
 		}
 	}
