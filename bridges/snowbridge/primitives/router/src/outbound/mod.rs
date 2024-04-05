@@ -12,7 +12,7 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{
 	outbound::{AgentExecuteCommand, Command, Message, SendMessage},
-	token_id_of, ChannelId, ParaId, TokenId,
+	ChannelId, ParaId, TokenId, TokenIdOf,
 };
 use sp_core::{H160, H256};
 use sp_runtime::traits::MaybeEquivalence;
@@ -383,7 +383,7 @@ where
 		// transfer amount must be greater than 0.
 		ensure!(amount > 0, ZeroAssetTransfer);
 
-		let token_id = token_id_of(&asset_id);
+		let token_id = TokenIdOf::convert_location(&asset_id).ok_or(InvalidAsset)?;
 
 		let expected_asset_id = ConvertAssetId::convert(&token_id).ok_or(InvalidAsset)?;
 

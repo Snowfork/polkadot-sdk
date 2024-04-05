@@ -20,8 +20,8 @@ use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::{
-	inbound::InboundQueueFixture, outbound::OperatingMode, token_id_of, AssetRegistrarMetadata,
-	Channel, ChannelId,
+	inbound::InboundQueueFixture, outbound::OperatingMode, AssetRegistrarMetadata, Channel,
+	ChannelId, TokenIdOf,
 };
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message, send_token::make_send_token_message,
@@ -632,7 +632,7 @@ fn send_relay_token_back_and_forth() {
 	));
 
 	let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
-	let token_id = token_id_of(&asset_id);
+	let token_id = TokenIdOf::convert_location(&asset_id).unwrap();
 
 	AssetHubRococo::force_default_xcm_version(Some(XCM_VERSION));
 	BridgeHubRococo::force_default_xcm_version(Some(XCM_VERSION));

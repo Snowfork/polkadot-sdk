@@ -63,8 +63,8 @@ use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	meth,
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
-	sibling_sovereign_account, token_id_of, AgentId, AssetRegistrarMetadata, Channel, ChannelId,
-	ParaId, PricingParameters as PricingParametersRecord, TokenId, PRIMARY_GOVERNANCE_CHANNEL,
+	sibling_sovereign_account, AgentId, AssetRegistrarMetadata, Channel, ChannelId, ParaId,
+	PricingParameters as PricingParametersRecord, TokenId, TokenIdOf, PRIMARY_GOVERNANCE_CHANNEL,
 	SECONDARY_GOVERNANCE_CHANNEL,
 };
 use sp_core::{RuntimeDebug, H160, H256};
@@ -744,7 +744,8 @@ pub mod pallet {
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 
 			// Record the token id or fail if it has already been created
-			let token_id = token_id_of(&asset_id);
+			let token_id = TokenIdOf::convert_location(&asset_id)
+				.ok_or(Error::<T>::LocationConversionFailed)?;
 			ensure!(!Tokens::<T>::contains_key(token_id), Error::<T>::TokenExists);
 			let versioned_asset_id: VersionedLocation = asset_id.clone().into();
 			Tokens::<T>::insert(token_id, versioned_asset_id);
