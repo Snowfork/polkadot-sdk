@@ -750,7 +750,7 @@ pub mod pallet {
 			let versioned_asset_id: VersionedLocation = asset_id.clone().into();
 			Tokens::<T>::insert(token_id, versioned_asset_id);
 
-			let command = Command::RegisterToken {
+			let command = Command::RegisterNativeToken {
 				agent_id,
 				token_id,
 				name: metadata.name,

@@ -11,8 +11,8 @@ use codec::{Decode, Encode};
 
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{
-	outbound::{AgentExecuteCommand, Command, Message, SendMessage},
-	ChannelId, ParaId, TokenId, TokenIdOf,
+	outbound::{Command, Message, SendMessage},
+	AgentId, ChannelId, ParaId, TokenId, TokenIdOf,
 };
 use sp_core::{H160, H256};
 use sp_runtime::traits::MaybeEquivalence;
@@ -104,13 +104,8 @@ impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription, 
 			SendError::MissingArgument
 		})?;
 
-		let mut converter = XcmConverter::<ConvertAssetId, ()>::new(&message, &expected_network);
-		let (agent_execute_command, message_id) = converter.convert().map_err(|err|{
-			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
-			SendError::Unroutable
-		})?;
-
 		let source_location = Location::new(1, local_sub.clone());
+
 		let agent_id = match AgentHashedDescription::convert_location(&source_location) {
 			Some(id) => id,
 			None => {
@@ -119,13 +114,16 @@ impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription, 
 			},
 		};
 
+		let mut converter =
+			XcmConverter::<ConvertAssetId, ()>::new(&message, expected_network, agent_id);
+		let (command, message_id) = converter.convert().map_err(|err|{
+			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
+			SendError::Unroutable
+		})?;
+
 		let channel_id: ChannelId = ParaId::from(para_id).into();
 
-		let outbound_message = Message {
-			id: Some(message_id.into()),
-			channel_id,
-			command: Command::AgentExecute { agent_id, command: agent_execute_command },
-		};
+		let outbound_message = Message { id: Some(message_id.into()), channel_id, command };
 
 		// validate the message
 		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
@@ -187,22 +185,24 @@ macro_rules! match_expression {
 
 struct XcmConverter<'a, ConvertAssetId, Call> {
 	iter: Peekable<Iter<'a, Instruction<Call>>>,
-	ethereum_network: &'a NetworkId,
+	ethereum_network: NetworkId,
+	agent_id: AgentId,
 	_marker: sp_std::marker::PhantomData<ConvertAssetId>,
 }
 impl<'a, ConvertAssetId, Call> XcmConverter<'a, ConvertAssetId, Call>
 where
 	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
 {
-	fn new(message: &'a Xcm<Call>, ethereum_network: &'a NetworkId) -> Self {
+	fn new(message: &'a Xcm<Call>, ethereum_network: NetworkId, agent_id: AgentId) -> Self {
 		Self {
 			iter: message.inner().iter().peekable(),
 			ethereum_network,
+			agent_id,
 			_marker: Default::default(),
 		}
 	}
 
-	fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+	fn convert(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
 		let result = match self.peek() {
 			Ok(ReserveAssetDeposited { .. }) => self.send_native_tokens_message(),
 			// Get withdraw/deposit and make native tokens create message.
@@ -219,9 +219,7 @@ where
 		Ok(result)
 	}
 
-	fn send_tokens_message(
-		&mut self,
-	) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+	fn send_tokens_message(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
 		use XcmConverterError::*;
 
 		// Get the reserve assets from WithdrawAsset.
@@ -295,7 +293,10 @@ where
 		// Check if there is a SetTopic and skip over it if found.
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
-		Ok((AgentExecuteCommand::TransferToken { token, recipient, amount }, *topic_id))
+		Ok((
+			Command::TransferToken { agent_id: self.agent_id, token, recipient, amount },
+			*topic_id,
+		))
 	}
 
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
@@ -308,15 +309,13 @@ where
 
 	fn network_matches(&self, network: &Option<NetworkId>) -> bool {
 		if let Some(network) = network {
-			network == self.ethereum_network
+			*network == self.ethereum_network
 		} else {
 			true
 		}
 	}
 
-	fn send_native_tokens_message(
-		&mut self,
-	) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+	fn send_native_tokens_message(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
 		use XcmConverterError::*;
 
 		// Get the reserve assets.
@@ -392,6 +391,9 @@ where
 		// Check if there is a SetTopic and skip over it if found.
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
-		Ok((AgentExecuteCommand::TransferNativeToken { token_id, recipient, amount }, *topic_id))
+		Ok((
+			Command::TransferNativeToken { agent_id: self.agent_id, token_id, recipient, amount },
+			*topic_id,
+		))
 	}
 }

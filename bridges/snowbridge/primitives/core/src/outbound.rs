@@ -3,7 +3,7 @@ use frame_support::PalletError;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
 use sp_core::{RuntimeDebug, H256};
-pub use v1::{AgentExecuteCommand, Command, Initializer, Message, OperatingMode, QueuedMessage};
+pub use v1::{Command, Initializer, Message, OperatingMode, QueuedMessage};
 
 /// Enqueued outbound messages need to be versioned to prevent data corruption
 /// or loss after forkless runtime upgrades
@@ -69,12 +69,16 @@ mod v1 {
 	#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 	#[cfg_attr(feature = "std", derive(PartialEq))]
 	pub enum Command {
-		/// Execute a sub-command within an agent for a consensus system in Polkadot
-		AgentExecute {
-			/// The ID of the agent
+		/// Transfer ERC20 tokens
+		TransferToken {
+			/// ID of the agent
 			agent_id: H256,
-			/// The sub-command to be executed
-			command: AgentExecuteCommand,
+			/// Address of the ERC20 token
+			token: H160,
+			/// The recipient of the tokens
+			recipient: H160,
+			/// The amount of tokens to transfer
+			amount: u128,
 		},
 		/// Upgrade the Gateway contract
 		Upgrade {
@@ -139,8 +143,8 @@ mod v1 {
 			// Fee multiplier
 			multiplier: UD60x18,
 		},
-		/// Register token from polkadot
-		RegisterToken {
+		/// Register token from Polkadot
+		RegisterNativeToken {
 			/// ID of the agent
 			agent_id: H256,
 			/// ID for the token
@@ -152,13 +156,24 @@ mod v1 {
 			/// Number of decimal places
 			decimals: u8,
 		},
+		/// Transfer token from Polkadot
+		TransferNativeToken {
+			/// ID of the agent
+			agent_id: H256,
+			/// ID for the token
+			token_id: H256,
+			/// The recipient of the newly minted tokens
+			recipient: H160,
+			/// The amount of tokens to mint
+			amount: u128,
+		},
 	}
 
 	impl Command {
 		/// Compute the enum variant index
 		pub fn index(&self) -> u8 {
 			match self {
-				Command::AgentExecute { .. } => 0,
+				Command::TransferToken { .. } => 0,
 				Command::Upgrade { .. } => 1,
 				Command::CreateAgent { .. } => 2,
 				Command::CreateChannel { .. } => 3,
@@ -167,17 +182,20 @@ mod v1 {
 				Command::TransferNativeFromAgent { .. } => 6,
 				Command::SetTokenTransferFees { .. } => 7,
 				Command::SetPricingParameters { .. } => 8,
-				Command::RegisterToken { .. } => 9,
+				Command::RegisterNativeToken { .. } => 9,
+				Command::TransferNativeToken { .. } => 10,
 			}
 		}
 
 		/// ABI-encode the Command.
 		pub fn abi_encode(&self) -> Vec<u8> {
 			match self {
-				Command::AgentExecute { agent_id, command } =>
+				Command::TransferToken { agent_id, token, recipient, amount } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
-						Token::Bytes(command.abi_encode()),
+						Token::Address(*token),
+						Token::Address(*recipient),
+						Token::Uint(U256::from(*amount)),
 					])]),
 				Command::Upgrade { impl_address, impl_code_hash, initializer, .. } =>
 					ethabi::encode(&[Token::Tuple(vec![
@@ -225,13 +243,20 @@ mod v1 {
 						Token::Uint(U256::from(*delivery_cost)),
 						Token::Uint(multiplier.clone().into_inner()),
 					])]),
-				Command::RegisterToken { agent_id, token_id, name, symbol, decimals } =>
+				Command::RegisterNativeToken { agent_id, token_id, name, symbol, decimals } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::FixedBytes(token_id.as_bytes().to_owned()),
 						Token::String(name.to_owned()),
 						Token::String(symbol.to_owned()),
 						Token::Uint(U256::from(*decimals)),
+					])]),
+				Command::TransferNativeToken { agent_id, token_id, recipient, amount } =>
+					ethabi::encode(&[Token::Tuple(vec![
+						Token::FixedBytes(agent_id.as_bytes().to_owned()),
+						Token::FixedBytes(token_id.as_bytes().to_owned()),
+						Token::Address(*recipient),
+						Token::Uint(U256::from(*amount)),
 					])]),
 			}
 		}
@@ -245,62 +270,6 @@ mod v1 {
 		pub params: Vec<u8>,
 		/// The initializer is allowed to consume this much gas at most.
 		pub maximum_required_gas: u64,
-	}
-
-	/// A Sub-command executable within an agent
-	#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-	#[cfg_attr(feature = "std", derive(PartialEq))]
-	pub enum AgentExecuteCommand {
-		/// Transfer ERC20 tokens
-		TransferToken {
-			/// Address of the ERC20 token
-			token: H160,
-			/// The recipient of the tokens
-			recipient: H160,
-			/// The amount of tokens to transfer
-			amount: u128,
-		},
-		TransferNativeToken {
-			/// ID for the token
-			token_id: H256,
-			/// The recipient of the newly minted tokens
-			recipient: H160,
-			/// The amount of tokens to mint
-			amount: u128,
-		},
-	}
-
-	impl AgentExecuteCommand {
-		fn index(&self) -> u8 {
-			match self {
-				AgentExecuteCommand::TransferToken { .. } => 0,
-				AgentExecuteCommand::TransferNativeToken { .. } => 1,
-			}
-		}
-
-		/// ABI-encode the sub-command
-		pub fn abi_encode(&self) -> Vec<u8> {
-			match self {
-				AgentExecuteCommand::TransferToken { token, recipient, amount } =>
-					ethabi::encode(&[
-						Token::Uint(self.index().into()),
-						Token::Bytes(ethabi::encode(&[
-							Token::Address(*token),
-							Token::Address(*recipient),
-							Token::Uint(U256::from(*amount)),
-						])),
-					]),
-				AgentExecuteCommand::TransferNativeToken { token_id, recipient, amount } =>
-					ethabi::encode(&[
-						Token::Uint(self.index().into()),
-						Token::Bytes(ethabi::encode(&[
-							Token::FixedBytes(token_id.as_bytes().to_owned()),
-							Token::Address(*recipient),
-							Token::Uint(U256::from(*amount)),
-						])),
-					]),
-			}
-		}
 	}
 
 	/// Message which is awaiting processing in the MessageQueue pallet
@@ -418,21 +387,12 @@ impl GasMeter for ConstantGasMeter {
 
 	fn maximum_dispatch_gas_used_at_most(command: &Command) -> u64 {
 		match command {
+			Command::TransferToken { .. } => 100_000,
 			Command::CreateAgent { .. } => 275_000,
 			Command::CreateChannel { .. } => 100_000,
 			Command::UpdateChannel { .. } => 50_000,
 			Command::TransferNativeFromAgent { .. } => 60_000,
 			Command::SetOperatingMode { .. } => 40_000,
-			Command::AgentExecute { command, .. } => match command {
-				// Execute IERC20.transferFrom
-				//
-				// Worst-case assumptions are important:
-				// * No gas refund for clearing storage slot of source account in ERC20 contract
-				// * Assume dest account in ERC20 contract does not yet have a storage slot
-				// * ERC20.transferFrom possibly does other business logic besides updating balances
-				AgentExecuteCommand::TransferToken { .. } => 100_000,
-				AgentExecuteCommand::TransferNativeToken { .. } => 150_000,
-			},
 			Command::Upgrade { initializer, .. } => {
 				let initializer_max_gas = match *initializer {
 					Some(Initializer { maximum_required_gas, .. }) => maximum_required_gas,
@@ -444,7 +404,8 @@ impl GasMeter for ConstantGasMeter {
 			},
 			Command::SetTokenTransferFees { .. } => 60_000,
 			Command::SetPricingParameters { .. } => 60_000,
-			Command::RegisterToken { .. } => 1_500_000,
+			Command::RegisterNativeToken { .. } => 1_500_000,
+			Command::TransferNativeToken { .. } => 150_000,
 		}
 	}
 }
