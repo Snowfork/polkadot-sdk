@@ -5,7 +5,7 @@ use snowbridge_core::{
 	AgentIdOf,
 };
 use sp_std::default::Default;
-use xcm::v3::prelude::SendError as XcmSendError;
+use xcm::prelude::SendError as XcmSendError;
 
 use super::*;
 
@@ -1092,4 +1092,70 @@ fn test_describe_here() {
 		agent_id,
 		hex!("03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314").into()
 	)
+}
+
+#[test]
+fn xcm_converter_transfer_native_token_success() {
+	let network = BridgedNetwork::get();
+
+	let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+	let amount = 1000000;
+	let asset_location = Location { parents: 1, interior: [GlobalConsensus(Rococo)].into() };
+	let token_id = TokenIdOf::convert_location(&asset_location).unwrap();
+
+	let assets: Assets = vec![Asset { id: AssetId(asset_location), fun: Fungible(amount) }].into();
+	let filter: AssetFilter = assets.clone().into();
+
+	let message: Xcm<()> = vec![
+		ReserveAssetDeposited(assets.clone()),
+		ClearOrigin,
+		BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
+		DepositAsset {
+			assets: filter,
+			beneficiary: AccountKey20 { network: None, key: beneficiary_address }.into(),
+		},
+		SetTopic([0; 32]),
+	]
+	.into();
+	let mut converter =
+		XcmConverter::<MockTokenIdConvert, ()>::new(&message, network, Default::default());
+	let expected_payload = Command::TransferNativeToken {
+		agent_id: Default::default(),
+		recipient: beneficiary_address.into(),
+		amount,
+		token_id,
+	};
+	let result = converter.convert();
+	assert_eq!(result, Ok((expected_payload, [0; 32])));
+}
+
+#[test]
+fn xcm_converter_transfer_native_token_with_invalid_location_will_fail() {
+	let network = BridgedNetwork::get();
+
+	let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
+
+	let amount = 1000000;
+	// Invalid asset location from a different consensus
+	let asset_location = Location { parents: 2, interior: [GlobalConsensus(Rococo)].into() };
+
+	let assets: Assets = vec![Asset { id: AssetId(asset_location), fun: Fungible(amount) }].into();
+	let filter: AssetFilter = assets.clone().into();
+
+	let message: Xcm<()> = vec![
+		ReserveAssetDeposited(assets.clone()),
+		ClearOrigin,
+		BuyExecution { fees: assets.get(0).unwrap().clone(), weight_limit: Unlimited },
+		DepositAsset {
+			assets: filter,
+			beneficiary: AccountKey20 { network: None, key: beneficiary_address }.into(),
+		},
+		SetTopic([0; 32]),
+	]
+	.into();
+	let mut converter =
+		XcmConverter::<MockTokenIdConvert, ()>::new(&message, network, Default::default());
+	let result = converter.convert();
+	assert_eq!(result.err(), Some(XcmConverterError::InvalidAsset));
 }
