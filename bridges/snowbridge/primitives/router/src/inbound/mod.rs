@@ -278,8 +278,8 @@ where
 						xcm: vec![
 							// Buy execution on target.
 							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
-							// Deposit asset to beneficiary.
-							DepositAsset { assets: Definite(asset.into()), beneficiary },
+							// Deposit both asset and fees to beneficiary.
+							DepositAsset { assets: Wild(AllCounted(2u32)), beneficiary },
 							// Forward message id to destination parachain.
 							SetTopic(message_id.into()),
 						]
@@ -289,8 +289,10 @@ where
 			},
 			None => {
 				instructions.extend(vec![
-					// Deposit asset to beneficiary.
-					DepositAsset { assets: Definite(asset.into()), beneficiary },
+					// Deposit both asset and fees to beneficiary so the fees will not get
+					// trapped. Another benefit is when fees left more than ED could be used to
+					// create the beneficiary account in case it does not exist.
+					DepositAsset { assets: Wild(AllCounted(2u32)), beneficiary },
 				]);
 			},
 		}
