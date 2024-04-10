@@ -28,7 +28,9 @@ use sp_core::H256;
 use sp_io::hashing::keccak_256;
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use sp_std::prelude::*;
-use xcm::prelude::{GeneralKey, GlobalConsensus, Junction::Parachain, Location, PalletInstance};
+use xcm::prelude::{
+	GeneralIndex, GeneralKey, GlobalConsensus, Junction::Parachain, Location, PalletInstance,
+};
 use xcm_builder::{DescribeAllTerminal, DescribeFamily, DescribeLocation, HashedDescription};
 
 /// The ID of an agent contract
@@ -187,6 +189,8 @@ impl DescribeLocation for DescribeSiblingAssetId {
 				Some((*network, *id, *data).encode()),
 			(1, [GlobalConsensus(network), Parachain(id), PalletInstance(instance)]) =>
 				Some((*network, *id, *instance).encode()),
+			(1, [GlobalConsensus(network), Parachain(id), GeneralIndex(index)]) =>
+				Some((*network, *id, *index).encode()),
 			_ => None,
 		}
 	}
