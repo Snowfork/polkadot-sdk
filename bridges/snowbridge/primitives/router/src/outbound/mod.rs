@@ -49,7 +49,7 @@ impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription, 
 	EthereumNetwork: Get<NetworkId>,
 	OutboundQueue: SendMessage<Balance = u128>,
 	AgentHashedDescription: ConvertLocation<H256>,
-	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+	ConvertAssetId: MaybeEquivalence<TokenId, VersionedLocation>,
 {
 	type Ticket = (Vec<u8>, XcmHash);
 
@@ -187,11 +187,11 @@ struct XcmConverter<'a, ConvertAssetId, Call> {
 	iter: Peekable<Iter<'a, Instruction<Call>>>,
 	ethereum_network: NetworkId,
 	agent_id: AgentId,
-	_marker: sp_std::marker::PhantomData<ConvertAssetId>,
+	_marker: PhantomData<ConvertAssetId>,
 }
 impl<'a, ConvertAssetId, Call> XcmConverter<'a, ConvertAssetId, Call>
 where
-	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+	ConvertAssetId: MaybeEquivalence<TokenId, VersionedLocation>,
 {
 	fn new(message: &'a Xcm<Call>, ethereum_network: NetworkId, agent_id: AgentId) -> Self {
 		Self {
@@ -384,7 +384,10 @@ where
 
 		let token_id = TokenIdOf::convert_location(&asset_id).ok_or(InvalidAsset)?;
 
-		let expected_asset_id = ConvertAssetId::convert(&token_id).ok_or(InvalidAsset)?;
+		let versioned_asset_id = ConvertAssetId::convert(&token_id).ok_or(InvalidAsset)?;
+
+		let expected_asset_id: Location =
+			versioned_asset_id.try_into().map_err(|_| InvalidAsset)?;
 
 		ensure!(asset_id == expected_asset_id, InvalidAsset);
 

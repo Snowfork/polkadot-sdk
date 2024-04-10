@@ -258,6 +258,11 @@ pub mod pallet {
 	pub type Tokens<T: Config> =
 		StorageMap<_, Twox64Concat, TokenId, VersionedLocation, OptionQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn location_tokens)]
+	pub type LocationToToken<T: Config> =
+		StorageMap<_, Twox64Concat, VersionedLocation, TokenId, OptionQuery>;
+
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
@@ -747,7 +752,8 @@ pub mod pallet {
 			let token_id = TokenIdOf::convert_location(&asset_id)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
 			let versioned_asset_id: VersionedLocation = asset_id.clone().into();
-			Tokens::<T>::insert(token_id, versioned_asset_id);
+			Tokens::<T>::insert(token_id, versioned_asset_id.clone());
+			LocationToToken::<T>::insert(versioned_asset_id, token_id);
 
 			let command = Command::RegisterNativeToken {
 				agent_id,
@@ -789,15 +795,12 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> MaybeEquivalence<TokenId, Location> for Pallet<T> {
-		fn convert(id: &TokenId) -> Option<Location> {
-			match Tokens::<T>::get(id) {
-				Some(loc) => Location::try_from(loc).ok(),
-				_ => None,
-			}
+	impl<T: Config> MaybeEquivalence<TokenId, VersionedLocation> for Pallet<T> {
+		fn convert(id: &TokenId) -> Option<VersionedLocation> {
+			Tokens::<T>::get(id)
 		}
-		fn convert_back(_loc: &Location) -> Option<TokenId> {
-			None
+		fn convert_back(loc: &VersionedLocation) -> Option<TokenId> {
+			LocationToToken::<T>::get(loc)
 		}
 	}
 }

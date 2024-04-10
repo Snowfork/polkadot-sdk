@@ -104,7 +104,7 @@ pub struct MessageToXcm<
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
-	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+	ConvertAssetId: MaybeEquivalence<TokenId, VersionedLocation>,
 {
 	_phantom: PhantomData<(
 		CreateAssetCall,
@@ -159,7 +159,7 @@ impl<
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
-	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+	ConvertAssetId: MaybeEquivalence<TokenId, VersionedLocation>,
 {
 	type Balance = Balance;
 	type AccountId = AccountId;
@@ -205,7 +205,7 @@ impl<
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
-	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+	ConvertAssetId: MaybeEquivalence<TokenId, VersionedLocation>,
 {
 	fn convert_register_token(
 		message_id: H256,
@@ -373,8 +373,12 @@ impl<
 
 		let fee_asset: Asset = (Location::parent(), dest_para_fee).into();
 
+		let versioned_asset_id =
+			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
+
 		let asset_id: Location =
-			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?; //Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+			versioned_asset_id.try_into().map_err(|_| ConvertMessageError::InvalidToken)?;
+
 		let asset: Asset = (asset_id, amount).into();
 
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
