@@ -185,12 +185,20 @@ impl DescribeLocation for DescribeSiblingAssetId {
 		match l.unpack() {
 			(1, [GlobalConsensus(network)]) => Some((*network).encode()),
 			(1, [GlobalConsensus(network), Parachain(id)]) => Some((*network, *id).encode()),
-			(1, [GlobalConsensus(network), Parachain(id), GeneralKey { data, .. }]) =>
-				Some((*network, *id, *data).encode()),
 			(1, [GlobalConsensus(network), Parachain(id), PalletInstance(instance)]) =>
 				Some((*network, *id, *instance).encode()),
 			(1, [GlobalConsensus(network), Parachain(id), GeneralIndex(index)]) =>
 				Some((*network, *id, *index).encode()),
+			(1, [GlobalConsensus(network), Parachain(id), GeneralKey { data, .. }]) =>
+				Some((*network, *id, *data).encode()),
+			(
+				1,
+				[GlobalConsensus(network), Parachain(id), PalletInstance(instance), GeneralIndex(index)],
+			) => Some((*network, *id, *instance, *index).encode()),
+			(
+				1,
+				[GlobalConsensus(network), Parachain(id), PalletInstance(instance), GeneralKey { data, .. }],
+			) => Some((*network, *id, *instance, *data).encode()),
 			_ => None,
 		}
 	}
