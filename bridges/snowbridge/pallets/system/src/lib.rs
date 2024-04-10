@@ -746,7 +746,6 @@ pub mod pallet {
 			// Record the token id or fail if it has already been created
 			let token_id = TokenIdOf::convert_location(&asset_id)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
-			ensure!(!Tokens::<T>::contains_key(token_id), Error::<T>::TokenExists);
 			let versioned_asset_id: VersionedLocation = asset_id.clone().into();
 			Tokens::<T>::insert(token_id, versioned_asset_id);
 
