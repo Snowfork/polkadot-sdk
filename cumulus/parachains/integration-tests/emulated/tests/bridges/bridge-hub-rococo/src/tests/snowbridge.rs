@@ -596,7 +596,7 @@ fn register_relay_token() {
 			decimals: 12,
 		},
 	});
-	// Construct XCM to create an agent for para 1001
+	// Construct XCM to register the relay token
 	let remote_xcm = VersionedXcm::from(Xcm::<()>(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		Transact {
