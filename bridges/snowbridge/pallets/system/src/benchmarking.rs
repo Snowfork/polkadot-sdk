@@ -159,6 +159,56 @@ mod benchmarks {
 		Ok(())
 	}
 
+	#[benchmark]
+	fn register_token() -> Result<(), BenchmarkError> {
+		let origin_para_id = 2000;
+		let origin_location = Location::new(1, [Parachain(origin_para_id)]);
+		let origin = T::Helper::make_xcm_origin(origin_location);
+		fund_sovereign_account::<T>(origin_para_id.into())?;
+		SnowbridgeControl::<T>::create_agent(origin.clone())?;
+		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
+
+		let relay_token_asset_id: Location =
+			Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+		let asset = Box::new(VersionedLocation::V4(relay_token_asset_id));
+		let asset_metadata = AssetRegistrarMetadata {
+			name: "roc".as_bytes().to_vec(),
+			symbol: "roc".as_bytes().to_vec(),
+			decimals: 12,
+		};
+
+		#[extrinsic_call]
+		_(origin as T::RuntimeOrigin, asset, asset_metadata);
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn force_register_token() -> Result<(), BenchmarkError> {
+		let origin_para_id = 2000;
+		let origin_location = Location::new(1, [Parachain(origin_para_id)]);
+		let origin = T::Helper::make_xcm_origin(origin_location.clone());
+		fund_sovereign_account::<T>(origin_para_id.into())?;
+		SnowbridgeControl::<T>::create_agent(origin.clone())?;
+		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
+
+		let relay_token_asset_id: Location =
+			Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+		let asset = Box::new(VersionedLocation::V4(relay_token_asset_id));
+		let asset_metadata = AssetRegistrarMetadata {
+			name: "roc".as_bytes().to_vec(),
+			symbol: "roc".as_bytes().to_vec(),
+			decimals: 12,
+		};
+
+		let versioned_origin_location = Box::new(VersionedLocation::V4(origin_location));
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, versioned_origin_location, asset, asset_metadata);
+
+		Ok(())
+	}
+
 	impl_benchmark_test_suite!(
 		SnowbridgeControl,
 		crate::mock::new_test_ext(true),

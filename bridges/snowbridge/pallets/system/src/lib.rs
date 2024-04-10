@@ -618,7 +618,7 @@ pub mod pallet {
 		///
 		/// - `origin`: Must be `MultiLocation`
 		#[pallet::call_index(11)]
-		#[pallet::weight(T::WeightInfo::register_token())]
+		#[pallet::weight(T::WeightInfo::force_register_token())]
 		pub fn force_register_token(
 			origin: OriginFor<T>,
 			location: Box<VersionedLocation>,
