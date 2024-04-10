@@ -682,6 +682,8 @@ fn send_relay_token_back_and_forth() {
 	AssetHubRococo::execute_with(|| {
 		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
 
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
 		let assets = vec![Asset { id: AssetId(Location::parent()), fun: Fungible(ROC_AMOUNT) }];
 		let multi_assets = VersionedAssets::V4(Assets::from(assets));
 
@@ -704,6 +706,17 @@ fn send_relay_token_back_and_forth() {
 			0,
 		)
 		.unwrap();
+
+		let events = AssetHubRococo::events();
+		// Check that the ROC transferred to some reserved account
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Balances(pallet_balances::Event::Transfer { amount, ..})
+					if *amount == ROC_AMOUNT,
+			)),
+			"Roc transferred to Ethereum sovereign account."
+		);
 	});
 
 	BridgeHubRococo::execute_with(|| {
@@ -745,12 +758,26 @@ fn send_relay_token_back_and_forth() {
 	AssetHubRococo::execute_with(|| {
 		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
 
-		// Check that the token was received and issued as a foreign asset on AssetHub
-		assert_expected_events!(
-			AssetHubRococo,
-			vec![
-				RuntimeEvent::Balances(pallet_balances::Event::Minted { .. }) => {},
-			]
+		let events = AssetHubRococo::events();
+
+		// Check that the ROC burnt from some reserved account
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Balances(pallet_balances::Event::Burned { amount, ..})
+					if *amount == ROC_AMOUNT,
+			)),
+			"Roc burnt from Ethereum sovereign account."
+		);
+
+		// Check that the token was minted to beneficiary
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
+					if *amount == ROC_AMOUNT && *who == AssetHubRococoReceiver::get()
+			)),
+			"Roc minted to beneficiary."
 		);
 	});
 }
