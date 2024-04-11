@@ -11668,7 +11668,6 @@ name = "penpal-runtime"
 version = "0.14.0"
 dependencies = [
  "assets-common",
- "bp-bridge-hub-rococo",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-session-benchmarking",

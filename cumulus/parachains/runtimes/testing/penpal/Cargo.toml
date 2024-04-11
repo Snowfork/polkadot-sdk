@@ -79,13 +79,11 @@ pallet-collator-selection = { path = "../../../../pallets/collator-selection", d
 parachain-info = { package = "staging-parachain-info", path = "../../../pallets/parachain-info", default-features = false }
 parachains-common = { path = "../../../common", default-features = false }
 assets-common = { path = "../../assets/common", default-features = false }
-bp-bridge-hub-rococo = { path = "../../../../../bridges/primitives/chain-bridge-hub-rococo", default-features = false }
 
 [features]
 default = ["std"]
 std = [
 	"assets-common/std",
-	"bp-bridge-hub-rococo/std",
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-parachain-system/std",
