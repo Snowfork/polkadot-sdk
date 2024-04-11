@@ -67,10 +67,24 @@ parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
 	// Local native currency which is stored in `pallet_balances``
 	pub const PenpalNativeCurrency: Location = Location::here();
-	pub const RelayNetwork: NetworkId = Rococo;
+	pub storage RelayNetwork: NetworkId = Rococo;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub UniversalLocation: InteriorLocation = [GlobalConsensus(RelayNetwork::get()),Parachain(ParachainInfo::parachain_id().into())].into();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
+	pub storage EthereumNetwork: NetworkId = Ethereum { chain_id: 11155111 };
+	pub storage SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
+				1,
+				[
+					Parachain(1013),
+					PalletInstance(80)
+				]
+			);
+	pub storage UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(
+			sp_std::vec![
+				(SiblingBridgeHubWithEthereumInboundQueueInstance::get(),GlobalConsensus(EthereumNetwork::get())),
+			]
+	);
+	pub storage SiblingBridgeHub: Location = Location::new(1, [Parachain(1013)]);
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -351,23 +365,6 @@ pub type TrustedReserves = (
 
 pub type TrustedTeleporters =
 	(AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,);
-
-parameter_types! {
-	pub storage EthereumNetwork: NetworkId = Ethereum { chain_id: 11155111 };
-	pub storage SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
-				1,
-				[
-					Parachain(1013),
-					PalletInstance(80)
-				]
-			);
-	pub storage UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(
-			sp_std::vec![
-				(SiblingBridgeHubWithEthereumInboundQueueInstance::get(),GlobalConsensus(EthereumNetwork::get())),
-			]
-	);
-	pub storage SiblingBridgeHub: Location = Location::new(1, [Parachain(1013)]);
-}
 
 pub struct GlobalConsensusEthereumAddressConvertsFor<AccountId>(PhantomData<AccountId>);
 impl<AccountId> ConvertLocation<AccountId> for GlobalConsensusEthereumAddressConvertsFor<AccountId>
