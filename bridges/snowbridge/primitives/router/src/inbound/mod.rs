@@ -351,13 +351,13 @@ where
 			// the dest chain to implement a custom Barrier which inspect the fee as
 			// expected(i.e. can cover the transact cost to avoid spamming)
 			BurnAsset(xcm_fee.clone().into()),
-			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() },
 			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
 			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
 			// Change origin to the bridge.
 			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
 			// DescendOrigin to the sender.
 			DescendOrigin(AccountKey20 { network: None, key: sender.into() }.into()),
+			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() },
 			// Forward message id
 			SetTopic(message_id.into()),
 		];
