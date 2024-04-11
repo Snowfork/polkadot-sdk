@@ -565,11 +565,6 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 
 #[test]
 fn transact_from_ethereum_to_penpal_success() {
-	// Fund sender on penpal so that it can pay execution fees.
-	let sender: H160 = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe").into();
-	let sovereign_of_sender = blake2_256(&(b"AccountKey20", sender).encode());
-	println!("sovereign account of the sender: {:#?}", hex::encode(sovereign_of_sender.clone()));
-	PenpalA::fund_accounts(vec![(sovereign_of_sender.into(), INITIAL_FUND)]);
 	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
 
 	BridgeHubRococo::execute_with(|| {
@@ -592,7 +587,7 @@ fn transact_from_ethereum_to_penpal_success() {
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::Transact {
-				sender,
+				sender: hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe").into(),
 				fee: XCM_FEE,
 				weight_at_most: XCM_WEIGHT,
 				origin_kind: OriginKind::SovereignAccount,
@@ -626,12 +621,6 @@ fn transact_from_ethereum_to_penpal_success() {
 
 #[test]
 fn transact_from_ethereum_to_penpal_insufficient_weight() {
-	// Fund sender on penpal so that it can pay execution fees.
-	let sender: H160 = hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe").into();
-	let sovereign_of_sender = blake2_256(&(b"AccountKey20", sender).encode());
-	println!("sovereign account of the sender: {:#?}", hex::encode(sovereign_of_sender.clone()));
-	PenpalA::fund_accounts(vec![(sovereign_of_sender.into(), INITIAL_FUND)]);
-
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 
@@ -639,7 +628,7 @@ fn transact_from_ethereum_to_penpal_insufficient_weight() {
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::Transact {
-				sender,
+				sender: hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe").into(),
 				fee: XCM_FEE,
 				weight_at_most: INSUFFICIENT_XCM_WEIGHT,
 				origin_kind: OriginKind::SovereignAccount,
