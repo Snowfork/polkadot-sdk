@@ -26,9 +26,8 @@ fn test_submit_happy_path() {
 		let message = Message {
 			event_log: mock_event_log(),
 			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
 		};
 
@@ -78,9 +77,8 @@ fn test_submit_xcm_invalid_channel() {
 		let message = Message {
 			event_log: mock_event_log_invalid_channel(),
 			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
 		};
 		assert_noop!(
@@ -104,9 +102,8 @@ fn test_submit_with_invalid_gateway() {
 		let message = Message {
 			event_log: mock_event_log_invalid_gateway(),
 			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
 		};
 		assert_noop!(
@@ -130,9 +127,8 @@ fn test_submit_with_invalid_nonce() {
 		let message = Message {
 			event_log: mock_event_log(),
 			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
@@ -164,9 +160,8 @@ fn test_submit_no_funds_to_reward_relayers_just_ignore() {
 		let message = Message {
 			event_log: mock_event_log(),
 			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
 		};
 		// Check submit successfully in case no funds available
@@ -182,9 +177,8 @@ fn test_set_operating_mode() {
 		let message = Message {
 			event_log: mock_event_log(),
 			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
 		};
 
@@ -224,9 +218,8 @@ fn test_submit_no_funds_to_reward_relayers_and_ed_preserved() {
 		let message = Message {
 			event_log: mock_event_log(),
 			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));
@@ -241,9 +234,8 @@ fn test_submit_no_funds_to_reward_relayers_and_ed_preserved() {
 		let message = Message {
 			event_log,
 			proof: Proof {
-				block_hash: Default::default(),
-				tx_index: Default::default(),
-				data: Default::default(),
+				receipt_proof: Default::default(),
+				execution_proof: mock_execution_proof(),
 			},
 		};
 		assert_ok!(InboundQueue::submit(origin.clone(), message.clone()));

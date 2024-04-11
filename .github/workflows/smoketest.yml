@@ -2,10 +2,6 @@ name: bridge
 
 on:
   push:
-    paths:
-      - "bridges/snowbridge/**"
-      - "!bridges/snowbridge/README.md"
-      - "!bridges/snowbridge/LICENSE"
     branches:
       - snowbridge
   workflow_dispatch:
@@ -29,14 +25,14 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: snowfork/snowbridge
-          ref: smoketests-ci
+          ref: main
           path: snowbridge
           submodules: "true"
       - run: rm -f snowbridge/polkadot-sdk
       - uses: actions/checkout@v2
         with:
           repository: snowfork/polkadot-sdk
-          ref: main
+          ref: snowbridge
           path: snowbridge/polkadot-sdk
       - uses: arduino/setup-protoc@v2
         with:

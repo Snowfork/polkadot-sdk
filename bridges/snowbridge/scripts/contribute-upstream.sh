@@ -45,6 +45,7 @@ rm -rf $SNOWBRIDGE_FOLDER/.cargo
 rm -rf $SNOWBRIDGE_FOLDER/.github
 rm -rf $SNOWBRIDGE_FOLDER/SECURITY.md
 rm -rf $SNOWBRIDGE_FOLDER/.gitignore
+rm -rf $SNOWBRIDGE_FOLDER/rustfmt.toml
 rm -rf $SNOWBRIDGE_FOLDER/templates
 rm -rf $SNOWBRIDGE_FOLDER/pallets/ethereum-client/fuzz
 
@@ -77,6 +78,8 @@ git remote -v | grep -w parity || git remote add parity https://github.com/parit
 git fetch parity master
 git checkout parity/master -- .github
 git add -- .github
+
+git commit -m "cleanup branch"
 
 # Fetch the latest from parity master
 echo "Fetching latest from Parity master. Resolve merge conflicts, if there are any."
