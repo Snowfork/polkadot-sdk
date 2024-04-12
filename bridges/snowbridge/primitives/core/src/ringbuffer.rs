@@ -16,6 +16,8 @@ where
 	/// Insert a map entry.
 	fn insert(k: Key, v: Value);
 
+	fn overwrite_last_index(k: Key, v: Value);
+
 	/// Check if map contains a key
 	fn contains_key(k: Key) -> bool;
 
@@ -61,6 +63,13 @@ where
 
 		Intermediate::insert(current_index, k.clone());
 		CurrentIndex::set(current_index);
+		M::insert(k, v);
+	}
+
+	/// Set a map entry.
+	fn overwrite_last_index(k: Key, v: Value) {
+		let current_index = CurrentIndex::get();
+		Intermediate::insert(current_index, k.clone());
 		M::insert(k, v);
 	}
 

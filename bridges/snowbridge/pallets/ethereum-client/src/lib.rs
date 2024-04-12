@@ -488,7 +488,7 @@ pub mod pallet {
 		/// Stores a compacted (slot and block roots root (hash of the `block_roots` beacon state
 		/// field, used for ancestry proof)) beacon state in a ring buffer map, with the header root
 		/// as map key.
-		pub fn store_finalized_header(
+		pub(super) fn store_finalized_header(
 			header: BeaconHeader,
 			block_roots_root: H256,
 		) -> DispatchResult {
@@ -497,10 +497,40 @@ pub mod pallet {
 			let header_root: H256 =
 				header.hash_tree_root().map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			<FinalizedBeaconStateBuffer<T>>::insert(
-				header_root,
-				CompactBeaconState { slot: header.slot, block_roots_root },
-			);
+			let index = FinalizedBeaconStateIndex::<T>::get();
+			let mut second_last_index = 0u32;
+
+			if index == 1 {
+				second_last_index = 8192;
+			} else if index == 0 {
+				second_last_index = 0;
+			} else {
+				second_last_index = index - 1;
+			}
+
+			let prev_head_header_root = FinalizedBeaconStateMapping::<T>::get(second_last_index);
+			let prev_head_finalized_state = FinalizedBeaconState::<T>::get(prev_head_header_root)
+				.unwrap_or(CompactBeaconState::default());
+
+			// If the last finalized header and the one provided to be added to the store
+			// is less than a sync committee apart, overwrite the last finalized header since
+			// we only need one finalized update per SLOTS_PER_HISTORICAL_ROOT. If the slots
+			// are SLOTS_PER_HISTORICAL_ROOT apart, store the update in a new index in the
+			// ringbuffer.
+			// Do not overwrite for the first index (initial beacon checkpoint)
+			if prev_head_finalized_state.slot != 0 &&
+				slot - prev_head_finalized_state.slot < config::SLOTS_PER_HISTORICAL_ROOT as u64
+			{
+				<FinalizedBeaconStateBuffer<T>>::overwrite_last_index(
+					header_root,
+					CompactBeaconState { slot: header.slot, block_roots_root },
+				);
+			} else {
+				<FinalizedBeaconStateBuffer<T>>::insert(
+					header_root,
+					CompactBeaconState { slot: header.slot, block_roots_root },
+				);
+			}
 			<LatestFinalizedBlockRoot<T>>::set(header_root);
 
 			log::info!(
