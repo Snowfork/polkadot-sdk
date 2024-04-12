@@ -293,13 +293,16 @@ fn send_token_from_ethereum_to_penpal() {
 		(PenpalASender::get(), INITIAL_FUND),
 	]);
 
+	let key = CustomizableAssetFromSystemAssetHub::key().to_vec();
+	let value = Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]).encode();
+
+	println!("key:{:?}", hex::encode(&key));
+	println!("value:{:?}", hex::encode(&value));
+
 	PenpalA::execute_with(|| {
 		assert_ok!(<PenpalA as Chain>::System::set_storage(
 			<PenpalA as Chain>::RuntimeOrigin::root(),
-			vec![(
-				CustomizableAssetFromSystemAssetHub::key().to_vec(),
-				Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]).encode(),
-			)],
+			vec![(key, value)],
 		));
 	});
 

@@ -50,3 +50,6 @@ snowbridge-pallet-system = { path = "../../../../../../../bridges/snowbridge/pal
 snowbridge-pallet-outbound-queue = { path = "../../../../../../../bridges/snowbridge/pallets/outbound-queue", default-features = false }
 snowbridge-pallet-inbound-queue = { path = "../../../../../../../bridges/snowbridge/pallets/inbound-queue", default-features = false }
 snowbridge-pallet-inbound-queue-fixtures = { path = "../../../../../../../bridges/snowbridge/pallets/inbound-queue/fixtures" }
+
+[dev-dependencies]
+hex = "0.4.3"
