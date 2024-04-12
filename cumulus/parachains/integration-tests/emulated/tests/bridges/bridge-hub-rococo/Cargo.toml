@@ -14,6 +14,7 @@ workspace = true
 codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 hex-literal = "0.4.1"
+hex = "0.4.3"
 
 # Substrate
 sp-core = { path = "../../../../../../../substrate/primitives/core", default-features = false }
@@ -50,6 +51,3 @@ snowbridge-pallet-system = { path = "../../../../../../../bridges/snowbridge/pal
 snowbridge-pallet-outbound-queue = { path = "../../../../../../../bridges/snowbridge/pallets/outbound-queue", default-features = false }
 snowbridge-pallet-inbound-queue = { path = "../../../../../../../bridges/snowbridge/pallets/inbound-queue", default-features = false }
 snowbridge-pallet-inbound-queue-fixtures = { path = "../../../../../../../bridges/snowbridge/pallets/inbound-queue/fixtures" }
-
-[dev-dependencies]
-hex = "0.4.3"
