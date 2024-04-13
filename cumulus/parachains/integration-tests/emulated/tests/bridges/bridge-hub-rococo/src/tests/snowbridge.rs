@@ -416,7 +416,8 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			]
 		);
 
-		// Construct SendToken message and sent to inbound queue
+		// Construct SendToken message and sent to inbound queue, the receiver here is a
+		// non-existence account on AH
 		send_inbound_message(make_send_token_message()).unwrap();
 
 		// Check that the send token message was sent using xcm
@@ -461,12 +462,20 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
 		));
 
+		// Send the Weth back to Ethereum, fund the sender so can pay the transaction fee
+		let sender: [u8; 32] =
+			hex!("2848d4dce4a7387c0f38f932a82f1b4ed783633e12ff73f0416cc982b5d82930");
+		<AssetHubRococo as AssetHubRococoPallet>::Balances::force_set_balance(
+			RuntimeOrigin::root(),
+			sp_runtime::AccountId32::new(sender).into(),
+			INITIAL_FUND,
+		)
+		.expect("fund the sender");
 		let free_balance_before = <AssetHubRococo as AssetHubRococoPallet>::Balances::free_balance(
-			AssetHubRococoReceiver::get(),
+			sp_runtime::AccountId32::new(sender),
 		);
-		// Send the Weth back to Ethereum
 		<AssetHubRococo as AssetHubRococoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
-			RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
+			RuntimeOrigin::signed(sender.into()),
 			Box::new(destination),
 			Box::new(beneficiary),
 			Box::new(multi_assets),
@@ -475,7 +484,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		)
 		.unwrap();
 		let free_balance_after = <AssetHubRococo as AssetHubRococoPallet>::Balances::free_balance(
-			AssetHubRococoReceiver::get(),
+			sp_runtime::AccountId32::new(sender),
 		);
 		// Assert at least DefaultBridgeHubEthereumBaseFee charged from the sender
 		let free_balance_diff = free_balance_before - free_balance_after;
