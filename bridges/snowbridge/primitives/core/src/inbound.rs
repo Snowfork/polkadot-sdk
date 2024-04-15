@@ -80,3 +80,12 @@ pub struct InboundQueueFixture {
 	pub finalized_header: BeaconHeader,
 	pub block_roots_root: H256,
 }
+
+#[derive(Copy, Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo)]
+pub enum EstimateInboundFeeError {
+	InvalidEnvelope,
+	InvalidPayload,
+	InvalidChannel,
+	VersionedConversionFailed,
+	Unroutable,
+}

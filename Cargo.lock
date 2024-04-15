@@ -2036,6 +2036,7 @@ dependencies = [
  "rococo-westend-system-emulated-network",
  "scale-info",
  "snowbridge-core",
+ "snowbridge-pallet-inbound-queue",
  "snowbridge-pallet-inbound-queue-fixtures",
  "snowbridge-pallet-outbound-queue",
  "snowbridge-pallet-system",
@@ -2113,6 +2114,7 @@ dependencies = [
  "serde",
  "snowbridge-beacon-primitives",
  "snowbridge-core",
+ "snowbridge-inbound-queue-runtime-api",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-pallet-ethereum-client",
  "snowbridge-pallet-inbound-queue",
@@ -18657,6 +18659,20 @@ dependencies = [
  "sp-runtime",
  "sp-std 14.0.0",
  "wasm-bindgen-test",
+]
+
+[[package]]
+name = "snowbridge-inbound-queue-runtime-api"
+version = "0.2.0"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "snowbridge-core",
+ "snowbridge-router-primitives",
+ "sp-api",
+ "sp-std 14.0.0",
+ "staging-xcm",
 ]
 
 [[package]]

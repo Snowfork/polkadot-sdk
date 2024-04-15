@@ -38,7 +38,9 @@ pub mod xcm_config;
 use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::{
-	gwei, meth,
+	gwei,
+	inbound::{EstimateInboundFeeError, Log},
+	meth,
 	outbound::{Command, Fee},
 	AgentId, AllowSiblingsOnly, PricingParameters, Rewards,
 };
@@ -83,7 +85,7 @@ use bridge_hub_common::{
 use pallet_xcm::EnsureXcm;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
-use xcm::VersionedLocation;
+use xcm::{VersionedAssets, VersionedLocation};
 use xcm_config::{TreasuryAccount, XcmOriginToTransactDispatchOrigin, XcmRouter};
 
 #[cfg(any(feature = "std", test))]
@@ -508,6 +510,25 @@ parameter_types! {
 		rewards: Rewards { local: 1 * UNITS, remote: meth(1) },
 		multiplier: FixedU128::from_rational(1, 1),
 	};
+	pub DefaultFee: Asset = (Parent, 1_000_000_000).into();
+	pub MaxSendCostXcm: Xcm<()> =  vec![
+		ReceiveTeleportedAsset(DefaultFee::get().into()),
+		BuyExecution { fees: DefaultFee::get(), weight_limit: Unlimited },
+		DescendOrigin(PalletInstance(80).into()),
+		UniversalOrigin(GlobalConsensus(Ethereum { chain_id: 11155111 })),
+		ReserveAssetDeposited(DefaultFee::get().into()),
+		ClearOrigin,
+		DepositReserveAsset {
+			assets: Definite(DefaultFee::get().into()),
+			dest: Location::new(1, [Parachain(bp_asset_hub_rococo::ASSET_HUB_ROCOCO_PARACHAIN_ID)]),
+			xcm: vec![
+				BuyExecution { fees: DefaultFee::get(), weight_limit: Unlimited },
+				DepositAsset { assets: Definite(DefaultFee::get().into()), beneficiary: Location::default() },
+				SetTopic([0; 32]),
+			]
+			.into(),
+		},
+	].into();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -573,6 +594,7 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 	type WeightInfo = weights::snowbridge_pallet_inbound_queue::WeightInfo<Runtime>;
 	type PricingParameters = EthereumSystem;
 	type AssetTransactor = <xcm_config::XcmConfig as xcm_executor::Config>::AssetTransactor;
+	type MaxSendCostXcm = MaxSendCostXcm;
 }
 
 impl snowbridge_pallet_outbound_queue::Config for Runtime {
@@ -1028,6 +1050,13 @@ impl_runtime_apis! {
 	impl snowbridge_system_runtime_api::ControlApi<Block> for Runtime {
 		fn agent_id(location: VersionedLocation) -> Option<AgentId> {
 			snowbridge_pallet_system::api::agent_id::<Runtime>(location)
+		}
+	}
+
+	impl snowbridge_inbound_queue_runtime_api::InboundQueueApi<Block> for Runtime {
+
+		fn calculate_fee(log: Log) -> Result<VersionedAssets, EstimateInboundFeeError> {
+			snowbridge_pallet_inbound_queue::api::calculate_fee::<Runtime>(log)
 		}
 	}
 

@@ -118,6 +118,7 @@ snowbridge-pallet-outbound-queue = { path = "../../../../../bridges/snowbridge/p
 snowbridge-outbound-queue-runtime-api = { path = "../../../../../bridges/snowbridge/pallets/outbound-queue/runtime-api", default-features = false }
 snowbridge-router-primitives = { path = "../../../../../bridges/snowbridge/primitives/router", default-features = false }
 snowbridge-runtime-common = { path = "../../../../../bridges/snowbridge/runtime/runtime-common", default-features = false }
+snowbridge-inbound-queue-runtime-api = { path = "../../../../../bridges/snowbridge/pallets/inbound-queue/runtime-api", default-features = false }
 
 bridge-hub-common = { path = "../common", default-features = false }
 
@@ -194,6 +195,7 @@ std = [
 	"serde",
 	"snowbridge-beacon-primitives/std",
 	"snowbridge-core/std",
+	"snowbridge-inbound-queue-runtime-api/std",
 	"snowbridge-outbound-queue-runtime-api/std",
 	"snowbridge-pallet-ethereum-client/std",
 	"snowbridge-pallet-inbound-queue/std",
