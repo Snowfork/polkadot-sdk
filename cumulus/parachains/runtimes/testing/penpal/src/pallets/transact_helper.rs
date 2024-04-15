@@ -87,7 +87,6 @@ pub mod pallet {
 					require_weight_at_most: Weight::default(),
 					call: transact.encode().into(),
 				},
-				// Optional only for trace
 				SetTopic([0; 32]),
 			]);
 

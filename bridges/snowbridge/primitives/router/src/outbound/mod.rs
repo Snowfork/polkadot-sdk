@@ -9,8 +9,8 @@ use core::slice::Iter;
 
 use codec::{Decode, DecodeAll, Encode};
 
+use crate::outbound::XcmConverterError::SetTopicExpected;
 use frame_support::{ensure, traits::Get};
-use frame_system::unique;
 use snowbridge_core::{
 	outbound::{AgentExecuteCommand, Command, Message, SendMessage, TransactInfo},
 	ChannelId, ParaId,
@@ -210,9 +210,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		let message = TransactInfo::decode_all(&mut call_data.clone().into_encoded().as_slice())
 			.map_err(|_| XcmConverterError::TransactDecodeFailed)?;
 
-		// Check if there is a SetTopic and skip over it if found.
-		let message_hash = unique(&message);
-		let topic_id = match_expression!(self.next()?, SetTopic(id), id).unwrap_or(&message_hash);
+		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 		Ok((
 			AgentExecuteCommand::Transact {
 				target: message.target,

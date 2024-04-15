@@ -28,9 +28,6 @@ mod envelope;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-#[cfg(feature = "runtime-benchmarks")]
-use snowbridge_beacon_primitives::CompactExecutionHeader;
-
 pub mod weights;
 
 #[cfg(test)]
@@ -55,8 +52,7 @@ use sp_core::{H160, H256};
 use sp_runtime::traits::Zero;
 use sp_std::{convert::TryFrom, vec};
 use xcm::prelude::{
-	send_xcm, Instruction::SetTopic, Junction::*, Location, SendError as XcmpSendError, SendXcm,
-	Xcm, XcmContext, XcmHash,
+	send_xcm, Junction::*, Location, SendError as XcmpSendError, SendXcm, Xcm, XcmContext, XcmHash,
 };
 use xcm_executor::traits::TransactAsset;
 
@@ -72,6 +68,9 @@ use snowbridge_router_primitives::{
 use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
 pub use weights::WeightInfo;
+
+#[cfg(feature = "runtime-benchmarks")]
+use snowbridge_beacon_primitives::BeaconHeader;
 
 type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
@@ -92,7 +91,7 @@ pub mod pallet {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	pub trait BenchmarkHelper<T> {
-		fn initialize_storage(block_hash: H256, header: CompactExecutionHeader);
+		fn initialize_storage(beacon_header: BeaconHeader, block_roots_root: H256);
 	}
 
 	#[pallet::config]
@@ -272,14 +271,15 @@ pub mod pallet {
 				Fortitude::Polite,
 			)
 			.min(delivery_cost);
-			if amount > BalanceOf::<T>::zero() {
+			if !amount.is_zero() {
 				T::Token::transfer(&sovereign_account, &who, amount, Preservation::Preserve)?;
 			}
 
 			// Decode message into XCM
 			let (xcm, fee) =
 				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(message) => Self::do_convert(envelope.message_id, message)?,
+					Ok(message) => T::MessageConverter::convert(envelope.message_id, message)
+						.map_err(|e| Error::<T>::ConvertMessage(e))?,
 					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 				};
 
@@ -321,17 +321,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn do_convert(
-			message_id: H256,
-			message: inbound::VersionedMessage,
-		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
-			let (mut xcm, fee) =
-				T::MessageConverter::convert(message).map_err(|e| Error::<T>::ConvertMessage(e))?;
-			// Append the message id as an XCM topic
-			xcm.inner_mut().extend(vec![SetTopic(message_id.into())]);
-			Ok((xcm, fee))
-		}
-
 		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {
 			let dest = Location::new(1, [Parachain(dest.into())]);
 			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
