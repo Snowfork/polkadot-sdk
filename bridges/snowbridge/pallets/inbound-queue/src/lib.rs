@@ -362,8 +362,11 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn calculate_send_cost(xcm: Xcm<()>) -> Result<BalanceOf<T>, Error<T>> {
-			let dest = Location::new(1, [Parachain(1000)]);
+		pub fn calculate_send_cost(
+			para_id: ParaId,
+			xcm: Xcm<()>,
+		) -> Result<BalanceOf<T>, Error<T>> {
+			let dest = Location::new(1, [Parachain(para_id.into())]);
 			let (_, assets) = validate_send::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
 			ensure!(assets.len() == 1, Error::<T>::Send(SendError::Fees));
 			let fee = assets.get(0).unwrap();
@@ -382,7 +385,8 @@ pub mod pallet {
 			// Cost here based on MaxMessagePayloadSize(the worst case)
 			let delivery_cost = Self::calculate_delivery_cost(T::MaxMessageSize::get());
 			// Cost here based on MaxSendCostXcm(the worst case)
-			let send_cost = Self::calculate_send_cost(T::MaxSendCostXcm::get()).unwrap_or_default();
+			let send_cost = Self::calculate_send_cost(1000_u32.into(), T::MaxSendCostXcm::get())
+				.unwrap_or_default();
 			delivery_cost.saturating_add(send_cost)
 		}
 	}
