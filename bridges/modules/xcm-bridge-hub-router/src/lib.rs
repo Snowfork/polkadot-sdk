@@ -341,8 +341,8 @@ impl<T: Config<I>, I: 'static> SendXcm for Pallet<T, I> {
 		// versioned message to the sibling bridge hub. However, the local bridge hub may have a
 		// higher XCM version than the remote `dest`. Once again, it is better to discard such
 		// messages here than at the bridge hub (e.g., to avoid losing funds).
-		let destination_version = T::DestinationVersion::get_version_for(dest_ref)
-			.ok_or(SendError::DestinationUnsupported)?;
+		let destination_version =
+			T::DestinationVersion::get_version_for(dest_ref).ok_or(SendError::NotApplicable)?;
 		let _ = VersionedXcm::from(xcm_ref.clone())
 			.into_version(destination_version)
 			.map_err(|()| SendError::DestinationUnsupported)?;
