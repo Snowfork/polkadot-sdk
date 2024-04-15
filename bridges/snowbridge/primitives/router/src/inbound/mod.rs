@@ -278,8 +278,8 @@ where
 						xcm: vec![
 							// Buy execution on target.
 							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
-							// Deposit both asset and fees to beneficiary.
-							DepositAsset { assets: Wild(All), beneficiary },
+							// Deposit asset to beneficiary.
+							DepositAsset { assets: Definite(asset.into()), beneficiary },
 							// Forward message id to destination parachain.
 							SetTopic(message_id.into()),
 						]
