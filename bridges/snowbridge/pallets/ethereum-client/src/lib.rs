@@ -500,9 +500,11 @@ pub mod pallet {
 			let index = FinalizedBeaconStateIndex::<T>::get();
 			let mut second_last_index = 0u32;
 
+			// for the ringbuffer first slot, then the previous slot is the last slot because
+			// it wraps around
 			if index == 1 {
 				second_last_index = 8192;
-			} else if index == 0 {
+			} else if index == 0 { // ringbuffer is empty
 				second_last_index = 0;
 			} else {
 				second_last_index = index - 1;
