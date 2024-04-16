@@ -12,7 +12,7 @@ workspace = true
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }
-scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11.1", default-features = false, features = ["derive"] }
 hex-literal = "0.4.1"
 
 # Substrate
@@ -31,7 +31,6 @@ xcm-executor = { package = "staging-xcm-executor", path = "../../../../../../../
 
 # Bridges
 pallet-bridge-messages = { path = "../../../../../../../bridges/modules/messages", default-features = false }
-bp-messages = { path = "../../../../../../../bridges/primitives/messages", default-features = false }
 
 # Cumulus
 parachains-common = { path = "../../../../../common" }
