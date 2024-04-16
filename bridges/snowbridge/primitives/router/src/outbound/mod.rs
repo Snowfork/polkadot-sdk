@@ -108,17 +108,21 @@ where
 		let outbound_message = Message {
 			id: Some(message_id.into()),
 			channel_id,
-			command: Command::AgentExecute { agent_id, command: agent_execute_command },
+			command: Command::AgentExecute { agent_id, command: agent_execute_command.clone() },
 		};
 
 		// validate the message
-		let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
+		let (ticket, fees) = OutboundQueue::validate(&outbound_message).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
-
-		// convert fee to Asset
-		let fee = Asset::from((Location::parent(), fee.total())).into();
+		let fee = match agent_execute_command {
+			AgentExecuteCommand::Transact { fee, .. } => {
+				ensure!(fee > fees.remote, SendError::Fees);
+				Ok::<Assets, SendError>(Asset::from((Location::parent(), fees.local)).into())
+			},
+			_ => Ok::<Assets, SendError>(Asset::from((Location::parent(), fees.total())).into()),
+		}?;
 
 		Ok(((ticket.encode(), message_id), fee))
 	}
@@ -216,6 +220,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 				target: message.target,
 				payload: message.call,
 				gas_limit: message.gas_limit,
+				fee: message.fee,
 			},
 			*topic_id,
 		))

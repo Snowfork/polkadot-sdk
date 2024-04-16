@@ -54,6 +54,7 @@ pub mod pallet {
 		pub target: H160,
 		pub call: Vec<u8>,
 		pub gas_limit: u64,
+		pub fee: u128,
 	}
 
 	#[pallet::hooks]
@@ -79,7 +80,7 @@ pub mod pallet {
 				parents: 2,
 				interior: Junctions::from([GlobalConsensus(Ethereum { chain_id: 11155111 })]),
 			};
-			let transact = TransactInfo { target, call, gas_limit };
+			let transact = TransactInfo { target, call, gas_limit, fee };
 
 			let inner_message = Xcm(vec![
 				Transact {

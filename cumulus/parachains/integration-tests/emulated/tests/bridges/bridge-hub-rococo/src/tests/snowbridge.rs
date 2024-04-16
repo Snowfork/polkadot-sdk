@@ -650,7 +650,7 @@ fn transact_from_penpal_to_ethereum() {
 			//call
 			hex!("00071468656c6c6f").to_vec(),
 			//fee
-			4_000_000_000,
+			2_750_872_500_000,
 			//gas
 			80_000,
 		));

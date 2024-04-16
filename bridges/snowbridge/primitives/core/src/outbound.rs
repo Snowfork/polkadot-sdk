@@ -247,6 +247,8 @@ mod v1 {
 			payload: Vec<u8>,
 			/// The dynamic gas component that needs to be specified when executing the contract
 			gas_limit: u64,
+			/// The fee to cover the delivery cost
+			fee: u128,
 		},
 	}
 
@@ -270,14 +272,15 @@ mod v1 {
 							Token::Uint(U256::from(*amount)),
 						])),
 					]),
-				AgentExecuteCommand::Transact { target, payload, gas_limit } => ethabi::encode(&[
-					Token::Uint(self.index().into()),
-					Token::Bytes(ethabi::encode(&[
-						Token::Address(*target),
-						Token::Bytes(payload.clone()),
-						Token::Uint(U256::from(*gas_limit)),
-					])),
-				]),
+				AgentExecuteCommand::Transact { target, payload, gas_limit, .. } =>
+					ethabi::encode(&[
+						Token::Uint(self.index().into()),
+						Token::Bytes(ethabi::encode(&[
+							Token::Address(*target),
+							Token::Bytes(payload.clone()),
+							Token::Uint(U256::from(*gas_limit)),
+						])),
+					]),
 			}
 		}
 	}
@@ -442,4 +445,5 @@ pub struct TransactInfo {
 	pub target: H160,
 	pub call: Vec<u8>,
 	pub gas_limit: u64,
+	pub fee: u128,
 }

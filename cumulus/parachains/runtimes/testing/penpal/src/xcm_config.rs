@@ -437,7 +437,7 @@ pub mod to_ethereum {
 	use xcm_builder::NetworkExportTableItem;
 
 	parameter_types! {
-		pub storage DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+		pub storage DefaultBridgeHubEthereumBaseFee: Balance = 4_000_000_000;
 		pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 		pub storage SiblingBridgeHub: Location = Location::new(1, [Parachain(1013)]);
 		pub storage EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
