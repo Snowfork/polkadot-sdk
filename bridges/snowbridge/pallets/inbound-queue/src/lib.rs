@@ -33,7 +33,6 @@ pub mod weights;
 #[cfg(test)]
 mod mock;
 
-pub mod api;
 #[cfg(test)]
 mod test;
 

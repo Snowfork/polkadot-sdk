@@ -10,7 +10,6 @@ members = [
 	"pallets/ethereum-client/fixtures",
 	"pallets/inbound-queue",
 	"pallets/inbound-queue/fixtures",
-	"pallets/inbound-queue/runtime-api",
 	"pallets/outbound-queue",
 	"pallets/outbound-queue/merkle-tree",
 	"pallets/outbound-queue/runtime-api",
