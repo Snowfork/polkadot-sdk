@@ -45,6 +45,7 @@ const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const INSUFFICIENT_XCM_FEE: u128 = 1000;
 const XCM_FEE: u128 = 4_000_000_000;
+const RELAY_TOKEN_AMOUNT: u128 = 100_000_000_000; //0.1 ROC
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
@@ -641,9 +642,7 @@ fn register_relay_token() {
 }
 
 #[test]
-fn send_relay_token_back_and_forth() {
-	const ROC_AMOUNT: u128 = 100_000_000_000; //0.1 ROC
-
+fn send_relay_token_from_substrate_to_ethereum() {
 	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
 		1,
 		[Parachain(AssetHubRococo::para_id().into())],
@@ -685,7 +684,8 @@ fn send_relay_token_back_and_forth() {
 
 		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
 
-		let assets = vec![Asset { id: AssetId(Location::parent()), fun: Fungible(ROC_AMOUNT) }];
+		let assets =
+			vec![Asset { id: AssetId(Location::parent()), fun: Fungible(RELAY_TOKEN_AMOUNT) }];
 		let multi_assets = VersionedAssets::V4(Assets::from(assets));
 
 		let destination = VersionedLocation::V4(Location::new(
@@ -714,11 +714,19 @@ fn send_relay_token_back_and_forth() {
 			events.iter().any(|event| matches!(
 				event,
 				RuntimeEvent::Balances(pallet_balances::Event::Transfer { amount, ..})
-					if *amount == ROC_AMOUNT,
+					if *amount == RELAY_TOKEN_AMOUNT,
 			)),
 			"Roc transferred to Ethereum sovereign account."
 		);
 	});
+}
+
+#[test]
+fn send_relay_token_from_ethereum_to_substrate() {
+	let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+	let token_id = TokenIdOf::convert_location(&asset_id).unwrap();
+
+	send_relay_token_from_substrate_to_ethereum();
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
@@ -742,7 +750,7 @@ fn send_relay_token_back_and_forth() {
 					id: AssetHubRococoReceiver::get().into(),
 					fee: XCM_FEE,
 				},
-				amount: ROC_AMOUNT,
+				amount: RELAY_TOKEN_AMOUNT,
 			},
 		});
 		let (xcm, _) = Converter::convert(message_id, message).unwrap();
@@ -766,7 +774,7 @@ fn send_relay_token_back_and_forth() {
 			events.iter().any(|event| matches!(
 				event,
 				RuntimeEvent::Balances(pallet_balances::Event::Burned { amount, ..})
-					if *amount == ROC_AMOUNT,
+					if *amount == RELAY_TOKEN_AMOUNT,
 			)),
 			"Roc burnt from Ethereum sovereign account."
 		);
@@ -776,7 +784,7 @@ fn send_relay_token_back_and_forth() {
 			events.iter().any(|event| matches!(
 				event,
 				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *amount == ROC_AMOUNT && *who == AssetHubRococoReceiver::get()
+					if *amount == RELAY_TOKEN_AMOUNT && *who == AssetHubRococoReceiver::get()
 			)),
 			"Roc minted to beneficiary."
 		);
