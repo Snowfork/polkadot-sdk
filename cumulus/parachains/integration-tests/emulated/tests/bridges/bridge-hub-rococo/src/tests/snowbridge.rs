@@ -568,6 +568,13 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 fn transact_from_ethereum_to_penpal_success() {
 	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
 
+	// Fund sender on penpal so that it can pay execution fees.
+	let sender: H160 = hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into();
+	PenpalA::fund_accounts(vec![(
+		blake2_256(&(b"AccountKey20", sender).encode()).into(),
+		INITIAL_FUND,
+	)]);
+
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 		type Runtime = <BridgeHubRococo as Chain>::Runtime;
@@ -588,7 +595,7 @@ fn transact_from_ethereum_to_penpal_success() {
 		let message = VersionedMessage::V1(MessageV1 {
 			chain_id: CHAIN_ID,
 			command: Command::Transact {
-				sender: hex!("90A987B944Cb1dCcE5564e5FDeCD7a54D3de27Fe").into(),
+				sender,
 				fee: XCM_FEE,
 				weight_at_most: XCM_WEIGHT,
 				origin_kind: OriginKind::SovereignAccount,
@@ -711,7 +718,7 @@ fn transact_from_ethereum_to_penpal_insufficient_fee() {
 		assert_expected_events!(
 			PenpalA,
 			vec![
-				RuntimeEvent::MessageQueue(pallet_message_queue::Event::ProcessingFailed{ .. }) => {},
+				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed{ success:false,.. }) => {},
 			]
 		);
 	});

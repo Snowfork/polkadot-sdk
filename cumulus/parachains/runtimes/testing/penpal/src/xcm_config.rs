@@ -224,47 +224,10 @@ impl Contains<Location> for CommonGoodAssetsParachain {
 	}
 }
 
-pub struct AllowUnpaidExecutionFromSnowBridgeWithFeeChecked<T>(PhantomData<T>);
-impl<T: Contains<Location>> ShouldExecute for AllowUnpaidExecutionFromSnowBridgeWithFeeChecked<T> {
-	fn should_execute<RuntimeCall>(
-		origin: &Location,
-		instructions: &mut [Instruction<RuntimeCall>],
-		max_weight: Weight,
-		_properties: &mut Properties,
-	) -> Result<(), ProcessMessageError> {
-		log::trace!(
-			target: "xcm::barriers",
-			"AllowUnpaidExecutionFromSnowBridgeWithFeeChecked origin: {:?}, instructions: {:?}, max_weight: {:?}, properties: {:?}",
-			origin, instructions, max_weight, _properties,
-		);
-		ensure!(T::contains(origin), ProcessMessageError::Unsupported);
-		let mut fee_assets = xcm::prelude::Assets::default();
-		instructions.matcher().match_next_inst_while(
-			|_| true,
-			|inst| match inst {
-				BurnAsset(assets) => {
-					fee_assets = assets.clone();
-					Ok(ControlFlow::Break(()))
-				},
-
-				_ => Ok(ControlFlow::Continue(())),
-			},
-		)?;
-		let mut trader = <XcmConfig as xcm_executor::Config>::Trader::new();
-		let ctx = XcmContext { origin: None, message_id: XcmHash::default(), topic: None };
-		trader
-			.buy_weight(max_weight, fee_assets.into(), &ctx)
-			.map_err(|_| ProcessMessageError::Unsupported)?;
-		Ok(())
-	}
-}
-
 pub type Barrier = TrailingSetTopicAsId<(
 	TakeWeightCredit,
 	// Expected responses are OK.
 	AllowKnownQueryResponses<PolkadotXcm>,
-	// Allow from BridgeHub
-	AllowUnpaidExecutionFromSnowBridgeWithFeeChecked<Equals<SiblingBridgeHub>>,
 	// Allow XCMs with some computed origins to pass through.
 	WithComputedOrigin<
 		(
@@ -402,6 +365,7 @@ impl xcm_executor::Config for XcmConfig {
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type Trader = (
 		UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>,
+		UsingComponents<WeightToFee, PenpalNativeCurrency, AccountId, Balances, ToAuthor<Runtime>>,
 		// This trader allows to pay with `is_sufficient=true` "Foreign" assets from dedicated
 		// `pallet_assets` instance - `ForeignAssets`.
 		cumulus_primitives_utility::TakeFirstAssetTrader<
