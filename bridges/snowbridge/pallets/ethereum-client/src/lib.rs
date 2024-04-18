@@ -488,7 +488,7 @@ pub mod pallet {
 		/// Stores a compacted (slot and block roots root (hash of the `block_roots` beacon state
 		/// field, used for ancestry proof)) beacon state in a ring buffer map, with the header root
 		/// as map key.
-		pub(super) fn store_finalized_header(
+		pub fn store_finalized_header(
 			header: BeaconHeader,
 			block_roots_root: H256,
 		) -> DispatchResult {
@@ -500,11 +500,8 @@ pub mod pallet {
 			let index = FinalizedBeaconStateIndex::<T>::get();
 			// If the ringbuffer is at the first slot, then the previous head is the last slot
 			// because the ringbuffer wraps around
-			let second_last_index = if index == 0 {
-				MaxFinalizedHeadersToKeep::<T>::get() - 1
-			} else {
-				index - 1
-			};
+			let second_last_index =
+				if index == 0 { MaxFinalizedHeadersToKeep::<T>::get() - 1 } else { index - 1 };
 
 			let prev_head_header_root = FinalizedBeaconStateMapping::<T>::get(second_last_index);
 			let prev_head_finalized_state = FinalizedBeaconState::<T>::get(prev_head_header_root)

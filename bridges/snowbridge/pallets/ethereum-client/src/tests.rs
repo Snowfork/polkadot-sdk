@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use crate::{functions::compute_period, sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared, MaxFinalizedHeadersToKeep};
-use crate::mock::{
-	get_message_verification_payload, load_checkpoint_update_fixture,
-	load_finalized_header_update_fixture, load_next_finalized_header_update_fixture,
-	load_next_sync_committee_update_fixture, load_sync_committee_update_fixture,
+use crate::{
+	functions::compute_period,
+	mock::{
+		get_message_verification_payload, load_checkpoint_update_fixture,
+		load_finalized_header_update_fixture, load_next_finalized_header_update_fixture,
+		load_next_sync_committee_update_fixture, load_sync_committee_update_fixture,
+	},
+	sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState, Error,
+	FinalizedBeaconState, LatestFinalizedBlockRoot, MaxFinalizedHeadersToKeep, NextSyncCommittee,
+	SyncCommitteePrepared,
 };
-use sp_core::Get;
 
 pub use crate::mock::*;
 
@@ -25,7 +29,7 @@ use snowbridge_core::{
 	inbound::{VerificationError, Verifier},
 	RingBufferMap,
 };
-use sp_core::H256;
+use sp_core::{Get, H256};
 use sp_runtime::DispatchError;
 
 /// Arbitrary hash used for tests and invalid hashes.
@@ -890,7 +894,8 @@ fn ring_buffer_works() {
 		// 2nd header should have been deleted
 		assert!(<FinalizedBeaconState<Test>>::get(block_root2).is_none());
 
-		// Insert fourth finalized checkpoint. Expected to overwrite finalized checkpoint at index 2.
+		// Insert fourth finalized checkpoint. Expected to overwrite finalized checkpoint at index
+		// 2.
 		<FinalizedBeaconStateBuffer<Test>>::overwrite_last_index(
 			block_root4,
 			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
@@ -922,24 +927,33 @@ fn ring_buffer_wrap_around_works() {
 	new_tester().execute_with(|| {
 		let max_headers_to_keep = <MaxFinalizedHeadersToKeep<Test>>::get();
 		for i in 0..max_headers_to_keep {
-			let header = get_beacon_header_with_slot((i +1) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64);
-			let block_root =  H256::random();
+			let header =
+				get_beacon_header_with_slot((i + 1) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64);
+			let block_root = H256::random();
 			assert_ok!(EthereumBeaconClient::store_finalized_header(header, block_root));
 		}
 		// last item (i = 5119 because max_headers_to_keep is not included in the for range and
-		// because the ringbuffer starts inserting at index 1) should then be at ringbuffer inddex 0.
+		// because the ringbuffer starts inserting at index 1) should then be at ringbuffer inddex
+		// 0.
 		assert_eq!(0, <FinalizedBeaconStateIndex<Test>>::get());
 
 		// should overwrite header at index 0
 		let next_block = H256::random();
-		let next_header = get_beacon_header_with_slot(((max_headers_to_keep-1) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64)+32);
+		let next_header = get_beacon_header_with_slot(
+			((max_headers_to_keep - 1) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64) + 32,
+		);
 		assert_ok!(EthereumBeaconClient::store_finalized_header(next_header, next_block));
 		assert_eq!(0, <FinalizedBeaconStateIndex<Test>>::get());
 
 		// should be inserted at index 1
 		let next_block_in_next_period = H256::random();
-		let next_header_in_next_period = get_beacon_header_with_slot(((max_headers_to_keep) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64)+32);
-		assert_ok!(EthereumBeaconClient::store_finalized_header(next_header_in_next_period, next_block_in_next_period));
+		let next_header_in_next_period = get_beacon_header_with_slot(
+			((max_headers_to_keep) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64) + 32,
+		);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(
+			next_header_in_next_period,
+			next_block_in_next_period
+		));
 		assert_eq!(1, <FinalizedBeaconStateIndex<Test>>::get());
 	});
 }
