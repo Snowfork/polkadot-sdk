@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use crate::{
-	functions::compute_period, sync_committee_sum, verify_merkle_branch, BeaconHeader,
-	CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee,
-	SyncCommitteePrepared,
-};
-
+use crate::{functions::compute_period, sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared, MaxFinalizedHeadersToKeep};
 use crate::mock::{
 	get_message_verification_payload, load_checkpoint_update_fixture,
 	load_finalized_header_update_fixture, load_next_finalized_header_update_fixture,
 	load_next_sync_committee_update_fixture, load_sync_committee_update_fixture,
 };
+use sp_core::Get;
 
 pub use crate::mock::*;
 
@@ -860,30 +856,29 @@ fn ring_buffer_works() {
 		let block_root4 = H256::random();
 		let block_root5 = H256::random();
 
+		// Insert initial finalized checkpoint
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root1,
 			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
 		);
-
-		let last_index = <FinalizedBeaconStateIndex<Test>>::get();
 		assert_eq!(
 			<FinalizedBeaconStateMapping<Test>>::get(<FinalizedBeaconStateIndex<Test>>::get()),
 			block_root1
 		);
 
+		// Insert second finalized checkpoint
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root2,
 			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
 		);
-
 		let last_index = <FinalizedBeaconStateIndex<Test>>::get();
 		assert_eq!(<FinalizedBeaconStateMapping<Test>>::get(last_index), block_root2);
 
+		// Insert third finalized checkpoint. Expected to overwrite finalized checkpoint at index 2.
 		<FinalizedBeaconStateBuffer<Test>>::overwrite_last_index(
 			block_root3,
 			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
 		);
-
 		let last_index_after_overwrite = <FinalizedBeaconStateIndex<Test>>::get();
 		// check the index stayed the same
 		assert_eq!(last_index_after_overwrite, last_index);
@@ -892,12 +887,14 @@ fn ring_buffer_works() {
 			<FinalizedBeaconStateMapping<Test>>::get(last_index_after_overwrite),
 			block_root3
 		);
+		// 2nd header should have been deleted
+		assert!(<FinalizedBeaconState<Test>>::get(block_root2).is_none());
 
+		// Insert fourth finalized checkpoint. Expected to overwrite finalized checkpoint at index 2.
 		<FinalizedBeaconStateBuffer<Test>>::overwrite_last_index(
 			block_root4,
 			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
 		);
-
 		let last_index_after_overwrite = <FinalizedBeaconStateIndex<Test>>::get();
 		// check the index stayed the same
 		assert_eq!(last_index_after_overwrite, last_index);
@@ -906,12 +903,14 @@ fn ring_buffer_works() {
 			<FinalizedBeaconStateMapping<Test>>::get(last_index_after_overwrite),
 			block_root4
 		);
+		// 3rd header should have been deleted
+		assert!(<FinalizedBeaconState<Test>>::get(block_root3).is_none());
 
+		// Insert fifth finalized checkpoint. Expected to be added to index 3.
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root5,
 			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
 		);
-
 		let last_index = <FinalizedBeaconStateIndex<Test>>::get();
 		assert_eq!(last_index_after_overwrite + 1, last_index);
 		assert_eq!(<FinalizedBeaconStateMapping<Test>>::get(last_index), block_root5);
@@ -919,16 +918,41 @@ fn ring_buffer_works() {
 }
 
 #[test]
+fn ring_buffer_wrap_around_works() {
+	new_tester().execute_with(|| {
+		let max_headers_to_keep = <MaxFinalizedHeadersToKeep<Test>>::get();
+		for i in 0..max_headers_to_keep {
+			let header = get_beacon_header_with_slot((i +1) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64);
+			let block_root =  H256::random();
+			assert_ok!(EthereumBeaconClient::store_finalized_header(header, block_root));
+		}
+		// last item (i = 5119 because max_headers_to_keep is not included in the for range and
+		// because the ringbuffer starts inserting at index 1) should then be at ringbuffer inddex 0.
+		assert_eq!(0, <FinalizedBeaconStateIndex<Test>>::get());
+
+		// should overwrite header at index 0
+		let next_block = H256::random();
+		let next_header = get_beacon_header_with_slot(((max_headers_to_keep-1) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64)+32);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(next_header, next_block));
+		assert_eq!(0, <FinalizedBeaconStateIndex<Test>>::get());
+
+		// should be inserted at index 1
+		let next_block_in_next_period = H256::random();
+		let next_header_in_next_period = get_beacon_header_with_slot(((max_headers_to_keep) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64)+32);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(next_header_in_next_period, next_block_in_next_period));
+		assert_eq!(1, <FinalizedBeaconStateIndex<Test>>::get());
+	});
+}
+
+#[test]
 fn store_finalized_header_works() {
 	new_tester().execute_with(|| {
 		// insert first bootstrap header
-		let header1 = getBeaconHeaderWithSlot(32);
+		let header1 = get_beacon_header_with_slot(32);
 		let block_roots1 = H256::random();
 		let header_root1 = header1.hash_tree_root();
 		assert_ok!(&header_root1);
-
-		let result = EthereumBeaconClient::store_finalized_header(header1, block_roots1);
-		assert_ok!(result);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(header1, block_roots1));
 
 		assert_eq!(<FinalizedBeaconStateIndex<Test>>::get(), 1);
 		assert_eq!(
@@ -938,13 +962,11 @@ fn store_finalized_header_works() {
 
 		// insert second header, within the same SLOTS_PER_HISTORICAL_EPOCH range.
 		// Should not overwrite the first header.
-		let header2 = getBeaconHeaderWithSlot(64);
+		let header2 = get_beacon_header_with_slot(64);
 		let block_roots2 = H256::random();
 		let header_root2 = header2.hash_tree_root();
 		assert_ok!(&header_root2);
-
-		let result = EthereumBeaconClient::store_finalized_header(header2, block_roots2);
-		assert_ok!(result);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(header2, block_roots2));
 
 		// Index should increase because we don't want to overwrite the first update
 		assert_eq!(<FinalizedBeaconStateIndex<Test>>::get(), 2);
@@ -956,13 +978,11 @@ fn store_finalized_header_works() {
 
 		// insert third header, within the same SLOTS_PER_HISTORICAL_EPOCH range.
 		// Should overwrite the last header.
-		let header3 = getBeaconHeaderWithSlot(96);
+		let header3 = get_beacon_header_with_slot(96);
 		let block_roots3 = H256::random();
 		let header_root3 = header3.hash_tree_root();
 		assert_ok!(&header_root3);
-
-		let result = EthereumBeaconClient::store_finalized_header(header3, block_roots3);
-		assert_ok!(result);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(header3, block_roots3));
 
 		// Index should not increase
 		assert_eq!(<FinalizedBeaconStateIndex<Test>>::get(), 2);
@@ -974,13 +994,11 @@ fn store_finalized_header_works() {
 
 		// insert fourth header, within the same SLOTS_PER_HISTORICAL_EPOCH range.
 		// Should overwrite the last header.
-		let header4 = getBeaconHeaderWithSlot(128);
+		let header4 = get_beacon_header_with_slot(128);
 		let block_roots4 = H256::random();
 		let header_root4 = header4.hash_tree_root();
 		assert_ok!(&header_root4);
-
-		let result = EthereumBeaconClient::store_finalized_header(header4, block_roots4);
-		assert_ok!(result);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(header4, block_roots4));
 
 		// Index should not increase
 		assert_eq!(<FinalizedBeaconStateIndex<Test>>::get(), 2);
@@ -992,13 +1010,11 @@ fn store_finalized_header_works() {
 
 		// Insert fourth header, at the boundary of the same SLOTS_PER_HISTORICAL_EPOCH range.
 		// Should insert the header.
-		let header4 = getBeaconHeaderWithSlot(8320);
+		let header4 = get_beacon_header_with_slot(8320);
 		let block_roots4 = H256::random();
 		let header_root4 = header4.hash_tree_root();
 		assert_ok!(&header_root4);
-
-		let result = EthereumBeaconClient::store_finalized_header(header4, block_roots4);
-		assert_ok!(result);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(header4, block_roots4));
 
 		// Index should increase
 		assert_eq!(<FinalizedBeaconStateIndex<Test>>::get(), 3);
@@ -1009,13 +1025,11 @@ fn store_finalized_header_works() {
 		);
 
 		// Should insert the header.
-		let header5 = getBeaconHeaderWithSlot(8352);
+		let header5 = get_beacon_header_with_slot(8352);
 		let block_roots5 = H256::random();
 		let header_root5 = header5.hash_tree_root();
 		assert_ok!(&header_root5);
-
-		let result = EthereumBeaconClient::store_finalized_header(header5, block_roots5);
-		assert_ok!(result);
+		assert_ok!(EthereumBeaconClient::store_finalized_header(header5, block_roots5));
 
 		// Index should increase
 		assert_eq!(<FinalizedBeaconStateIndex<Test>>::get(), 4);
@@ -1027,7 +1041,7 @@ fn store_finalized_header_works() {
 	});
 }
 
-fn getBeaconHeaderWithSlot(slot: u64) -> BeaconHeader {
+fn get_beacon_header_with_slot(slot: u64) -> BeaconHeader {
 	BeaconHeader {
 		slot,
 		proposer_index: 1,

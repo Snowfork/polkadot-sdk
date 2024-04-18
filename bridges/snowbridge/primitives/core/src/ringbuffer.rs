@@ -69,8 +69,10 @@ where
 	/// Set a map entry.
 	fn overwrite_last_index(k: Key, v: Value) {
 		let current_index = CurrentIndex::get();
+		let current_key = Intermediate::get(current_index);
 		Intermediate::insert(current_index, k.clone());
 		M::insert(k, v);
+		M::remove(current_key);
 	}
 
 	/// Check if map contains a key

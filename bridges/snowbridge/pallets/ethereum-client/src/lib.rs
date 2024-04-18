@@ -498,17 +498,13 @@ pub mod pallet {
 				header.hash_tree_root().map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
 			let index = FinalizedBeaconStateIndex::<T>::get();
-			let mut second_last_index = 0u32;
-
-			// for the ringbuffer first slot, then the previous slot is the last slot because
-			// it wraps around
-			if index == 1 {
-				second_last_index = 8192;
-			} else if index == 0 { // ringbuffer is empty
-				second_last_index = 0;
+			// If the ringbuffer is at the first slot, then the previous head is the last slot
+			// because the ringbuffer wraps around
+			let second_last_index = if index == 0 {
+				MaxFinalizedHeadersToKeep::<T>::get() - 1
 			} else {
-				second_last_index = index - 1;
-			}
+				index - 1
+			};
 
 			let prev_head_header_root = FinalizedBeaconStateMapping::<T>::get(second_last_index);
 			let prev_head_finalized_state = FinalizedBeaconState::<T>::get(prev_head_header_root)
@@ -521,7 +517,7 @@ pub mod pallet {
 			// ringbuffer.
 			// Do not overwrite for the first index (initial beacon checkpoint)
 			if prev_head_finalized_state.slot != 0 &&
-				slot - prev_head_finalized_state.slot < config::SLOTS_PER_HISTORICAL_ROOT as u64
+				slot - prev_head_finalized_state.slot < SLOTS_PER_HISTORICAL_ROOT as u64
 			{
 				<FinalizedBeaconStateBuffer<T>>::overwrite_last_index(
 					header_root,
