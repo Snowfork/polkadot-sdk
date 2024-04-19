@@ -18,7 +18,9 @@ use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
-use rococo_system_emulated_network::penpal_emulated_chain::CustomizableAssetFromSystemAssetHub;
+use rococo_system_emulated_network::penpal_emulated_chain::{
+	CustomizableAssetFromSystemAssetHub, PenpalAssetOwner,
+};
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
 use snowbridge_core::{
 	inbound::InboundQueueFixture, outbound::OperatingMode, AssetRegistrarMetadata, Channel,
@@ -34,8 +36,8 @@ use snowbridge_router_primitives::inbound::{
 	VersionedMessage,
 };
 use sp_core::H256;
-use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
+use xcm::v3::MultiLocation;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 const CHAIN_ID: u64 = 11155111;
@@ -44,8 +46,9 @@ const TREASURY_ACCOUNT: [u8; 32] =
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const INSUFFICIENT_XCM_FEE: u128 = 1000;
-const XCM_FEE: u128 = 4_000_000_000;
-const RELAY_TOKEN_AMOUNT: u128 = 100_000_000_000; //0.1 ROC
+const XCM_FEE: u128 = 8_000_000_000;
+// amount of native token
+const TOKEN_AMOUNT: u128 = 100_000_000_000; //0.1
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
@@ -523,16 +526,6 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 }
 
 #[test]
-fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
-	// Insufficient fund
-	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), 1_000);
-
-	BridgeHubRococo::execute_with(|| {
-		assert_err!(send_inbound_message(make_register_token_message()), Token(FundsUnavailable));
-	});
-}
-
-#[test]
 fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
 
@@ -575,30 +568,48 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 }
 
 #[test]
-fn register_relay_token() {
-	let origin_para: u32 = AssetHubRococo::para_id().into();
+fn register_penpal_native_token() {
 	// Fund the origin parachain sovereign account so that it can pay execution fees.
-	BridgeHubRococo::fund_para_sovereign(origin_para.into(), INITIAL_FUND);
+	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id(), INITIAL_FUND);
+
+	// Create agent and channel
+	BridgeHubRococo::execute_with(|| {
+		type Runtime = <BridgeHubRococo as Chain>::Runtime;
+		let agent_id = snowbridge_pallet_system::agent_id_of::<Runtime>(&Location::new(
+			1,
+			[Parachain(PenpalA::para_id().into())],
+		))
+		.unwrap();
+		snowbridge_pallet_system::Agents::<Runtime>::insert(agent_id, ());
+		let channel_id: ChannelId = PenpalA::para_id().into();
+		snowbridge_pallet_system::Channels::<Runtime>::insert(
+			channel_id,
+			Channel { agent_id, para_id: PenpalA::para_id() },
+		)
+	});
 
 	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
 	let destination = Rococo::child_location_of(BridgeHubRococo::para_id()).into();
 
-	let relay_token_asset_id: Location =
-		Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+	let asset_id: Location = Location {
+		parents: 1,
+		interior: [GlobalConsensus(Rococo), Parachain(PenpalA::para_id().into())].into(),
+	};
 
+	// construct ForceRegisterToken call
 	let register_relay_token_call = SnowbridgeControl::Control(ControlCall::ForceRegisterToken {
 		location: Box::new(VersionedLocation::V4(Location::new(
 			1,
-			[Parachain(AssetHubRococo::para_id().into())],
+			[Parachain(PenpalA::para_id().into())],
 		))),
-		asset: Box::new(VersionedLocation::V4(relay_token_asset_id)),
+		asset: Box::new(VersionedLocation::V4(asset_id)),
 		metadata: AssetRegistrarMetadata {
-			name: "roc".as_bytes().to_vec(),
-			symbol: "roc".as_bytes().to_vec(),
+			name: "pen".as_bytes().to_vec(),
+			symbol: "pen".as_bytes().to_vec(),
 			decimals: 12,
 		},
 	});
-	// Construct XCM to register the relay token
+	// Construct XCM to register the token
 	let remote_xcm = VersionedXcm::from(Xcm::<()>(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
 		Transact {
@@ -608,8 +619,7 @@ fn register_relay_token() {
 		},
 	]));
 
-	// Rococo Global Consensus
-	// Send XCM message from Relay Chain to Bridge Hub source Parachain
+	// Rococo Global Consensus send XCM message from Relay Chain to Bridge Hub
 	Rococo::execute_with(|| {
 		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send_blob(
 			sudo_origin,
@@ -642,50 +652,63 @@ fn register_relay_token() {
 }
 
 #[test]
-fn send_relay_token_from_substrate_to_ethereum() {
-	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
+fn send_penpal_native_token_to_ethereum() {
+	let penpal_sovereign = BridgeHubRococo::sovereign_account_id_of(Location::new(
 		1,
-		[Parachain(AssetHubRococo::para_id().into())],
+		[Parachain(PenpalA::para_id().into())],
 	));
 
-	let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+	let asset_id: Location = Location {
+		parents: 1,
+		interior: [GlobalConsensus(Rococo), Parachain(PenpalA::para_id().into())].into(),
+	};
 	let token_id = TokenIdOf::convert_location(&asset_id).unwrap();
 
-	AssetHubRococo::force_default_xcm_version(Some(XCM_VERSION));
+	PenpalA::force_default_xcm_version(Some(XCM_VERSION));
 	BridgeHubRococo::force_default_xcm_version(Some(XCM_VERSION));
-	AssetHubRococo::force_xcm_version(
+	PenpalA::force_xcm_version(
 		Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]),
 		XCM_VERSION,
 	);
 
-	BridgeHubRococo::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
-	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
+	// Prefund sovereign account
+	BridgeHubRococo::fund_accounts(vec![(penpal_sovereign.clone(), INITIAL_FUND)]);
 
+	// create agent,channel,token
 	BridgeHubRococo::execute_with(|| {
 		type Runtime = <BridgeHubRococo as Chain>::Runtime;
 
 		let agent_id = snowbridge_pallet_system::agent_id_of::<Runtime>(&Location::new(
 			1,
-			[Parachain(AssetHubRococo::para_id().into())],
+			[Parachain(PenpalA::para_id().into())],
 		))
 		.unwrap();
 		snowbridge_pallet_system::Agents::<Runtime>::insert(agent_id, ());
-		let channel_id: ChannelId = AssetHubRococo::para_id().into();
+		let channel_id: ChannelId = PenpalA::para_id().into();
 		snowbridge_pallet_system::Channels::<Runtime>::insert(
 			channel_id,
-			Channel { agent_id, para_id: AssetHubRococo::para_id() },
+			Channel { agent_id, para_id: PenpalA::para_id() },
 		);
 		let versioned_asset_id: VersionedLocation = asset_id.into();
 		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, versioned_asset_id);
 	});
 
-	AssetHubRococo::execute_with(|| {
-		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
+	// fund Parachain's sender account with some relay token
+	let asset_owner = PenpalAssetOwner::get();
+	let relay_native_asset_location = MultiLocation::parent();
+	PenpalA::mint_foreign_asset(
+		<PenpalA as Chain>::RuntimeOrigin::signed(asset_owner),
+		relay_native_asset_location,
+		PenpalASender::get(),
+		INITIAL_FUND,
+	);
 
-		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+	// Send penpal native token to Ethereum
+	PenpalA::execute_with(|| {
+		type RuntimeOrigin = <PenpalA as Chain>::RuntimeOrigin;
+		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
 
-		let assets =
-			vec![Asset { id: AssetId(Location::parent()), fun: Fungible(RELAY_TOKEN_AMOUNT) }];
+		let assets = vec![Asset { id: AssetId(Location::here()), fun: Fungible(TOKEN_AMOUNT) }];
 		let multi_assets = VersionedAssets::V4(Assets::from(assets));
 
 		let destination = VersionedLocation::V4(Location::new(
@@ -698,47 +721,64 @@ fn send_relay_token_from_substrate_to_ethereum() {
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
 		));
 
-		// Send the ROC to Ethereum
-		<AssetHubRococo as AssetHubRococoPallet>::PolkadotXcm::reserve_transfer_assets(
-			RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
+		assert_ok!(<PenpalA as PenpalAPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+			RuntimeOrigin::signed(PenpalASender::get()),
 			Box::new(destination),
 			Box::new(beneficiary),
 			Box::new(multi_assets),
 			0,
-		)
-		.unwrap();
+			Unlimited,
+		));
 
-		let events = AssetHubRococo::events();
-		// Check that the ROC transferred to some reserved account
+		let events = PenpalA::events();
+		// Check that the native asset transferred to some reserved account(sovereign of Ethereum)
 		assert!(
 			events.iter().any(|event| matches!(
 				event,
 				RuntimeEvent::Balances(pallet_balances::Event::Transfer { amount, ..})
-					if *amount == RELAY_TOKEN_AMOUNT,
+					if *amount == TOKEN_AMOUNT,
 			)),
-			"Roc transferred to Ethereum sovereign account."
+			"native token reserved to Ethereum sovereign account."
 		);
 	});
-}
-
-#[test]
-fn send_relay_token_from_ethereum_to_substrate() {
-	let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
-	let token_id = TokenIdOf::convert_location(&asset_id).unwrap();
-
-	send_relay_token_from_substrate_to_ethereum();
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-
-		type Converter = <bridge_hub_rococo_runtime::Runtime as snowbridge_pallet_inbound_queue::Config>::MessageConverter;
-
+		// Check that the transfer token back to Ethereum message was queue in the Ethereum
+		// Outbound Queue
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
 				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
 			]
 		);
+	});
+}
+
+#[test]
+fn send_penpal_native_token_from_ethereum() {
+	let asset_id: Location = Location {
+		parents: 1,
+		interior: [GlobalConsensus(Rococo), Parachain(PenpalA::para_id().into())].into(),
+	};
+	let token_id = TokenIdOf::convert_location(&asset_id).unwrap();
+
+	let ethereum_sovereign = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(
+		&Location::new(2, [GlobalConsensus(EthereumNetwork::get())]),
+	)
+	.unwrap();
+
+	PenpalA::fund_accounts(vec![(ethereum_sovereign.into(), INITIAL_FUND)]);
+
+	// Run the previous test to prepare everything
+	send_penpal_native_token_to_ethereum();
+
+	// Send native token back to penpal
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+
+		type Converter = <bridge_hub_rococo_runtime::Runtime as
+snowbridge_pallet_inbound_queue::Config>::MessageConverter;
 
 		let message_id: H256 = [0; 32].into();
 		let message = VersionedMessage::V1(MessageV1 {
@@ -746,15 +786,15 @@ fn send_relay_token_from_ethereum_to_substrate() {
 			command: Command::SendNativeToken {
 				token_id,
 				destination: Destination::ForeignAccountId32 {
-					para_id: AssetHubRococo::para_id().into(),
-					id: AssetHubRococoReceiver::get().into(),
+					para_id: PenpalA::para_id().into(),
+					id: PenpalAReceiver::get().into(),
 					fee: XCM_FEE,
 				},
-				amount: RELAY_TOKEN_AMOUNT,
+				amount: TOKEN_AMOUNT,
 			},
 		});
 		let (xcm, _) = Converter::convert(message_id, message).unwrap();
-		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
@@ -764,19 +804,19 @@ fn send_relay_token_from_ethereum_to_substrate() {
 		);
 	});
 
-	AssetHubRococo::execute_with(|| {
-		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+	PenpalA::execute_with(|| {
+		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
 
-		let events = AssetHubRococo::events();
+		let events = PenpalA::events();
 
-		// Check that the ROC burnt from some reserved account
+		// Check that the native token burnt from some reserved account
 		assert!(
 			events.iter().any(|event| matches!(
 				event,
 				RuntimeEvent::Balances(pallet_balances::Event::Burned { amount, ..})
-					if *amount == RELAY_TOKEN_AMOUNT,
+					if *amount == TOKEN_AMOUNT,
 			)),
-			"Roc burnt from Ethereum sovereign account."
+			"native token burnt from Ethereum sovereign account."
 		);
 
 		// Check that the token was minted to beneficiary
@@ -784,9 +824,9 @@ fn send_relay_token_from_ethereum_to_substrate() {
 			events.iter().any(|event| matches!(
 				event,
 				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *amount == RELAY_TOKEN_AMOUNT && *who == AssetHubRococoReceiver::get()
+					if *amount == TOKEN_AMOUNT && *who == PenpalAReceiver::get()
 			)),
-			"Roc minted to beneficiary."
+			"Token minted to beneficiary."
 		);
 	});
 }

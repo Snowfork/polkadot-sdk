@@ -9,7 +9,7 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::tokens::Balance as BalanceT, weights::Weight, PalletError};
 use scale_info::TypeInfo;
-use snowbridge_core::TokenId;
+use snowbridge_core::{IsSystem, ParaId, TokenId};
 use sp_core::{Get, RuntimeDebug, H160, H256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::MaybeEquivalence, MultiAddress};
@@ -360,7 +360,7 @@ impl<
 	) -> Result<(Xcm<()>, Balance), ConvertMessageError> {
 		let network = Ethereum { chain_id };
 
-		let (_, beneficiary, dest_para_fee) = match destination {
+		let (para_id, beneficiary, dest_para_fee) = match destination {
 			// Final destination is a 32-byte account on a sibling of AssetHub
 			Destination::ForeignAccountId32 { para_id, id, fee } =>
 				Some((para_id, Location::new(0, [AccountId32 { network: None, id }]), fee)),
@@ -371,7 +371,11 @@ impl<
 		}
 		.ok_or(ConvertMessageError::InvalidDestination)?;
 
-		let fee_asset: Asset = (Location::parent(), dest_para_fee).into();
+		let mut fee_asset: Asset = (Location::here(), dest_para_fee).into();
+
+		if ParaId::from(para_id).is_system() {
+			fee_asset = (Location::parent(), dest_para_fee).into();
+		}
 
 		let versioned_asset_id =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
@@ -381,14 +385,15 @@ impl<
 
 		let asset: Asset = (asset_id, amount).into();
 
+		let assets: Assets = vec![asset, fee_asset.clone()].into();
+
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let instructions = vec![
-			ReceiveTeleportedAsset(fee_asset.clone().into()),
-			BuyExecution { fees: fee_asset.clone(), weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
-			WithdrawAsset(asset.clone().into()),
+			WithdrawAsset(assets),
+			BuyExecution { fees: fee_asset, weight_limit: Unlimited },
 			ClearOrigin,
 			DepositAsset { assets: AllCounted(2).into(), beneficiary },
 			SetTopic(message_id.into()),
