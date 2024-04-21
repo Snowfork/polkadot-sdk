@@ -863,7 +863,7 @@ fn ring_buffer_works() {
 		// Insert initial finalized checkpoint
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root1,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 10, block_roots_root: H256::random() },
 		);
 		assert_eq!(
 			<FinalizedBeaconStateMapping<Test>>::get(<FinalizedBeaconStateIndex<Test>>::get()),
@@ -873,15 +873,15 @@ fn ring_buffer_works() {
 		// Insert second finalized checkpoint
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root2,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 20, block_roots_root: H256::random() },
 		);
 		let last_index = <FinalizedBeaconStateIndex<Test>>::get();
 		assert_eq!(<FinalizedBeaconStateMapping<Test>>::get(last_index), block_root2);
 
 		// Insert third finalized checkpoint. Expected to overwrite finalized checkpoint at index 2.
-		<FinalizedBeaconStateBuffer<Test>>::overwrite_last_index(
+		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root3,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 30, block_roots_root: H256::random() },
 		);
 		let last_index_after_overwrite = <FinalizedBeaconStateIndex<Test>>::get();
 		// check the index stayed the same
@@ -896,9 +896,9 @@ fn ring_buffer_works() {
 
 		// Insert fourth finalized checkpoint. Expected to overwrite finalized checkpoint at index
 		// 2.
-		<FinalizedBeaconStateBuffer<Test>>::overwrite_last_index(
+		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root4,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 40, block_roots_root: H256::random() },
 		);
 		let last_index_after_overwrite = <FinalizedBeaconStateIndex<Test>>::get();
 		// check the index stayed the same
@@ -914,7 +914,7 @@ fn ring_buffer_works() {
 		// Insert fifth finalized checkpoint. Expected to be added to index 3.
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root5,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 10 + 8193, block_roots_root: H256::random() },
 		);
 		let last_index = <FinalizedBeaconStateIndex<Test>>::get();
 		assert_eq!(last_index_after_overwrite + 1, last_index);
