@@ -935,11 +935,6 @@ fn ring_buffer_wrap_around_works() {
 			}
 			let block_root = H256::random();
 			assert_ok!(EthereumBeaconClient::store_finalized_header(header, block_root));
-			println!(
-				"added slot at index {}: {}",
-				header.slot,
-				<FinalizedBeaconStateIndex<Test>>::get()
-			)
 		}
 		// last item (i = 5119 because max_headers_to_keep is not included in the for range and
 		// because the ringbuffer starts inserting at index 1) should then be at ringbuffer inddex
@@ -951,7 +946,6 @@ fn ring_buffer_wrap_around_works() {
 		let next_header = get_beacon_header_with_slot(
 			(max_headers_to_keep as u64 * SLOTS_PER_HISTORICAL_ROOT as u64) - 32,
 		);
-		println!("adding slot {}:", next_header.slot);
 		assert_ok!(EthereumBeaconClient::store_finalized_header(next_header, next_block));
 		assert_eq!(0, <FinalizedBeaconStateIndex<Test>>::get());
 
