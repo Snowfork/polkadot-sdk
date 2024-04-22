@@ -18,9 +18,10 @@ use codec::{Decode, Encode};
 use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::{pallet_prelude::TypeInfo, traits::fungibles::Mutate};
 use hex_literal::hex;
+use penpal_runtime::xcm_config::to_ethereum::BridgeHubEthereumBaseFee;
 use rococo_system_emulated_network::penpal_emulated_chain::CustomizableAssetFromSystemAssetHub;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
-use snowbridge_core::{inbound::InboundQueueFixture, outbound::OperatingMode};
+use snowbridge_core::{inbound::InboundQueueFixture, outbound::OperatingMode, Channel, ChannelId};
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message, send_token::make_send_token_message,
 	send_token_to_penpal::make_send_token_to_penpal_message,
@@ -566,95 +567,50 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 fn transact_from_penpal_to_ethereum() {
 	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
 
-	let sudo_origin = <Rococo as Chain>::RuntimeOrigin::root();
-	let destination: VersionedLocation =
-		Rococo::child_location_of(BridgeHubRococo::para_id()).into();
-
-	// Construct XCM to create an agent for penpal
-	let create_agent_xcm = VersionedXcm::from(Xcm(vec![
-		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		DescendOrigin(Parachain(PenpalA::para_id().into()).into()),
-		Transact {
-			require_weight_at_most: 3000000000.into(),
-			origin_kind: OriginKind::Xcm,
-			call: SnowbridgeControl::Control(ControlCall::CreateAgent {}).encode().into(),
-		},
-	]));
-
-	// Construct XCM to create a channel for penpal
-	let create_channel_xcm = VersionedXcm::from(Xcm(vec![
-		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		DescendOrigin(Parachain(PenpalA::para_id().into()).into()),
-		Transact {
-			require_weight_at_most: 3000000000.into(),
-			origin_kind: OriginKind::Xcm,
-			call: SnowbridgeControl::Control(ControlCall::CreateChannel {
-				mode: OperatingMode::Normal,
-			})
-			.encode()
-			.into(),
-		},
-	]));
-
-	// Send XCM message from Relay Chain to create agent/channel for penpal on BH
-	Rococo::execute_with(|| {
-		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
-			sudo_origin.clone(),
-			bx!(destination.clone()),
-			bx!(create_agent_xcm),
-		));
-
-		assert_ok!(<Rococo as RococoPallet>::XcmPallet::send(
-			sudo_origin,
-			bx!(destination),
-			bx!(create_channel_xcm),
-		));
-
-		type RuntimeEvent = <Rococo as Chain>::RuntimeEvent;
-
-		assert_expected_events!(
-			Rococo,
-			vec![
-				RuntimeEvent::XcmPallet(pallet_xcm::Event::Sent { .. }) => {},
-			]
-		);
-	});
-
+	// Create agent and channel
 	BridgeHubRococo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-
-		// Check that the Channel was created
-		assert_expected_events!(
-			BridgeHubRococo,
-			vec![
-				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::CreateChannel {
-					..
-				}) => {},
-			]
-		);
+		type Runtime = <BridgeHubRococo as Chain>::Runtime;
+		let agent_id = snowbridge_pallet_system::agent_id_of::<Runtime>(&Location::new(
+			1,
+			[Parachain(PenpalA::para_id().into())],
+		))
+		.unwrap();
+		snowbridge_pallet_system::Agents::<Runtime>::insert(agent_id, ());
+		let channel_id: ChannelId = PenpalA::para_id().into();
+		snowbridge_pallet_system::Channels::<Runtime>::insert(
+			channel_id,
+			Channel { agent_id, para_id: PenpalA::para_id() },
+		)
 	});
 
 	PenpalA::execute_with(|| {
 		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
 		type RuntimeOrigin = <PenpalA as Chain>::RuntimeOrigin;
 		let sender = PenpalASender::get();
+		let initial_fund = 4_000_000_000_000;
 		assert_ok!(<PenpalA as PenpalAPallet>::ForeignAssets::mint_into(
 			xcm::v3::Location::parent(),
 			(&sender.clone()).into(),
-			4_000_000_000_000,
+			initial_fund,
 		));
+		let remote_cost = 2_750_872_500_000;
 		assert_ok!(<PenpalA as PenpalAPallet>::TransactHelper::transact_to_ethereum(
-			RuntimeOrigin::signed(sender),
+			RuntimeOrigin::signed(sender.clone()),
 			//contract
 			hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into(),
 			//call
 			hex!("00071468656c6c6f").to_vec(),
-			//fee
-			2_750_872_500_000,
+			//The fee here in DOT should cover the remote execution cost on Ethereum
+			remote_cost,
 			//gas
 			80_000,
 		));
-
+		let balance_after = <PenpalA as PenpalAPallet>::ForeignAssets::balance(
+			xcm::v3::Location::parent(),
+			sender.clone(),
+		);
+		let total_cost = initial_fund - balance_after;
+		assert_eq!(total_cost > remote_cost + BridgeHubEthereumBaseFee::get(), true);
 		assert_expected_events!(
 			PenpalA,
 			vec![
