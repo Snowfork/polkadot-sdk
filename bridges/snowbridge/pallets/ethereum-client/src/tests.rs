@@ -863,25 +863,26 @@ fn ring_buffer_works() {
 		// Insert initial finalized checkpoint
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root1,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 16, block_roots_root: H256::random() },
 		);
 		assert_eq!(
 			<FinalizedBeaconStateMapping<Test>>::get(<FinalizedBeaconStateIndex<Test>>::get()),
 			block_root1
 		);
 
-		// Insert second finalized checkpoint
+		// Insert second finalized checkpoint. Expected to insert because we don't want
+		// to overwrite the initial checkpoint.
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root2,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 32, block_roots_root: H256::random() },
 		);
 		let last_index = <FinalizedBeaconStateIndex<Test>>::get();
 		assert_eq!(<FinalizedBeaconStateMapping<Test>>::get(last_index), block_root2);
 
 		// Insert third finalized checkpoint. Expected to overwrite finalized checkpoint at index 2.
-		<FinalizedBeaconStateBuffer<Test>>::overwrite_last_index(
+		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root3,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 64, block_roots_root: H256::random() },
 		);
 		let last_index_after_overwrite = <FinalizedBeaconStateIndex<Test>>::get();
 		// check the index stayed the same
@@ -896,9 +897,9 @@ fn ring_buffer_works() {
 
 		// Insert fourth finalized checkpoint. Expected to overwrite finalized checkpoint at index
 		// 2.
-		<FinalizedBeaconStateBuffer<Test>>::overwrite_last_index(
+		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root4,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 96, block_roots_root: H256::random() },
 		);
 		let last_index_after_overwrite = <FinalizedBeaconStateIndex<Test>>::get();
 		// check the index stayed the same
@@ -914,7 +915,7 @@ fn ring_buffer_works() {
 		// Insert fifth finalized checkpoint. Expected to be added to index 3.
 		<FinalizedBeaconStateBuffer<Test>>::insert(
 			block_root5,
-			CompactBeaconState { slot: Default::default(), block_roots_root: H256::random() },
+			CompactBeaconState { slot: 8288, block_roots_root: H256::random() },
 		);
 		let last_index = <FinalizedBeaconStateIndex<Test>>::get();
 		assert_eq!(last_index_after_overwrite + 1, last_index);
@@ -927,10 +928,18 @@ fn ring_buffer_wrap_around_works() {
 	new_tester().execute_with(|| {
 		let max_headers_to_keep = <MaxFinalizedHeadersToKeep<Test>>::get();
 		for i in 0..max_headers_to_keep {
-			let header =
+			let mut header =
 				get_beacon_header_with_slot((i + 1) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64);
+			if i == max_headers_to_keep - 1 {
+				header.slot = header.slot - 96;
+			}
 			let block_root = H256::random();
 			assert_ok!(EthereumBeaconClient::store_finalized_header(header, block_root));
+			println!(
+				"added slot at index {}: {}",
+				header.slot,
+				<FinalizedBeaconStateIndex<Test>>::get()
+			)
 		}
 		// last item (i = 5119 because max_headers_to_keep is not included in the for range and
 		// because the ringbuffer starts inserting at index 1) should then be at ringbuffer inddex
@@ -940,8 +949,9 @@ fn ring_buffer_wrap_around_works() {
 		// should overwrite header at index 0
 		let next_block = H256::random();
 		let next_header = get_beacon_header_with_slot(
-			((max_headers_to_keep - 1) as u64 * SLOTS_PER_HISTORICAL_ROOT as u64) + 32,
+			(max_headers_to_keep as u64 * SLOTS_PER_HISTORICAL_ROOT as u64) - 32,
 		);
+		println!("adding slot {}:", next_header.slot);
 		assert_ok!(EthereumBeaconClient::store_finalized_header(next_header, next_block));
 		assert_eq!(0, <FinalizedBeaconStateIndex<Test>>::get());
 

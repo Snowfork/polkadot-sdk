@@ -4,9 +4,12 @@ use super::*;
 use frame_support::ensure;
 use primitives::ExecutionProof;
 
-use snowbridge_core::inbound::{
-	VerificationError::{self, *},
-	*,
+use snowbridge_core::{
+	inbound::{
+		VerificationError::{self, *},
+		*,
+	},
+	ringbuffer::CheckOverwrite,
 };
 use snowbridge_ethereum::Receipt;
 
@@ -157,5 +160,12 @@ impl<T: Config> Pallet<T> {
 		);
 
 		Ok(())
+	}
+}
+
+impl<T: Config> CheckOverwrite<CompactBeaconState> for Pallet<T> {
+	fn can_overwrite(new_value: &CompactBeaconState, prev_value: &CompactBeaconState) -> bool {
+		let slots_difference = new_value.slot - prev_value.slot;
+		slots_difference < SLOTS_PER_HISTORICAL_ROOT as u64
 	}
 }

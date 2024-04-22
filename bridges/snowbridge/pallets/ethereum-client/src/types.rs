@@ -4,9 +4,9 @@ pub use crate::config::{
 	SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_BITS_SIZE as SC_BITS_SIZE,
 	SYNC_COMMITTEE_SIZE as SC_SIZE,
 };
+use crate::Pallet;
 use frame_support::storage::types::OptionQuery;
-use snowbridge_core::RingBufferMapImpl;
-
+use snowbridge_core::ringbuffer::RingBufferMapImplWithConditionalOverWrite;
 // Specialize types based on configured sync committee size
 pub type SyncCommittee = primitives::SyncCommittee<SC_SIZE>;
 pub type SyncCommitteePrepared = primitives::SyncCommitteePrepared<SC_SIZE>;
@@ -18,11 +18,12 @@ pub type NextSyncCommitteeUpdate = primitives::NextSyncCommitteeUpdate<SC_SIZE>;
 pub use primitives::{AncestryProof, ExecutionProof};
 
 /// FinalizedState ring buffer implementation
-pub(crate) type FinalizedBeaconStateBuffer<T> = RingBufferMapImpl<
+pub(crate) type FinalizedBeaconStateBuffer<T> = RingBufferMapImplWithConditionalOverWrite<
 	u32,
 	crate::MaxFinalizedHeadersToKeep<T>,
 	crate::FinalizedBeaconStateIndex<T>,
 	crate::FinalizedBeaconStateMapping<T>,
 	crate::FinalizedBeaconState<T>,
 	OptionQuery,
+	Pallet<T>,
 >;

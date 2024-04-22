@@ -17,7 +17,7 @@ pub mod ringbuffer;
 pub use polkadot_parachain_primitives::primitives::{
 	Id as ParaId, IsSystem, Sibling as SiblingParaId,
 };
-pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
+pub use ringbuffer::{RingBufferMap, RingBufferMapImplWithConditionalOverWrite};
 pub use sp_core::U256;
 
 use codec::{Decode, Encode, MaxEncodedLen};
