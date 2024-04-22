@@ -32,11 +32,8 @@ use crate::{BaseDeliveryFee, FeeAssetId, TransactionByteFee};
 use codec::Encode;
 use core::marker::PhantomData;
 use frame_support::{
-	ensure, parameter_types,
-	traits::{
-		ConstU32, Contains, ContainsPair, Equals, Everything, EverythingBut, Get, Nothing,
-		ProcessMessageError,
-	},
+	parameter_types,
+	traits::{ConstU32, Contains, ContainsPair, Everything, EverythingBut, Get, Nothing},
 	weights::Weight,
 };
 use frame_system::EnsureRoot;
@@ -46,20 +43,20 @@ use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::{impls::ToAuthor, xcm_sender::ExponentialPrice};
 use sp_core::blake2_256;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
-use sp_std::{collections::btree_set::BTreeSet, ops::ControlFlow};
+use sp_std::collections::btree_set::BTreeSet;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, AsPrefixedGeneralIndex, ConvertedConcreteId, CreateMatcher,
-	EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor, FungibleAdapter,
-	FungiblesAdapter, IsConcrete, LocalMint, MatchXcm, NativeAsset, NoChecking, ParentAsSuperuser,
-	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, StartsWith,
-	TakeWeightCredit, TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
+	AllowTopLevelPaidExecutionFrom, AsPrefixedGeneralIndex, ConvertedConcreteId, EnsureXcmOrigin,
+	FixedWeightBounds, FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter, IsConcrete,
+	LocalMint, NativeAsset, NoChecking, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, StartsWith, TakeWeightCredit,
+	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
 	XcmFeeManagerFromComponents, XcmFeeToAccount,
 };
 use xcm_executor::{
-	traits::{ConvertLocation, JustTry, Properties, ShouldExecute, WeightTrader},
+	traits::{ConvertLocation, JustTry},
 	XcmExecutor,
 };
 

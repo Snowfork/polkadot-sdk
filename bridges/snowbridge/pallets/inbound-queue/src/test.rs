@@ -265,7 +265,7 @@ fn test_convert_transact() {
 			},
 		});
 		// Convert the message to XCM
-		let (xcm, dest_fee) = InboundQueue::do_convert(message_id, message).unwrap();
+		let (xcm, dest_fee) = InboundQueue::do_convert(1000.into(), message_id, message).unwrap();
 		let instructions = xcm.into_inner();
 		assert_eq!(instructions.len(), 7);
 		assert_eq!(dest_fee, fee.into());

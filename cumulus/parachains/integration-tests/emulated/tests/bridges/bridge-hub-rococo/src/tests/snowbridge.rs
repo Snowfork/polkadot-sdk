@@ -541,7 +541,7 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 				fee: INSUFFICIENT_XCM_FEE,
 			},
 		});
-		let (xcm, _) = Converter::convert(message_id, message).unwrap();
+		let (xcm, _) = Converter::convert(AssetHubRococo::para_id(), message_id, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
 		assert_expected_events!(
@@ -603,7 +603,8 @@ fn transact_from_ethereum_to_penpal_success() {
 			},
 		});
 		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let (xcm, _) =
+			EthereumInboundQueue::do_convert(PenpalA::para_id(), message_id, message).unwrap();
 		// Send the XCM
 		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
 
@@ -644,7 +645,8 @@ fn transact_from_ethereum_to_penpal_insufficient_weight() {
 			},
 		});
 		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let (xcm, _) =
+			EthereumInboundQueue::do_convert(PenpalA::para_id(), message_id, message).unwrap();
 		// Send the XCM
 		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
 
@@ -700,7 +702,8 @@ fn transact_from_ethereum_to_penpal_insufficient_fee() {
 			},
 		});
 		// Convert the message to XCM
-		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		let (xcm, _) =
+			EthereumInboundQueue::do_convert(PenpalA::para_id(), message_id, message).unwrap();
 		// Send the XCM
 		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
 

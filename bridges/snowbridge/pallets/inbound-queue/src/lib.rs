@@ -280,7 +280,8 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::InvalidPayload)?;
 
 			// Convert VersionMessage to XCM
-			let (xcm, fee) = Self::do_convert(envelope.message_id, message.clone())?;
+			let (xcm, fee) =
+				Self::do_convert(channel.para_id, envelope.message_id, message.clone())?;
 
 			log::info!(
 				target: LOG_TARGET,
@@ -329,10 +330,11 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub fn do_convert(
+			para_id: ParaId,
 			message_id: H256,
 			message: VersionedMessage,
 		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
-			let (xcm, fee) = T::MessageConverter::convert(message_id, message)
+			let (xcm, fee) = T::MessageConverter::convert(para_id, message_id, message)
 				.map_err(|e| Error::<T>::ConvertMessage(e))?;
 			Ok((xcm, fee))
 		}
