@@ -476,6 +476,32 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 					pallet_uniques::Call::buy_item { .. }
 			) | RuntimeCall::ToWestendXcmRouter(
 				pallet_xcm_bridge_hub_router::Call::report_bridge_status { .. }
+			) | RuntimeCall::ForeignUniques(
+				pallet_uniques::Call::create { .. } |
+					pallet_uniques::Call::force_create { .. } |
+					pallet_uniques::Call::destroy { .. } |
+					pallet_uniques::Call::mint { .. } |
+					pallet_uniques::Call::burn { .. } |
+					pallet_uniques::Call::transfer { .. } |
+					pallet_uniques::Call::freeze { .. } |
+					pallet_uniques::Call::thaw { .. } |
+					pallet_uniques::Call::freeze_collection { .. } |
+					pallet_uniques::Call::thaw_collection { .. } |
+					pallet_uniques::Call::transfer_ownership { .. } |
+					pallet_uniques::Call::set_team { .. } |
+					pallet_uniques::Call::approve_transfer { .. } |
+					pallet_uniques::Call::cancel_approval { .. } |
+					pallet_uniques::Call::force_item_status { .. } |
+					pallet_uniques::Call::set_attribute { .. } |
+					pallet_uniques::Call::clear_attribute { .. } |
+					pallet_uniques::Call::set_metadata { .. } |
+					pallet_uniques::Call::clear_metadata { .. } |
+					pallet_uniques::Call::set_collection_metadata { .. } |
+					pallet_uniques::Call::clear_collection_metadata { .. } |
+					pallet_uniques::Call::set_accept_ownership { .. } |
+					pallet_uniques::Call::set_collection_max_supply { .. } |
+					pallet_uniques::Call::set_price { .. } |
+					pallet_uniques::Call::buy_item { .. }
 			)
 		)
 	}
