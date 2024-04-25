@@ -88,36 +88,28 @@ where
 			SendError::MissingArgument
 		})?;
 
-		let mut converter = XcmConverter::new(&message, &expected_network);
-		let (agent_execute_command, message_id) = converter.convert().map_err(|err|{
+		let mut converter = XcmConverter::<AgentHashedDescription, ()>::new(
+			&message,
+			expected_network,
+			para_id.into(),
+		);
+		let (command, message_id) = converter.convert().map_err(|err|{
 			log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to pattern matching error '{err:?}'.");
 			SendError::Unroutable
 		})?;
 
-		let source_location = Location::new(1, local_sub.clone());
-		let agent_id = match AgentHashedDescription::convert_location(&source_location) {
-			Some(id) => id,
-			None => {
-				log::error!(target: "xcm::ethereum_blob_exporter", "unroutable due to not being able to create agent id. '{source_location:?}'");
-				return Err(SendError::Unroutable)
-			},
-		};
-
 		let channel_id: ChannelId = ParaId::from(para_id).into();
 
-		let outbound_message = Message {
-			id: Some(message_id.into()),
-			channel_id,
-			command: Command::AgentExecute { agent_id, command: agent_execute_command.clone() },
-		};
+		let outbound_message =
+			Message { id: Some(message_id.into()), channel_id, command: command.clone() };
 
 		// validate the message
 		let (ticket, fees) = OutboundQueue::validate(&outbound_message).map_err(|err| {
 			log::error!(target: "xcm::ethereum_blob_exporter", "OutboundQueue validation of message failed. {err:?}");
 			SendError::Unroutable
 		})?;
-		let fee = match agent_execute_command {
-			AgentExecuteCommand::Transact { fee, .. } => {
+		let fee = match command {
+			Command::Transact { fee, .. } => {
 				ensure!(fee > fees.remote, SendError::Fees);
 				Ok::<Assets, SendError>(Asset::from((Location::parent(), fees.local)).into())
 			},
@@ -163,6 +155,7 @@ enum XcmConverterError {
 	TransactSovereignAccountExpected,
 	TransactDecodeFailed,
 	UnexpectedInstruction,
+	Unroutable,
 }
 
 macro_rules! match_expression {
@@ -174,17 +167,28 @@ macro_rules! match_expression {
 	};
 }
 
-struct XcmConverter<'a, Call> {
+struct XcmConverter<'a, AgentHashedDescription, Call> {
 	iter: Peekable<Iter<'a, Instruction<Call>>>,
-	ethereum_network: &'a NetworkId,
+	ethereum_network: NetworkId,
+	para_id: ParaId,
+	_marker: PhantomData<AgentHashedDescription>,
 }
-impl<'a, Call> XcmConverter<'a, Call> {
-	fn new(message: &'a Xcm<Call>, ethereum_network: &'a NetworkId) -> Self {
-		Self { iter: message.inner().iter().peekable(), ethereum_network }
+impl<'a, AgentHashedDescription, Call> XcmConverter<'a, AgentHashedDescription, Call>
+where
+	AgentHashedDescription: ConvertLocation<H256>,
+{
+	fn new(message: &'a Xcm<Call>, ethereum_network: NetworkId, para_id: ParaId) -> Self {
+		Self {
+			iter: message.inner().iter().peekable(),
+			ethereum_network,
+			para_id,
+			_marker: Default::default(),
+		}
 	}
 
-	fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+	fn convert(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
 		let result = match self.peek() {
+			// Transact message
 			Ok(Transact { .. }) => self.transact_message(),
 			// Get withdraw/deposit and make native tokens create message.
 			Ok(WithdrawAsset { .. }) => self.native_tokens_unlock_message(),
@@ -200,7 +204,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		Ok(result)
 	}
 
-	fn transact_message(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+	fn transact_message(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
 		let call_data = if let Transact { origin_kind, call, .. } = self.next()? {
 			ensure!(
 				*origin_kind == OriginKind::SovereignAccount,
@@ -216,7 +220,8 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 		Ok((
-			AgentExecuteCommand::Transact {
+			Command::Transact {
+				agent_id: message.agent_id,
 				target: message.target,
 				payload: message.call,
 				gas_limit: message.gas_limit,
@@ -226,9 +231,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		))
 	}
 
-	fn native_tokens_unlock_message(
-		&mut self,
-	) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+	fn native_tokens_unlock_message(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
 		use XcmConverterError::*;
 
 		// Get the reserve assets from WithdrawAsset.
@@ -302,7 +305,19 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		// Check if there is a SetTopic and skip over it if found.
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
-		Ok((AgentExecuteCommand::TransferToken { token, recipient, amount }, *topic_id))
+		let agent_id = AgentHashedDescription::convert_location(&Location::new(
+			1,
+			Parachain(self.para_id.into()),
+		))
+		.ok_or(Unroutable)?;
+
+		Ok((
+			Command::AgentExecute {
+				agent_id,
+				command: AgentExecuteCommand::TransferToken { token, recipient, amount },
+			},
+			*topic_id,
+		))
 	}
 
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
@@ -315,7 +330,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 
 	fn network_matches(&self, network: &Option<NetworkId>) -> bool {
 		if let Some(network) = network {
-			network == self.ethereum_network
+			network.clone() == self.ethereum_network
 		} else {
 			true
 		}

@@ -567,14 +567,15 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 fn transact_from_penpal_to_ethereum() {
 	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
 
+	// Agent as PalletInstance
+	let agent_id = snowbridge_pallet_system::agent_id_of::<<BridgeHubRococo as Chain>::Runtime>(
+		&Location::new(1, [Parachain(PenpalA::para_id().into()), PalletInstance(52)]),
+	)
+	.unwrap();
+
 	// Create agent and channel
 	BridgeHubRococo::execute_with(|| {
 		type Runtime = <BridgeHubRococo as Chain>::Runtime;
-		let agent_id = snowbridge_pallet_system::agent_id_of::<Runtime>(&Location::new(
-			1,
-			[Parachain(PenpalA::para_id().into())],
-		))
-		.unwrap();
 		snowbridge_pallet_system::Agents::<Runtime>::insert(agent_id, ());
 		let channel_id: ChannelId = PenpalA::para_id().into();
 		snowbridge_pallet_system::Channels::<Runtime>::insert(
@@ -596,6 +597,7 @@ fn transact_from_penpal_to_ethereum() {
 		let remote_cost = 2_750_872_500_000;
 		assert_ok!(<PenpalA as PenpalAPallet>::TransactHelper::transact_to_ethereum(
 			RuntimeOrigin::signed(sender.clone()),
+			agent_id,
 			//contract
 			hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into(),
 			//call

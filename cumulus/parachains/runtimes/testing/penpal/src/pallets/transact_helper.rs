@@ -20,7 +20,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use sp_core::H160;
+	use sp_core::{H160, H256};
 	use sp_std::{vec, vec::Vec};
 	use xcm::prelude::*;
 	use xcm_executor::traits::XcmAssetTransfers;
@@ -51,6 +51,7 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 	pub struct TransactInfo {
+		pub agent_id: H256,
 		pub target: H160,
 		pub call: Vec<u8>,
 		pub gas_limit: u64,
@@ -69,6 +70,7 @@ pub mod pallet {
 		#[pallet::weight(Weight::from_parts(100_000_000, 0))]
 		pub fn transact_to_ethereum(
 			origin: OriginFor<T>,
+			agent_id: H256,
 			target: H160,
 			call: Vec<u8>,
 			fee: u128,
@@ -80,7 +82,8 @@ pub mod pallet {
 				parents: 2,
 				interior: Junctions::from([GlobalConsensus(Ethereum { chain_id: 11155111 })]),
 			};
-			let transact = TransactInfo { target, call, gas_limit, fee };
+
+			let transact = TransactInfo { agent_id, target, call, gas_limit, fee };
 
 			let inner_message = Xcm(vec![
 				Transact {

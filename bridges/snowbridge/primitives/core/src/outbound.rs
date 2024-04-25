@@ -140,6 +140,19 @@ mod v1 {
 			// Fee multiplier
 			multiplier: UD60x18,
 		},
+		/// Execute a contract on the target chain
+		Transact {
+			/// ID of the agent
+			agent_id: H256,
+			/// Target contract address
+			target: H160,
+			/// The call data to the contract
+			payload: Vec<u8>,
+			/// The dynamic gas component that needs to be specified when executing the contract
+			gas_limit: u64,
+			/// The fee to cover the delivery cost
+			fee: u128,
+		},
 	}
 
 	impl Command {
@@ -155,6 +168,7 @@ mod v1 {
 				Command::TransferNativeFromAgent { .. } => 6,
 				Command::SetTokenTransferFees { .. } => 7,
 				Command::SetPricingParameters { .. } => 8,
+				Command::Transact { .. } => 9,
 			}
 		}
 
@@ -212,6 +226,13 @@ mod v1 {
 						Token::Uint(U256::from(*delivery_cost)),
 						Token::Uint(multiplier.clone().into_inner()),
 					])]),
+				Command::Transact { agent_id, target, payload, gas_limit, .. } =>
+					ethabi::encode(&[Token::Tuple(vec![
+						Token::FixedBytes(agent_id.as_bytes().to_owned()),
+						Token::Address(*target),
+						Token::Bytes(payload.clone()),
+						Token::Uint(U256::from(*gas_limit)),
+					])]),
 			}
 		}
 	}
@@ -239,24 +260,12 @@ mod v1 {
 			/// The amount of tokens to transfer
 			amount: u128,
 		},
-		/// Execute a contract on the target chain
-		Transact {
-			/// Target contract address
-			target: H160,
-			/// The call data to the contract
-			payload: Vec<u8>,
-			/// The dynamic gas component that needs to be specified when executing the contract
-			gas_limit: u64,
-			/// The fee to cover the delivery cost
-			fee: u128,
-		},
 	}
 
 	impl AgentExecuteCommand {
 		fn index(&self) -> u8 {
 			match self {
 				AgentExecuteCommand::TransferToken { .. } => 0,
-				AgentExecuteCommand::Transact { .. } => 1,
 			}
 		}
 
@@ -270,15 +279,6 @@ mod v1 {
 							Token::Address(*token),
 							Token::Address(*recipient),
 							Token::Uint(U256::from(*amount)),
-						])),
-					]),
-				AgentExecuteCommand::Transact { target, payload, gas_limit, .. } =>
-					ethabi::encode(&[
-						Token::Uint(self.index().into()),
-						Token::Bytes(ethabi::encode(&[
-							Token::Address(*target),
-							Token::Bytes(payload.clone()),
-							Token::Uint(U256::from(*gas_limit)),
 						])),
 					]),
 			}
@@ -413,7 +413,6 @@ impl GasMeter for ConstantGasMeter {
 				// * Assume dest account in ERC20 contract does not yet have a storage slot
 				// * ERC20.transferFrom possibly does other business logic besides updating balances
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
-				AgentExecuteCommand::Transact { gas_limit, .. } => *gas_limit,
 			},
 			Command::Upgrade { initializer, .. } => {
 				let initializer_max_gas = match *initializer {
@@ -426,6 +425,7 @@ impl GasMeter for ConstantGasMeter {
 			},
 			Command::SetTokenTransferFees { .. } => 60_000,
 			Command::SetPricingParameters { .. } => 60_000,
+			Command::Transact { gas_limit, .. } => *gas_limit,
 		}
 	}
 }
@@ -442,6 +442,7 @@ pub const ETHER_DECIMALS: u8 = 18;
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct TransactInfo {
+	pub agent_id: H256,
 	pub target: H160,
 	pub call: Vec<u8>,
 	pub gas_limit: u64,
