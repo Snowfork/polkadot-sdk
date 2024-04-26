@@ -83,7 +83,11 @@ mod benchmarks {
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin, OperatingMode::Normal);
+		_(
+			origin as T::RuntimeOrigin,
+			OperatingMode::Normal,
+			VersionedLocation::from(Location::here()),
+		);
 
 		Ok(())
 	}
@@ -95,10 +99,18 @@ mod benchmarks {
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
+		SnowbridgeControl::<T>::create_channel(
+			origin.clone(),
+			OperatingMode::Normal,
+			VersionedLocation::from(Location::here()),
+		)?;
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin, OperatingMode::RejectingOutboundMessages);
+		_(
+			origin as T::RuntimeOrigin,
+			OperatingMode::RejectingOutboundMessages,
+			VersionedLocation::from(Location::here()),
+		);
 
 		Ok(())
 	}
@@ -112,10 +124,19 @@ mod benchmarks {
 
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
+		SnowbridgeControl::<T>::create_channel(
+			origin.clone(),
+			OperatingMode::Normal,
+			VersionedLocation::from(Location::here()),
+		)?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, channel_id, OperatingMode::RejectingOutboundMessages);
+		_(
+			RawOrigin::Root,
+			channel_id,
+			OperatingMode::RejectingOutboundMessages,
+			VersionedLocation::from(Location::here()),
+		);
 
 		Ok(())
 	}
@@ -127,7 +148,11 @@ mod benchmarks {
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
+		SnowbridgeControl::<T>::create_channel(
+			origin.clone(),
+			OperatingMode::Normal,
+			VersionedLocation::from(Location::here()),
+		)?;
 
 		#[extrinsic_call]
 		_(origin as T::RuntimeOrigin, H160::default(), 1);
@@ -166,7 +191,11 @@ mod benchmarks {
 		let origin = T::Helper::make_xcm_origin(origin_location);
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
+		SnowbridgeControl::<T>::create_channel(
+			origin.clone(),
+			OperatingMode::Normal,
+			VersionedLocation::from(Location::here()),
+		)?;
 
 		let relay_token_asset_id: Location =
 			Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
@@ -190,7 +219,11 @@ mod benchmarks {
 		let origin = T::Helper::make_xcm_origin(origin_location.clone());
 		fund_sovereign_account::<T>(origin_para_id.into())?;
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
+		SnowbridgeControl::<T>::create_channel(
+			origin.clone(),
+			OperatingMode::Normal,
+			VersionedLocation::from(Location::here()),
+		)?;
 
 		let relay_token_asset_id: Location =
 			Location { parents: 1, interior: GlobalConsensus(Rococo).into() };

@@ -55,7 +55,7 @@ pub enum ControlCall {
 	#[codec(index = 3)]
 	CreateAgent,
 	#[codec(index = 4)]
-	CreateChannel { mode: OperatingMode },
+	CreateChannel { mode: OperatingMode, fee_asset_id: VersionedLocation },
 	#[codec(index = 11)]
 	ForceRegisterToken {
 		location: Box<VersionedLocation>,
@@ -165,8 +165,10 @@ fn create_channel() {
 		},
 	]));
 
-	let create_channel_call =
-		SnowbridgeControl::Control(ControlCall::CreateChannel { mode: OperatingMode::Normal });
+	let create_channel_call = SnowbridgeControl::Control(ControlCall::CreateChannel {
+		mode: OperatingMode::Normal,
+		fee_asset_id: VersionedLocation::from(Location::here()),
+	});
 	// Construct XCM to create a channel for para 1001
 	let create_channel_xcm = VersionedXcm::from(Xcm::<()>(vec![
 		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
@@ -544,7 +546,9 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 				fee: INSUFFICIENT_XCM_FEE,
 			},
 		});
-		let (xcm, _) = Converter::convert(message_id, message).unwrap();
+
+		let fee_asset_id = VersionedLocation::from(Location::parent());
+		let (xcm, _) = Converter::convert(fee_asset_id, message_id, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
 		assert_expected_events!(
@@ -584,7 +588,11 @@ fn register_penpal_native_token() {
 		let channel_id: ChannelId = PenpalA::para_id().into();
 		snowbridge_pallet_system::Channels::<Runtime>::insert(
 			channel_id,
-			Channel { agent_id, para_id: PenpalA::para_id() },
+			Channel {
+				agent_id,
+				para_id: PenpalA::para_id(),
+				fee_asset_id: VersionedLocation::from(Location::here()),
+			},
 		)
 	});
 
@@ -687,7 +695,11 @@ fn send_penpal_native_token_to_ethereum() {
 		let channel_id: ChannelId = PenpalA::para_id().into();
 		snowbridge_pallet_system::Channels::<Runtime>::insert(
 			channel_id,
-			Channel { agent_id, para_id: PenpalA::para_id() },
+			Channel {
+				agent_id,
+				para_id: PenpalA::para_id(),
+				fee_asset_id: VersionedLocation::from(Location::here()),
+			},
 		);
 		let versioned_asset_id: VersionedLocation = asset_id.into();
 		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, versioned_asset_id);
@@ -793,7 +805,10 @@ snowbridge_pallet_inbound_queue::Config>::MessageConverter;
 				amount: TOKEN_AMOUNT,
 			},
 		});
-		let (xcm, _) = Converter::convert(message_id, message).unwrap();
+		let fee_asset_id = VersionedLocation::from(Location::here());
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(fee_asset_id, message_id, message).unwrap();
+		// Send the XCM
 		let _ = EthereumInboundQueue::send_xcm(xcm, PenpalA::para_id().into()).unwrap();
 
 		assert_expected_events!(

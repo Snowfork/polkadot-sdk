@@ -61,9 +61,8 @@ use snowbridge_core::{
 	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, PricingParameters,
 	StaticLookup,
 };
-use snowbridge_router_primitives::{
-	inbound,
-	inbound::{ConvertMessage, ConvertMessageError},
+use snowbridge_router_primitives::inbound::{
+	ConvertMessage, ConvertMessageError, VersionedMessage,
 };
 use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
@@ -87,6 +86,8 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use sp_core::H256;
+	use xcm::VersionedLocation;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -277,13 +278,13 @@ pub mod pallet {
 				T::Token::transfer(&sovereign_account, &who, amount, Preservation::Preserve)?;
 			}
 
+			// Decode payload into VersionMessage
+			let message = VersionedMessage::decode_all(&mut envelope.payload.as_ref())
+				.map_err(|_| Error::<T>::InvalidPayload)?;
+
 			// Decode message into XCM
 			let (xcm, fee) =
-				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(message) => T::MessageConverter::convert(envelope.message_id, message)
-						.map_err(|e| Error::<T>::ConvertMessage(e))?,
-					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-				};
+				Self::do_convert(channel.fee_asset_id, envelope.message_id, message.clone())?;
 
 			log::info!(
 				target: LOG_TARGET,
@@ -291,6 +292,11 @@ pub mod pallet {
 				xcm,
 				fee
 			);
+
+			if fee > BalanceOf::<T>::zero() {
+				// Burning fees for teleport
+				Self::burn_fees(channel.para_id, fee)?;
+			}
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;
@@ -320,6 +326,16 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		pub fn do_convert(
+			fee_asset_id: VersionedLocation,
+			message_id: H256,
+			message: VersionedMessage,
+		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
+			let (xcm, fee) = T::MessageConverter::convert(fee_asset_id, message_id, message)
+				.map_err(|e| Error::<T>::ConvertMessage(e))?;
+			Ok((xcm, fee))
+		}
+
 		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {
 			let dest = Location::new(1, [Parachain(dest.into())]);
 			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;

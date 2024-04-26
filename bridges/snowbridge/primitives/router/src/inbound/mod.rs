@@ -9,7 +9,7 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::tokens::Balance as BalanceT, weights::Weight, PalletError};
 use scale_info::TypeInfo;
-use snowbridge_core::{IsSystem, ParaId, TokenId};
+use snowbridge_core::TokenId;
 use sp_core::{Get, RuntimeDebug, H160, H256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::MaybeEquivalence, MultiAddress};
@@ -123,6 +123,8 @@ pub enum ConvertMessageError {
 	UnsupportedVersion,
 	InvalidDestination,
 	InvalidToken,
+	/// The fee asset is not supported for conversion.
+	UnsupportedFeeAsset,
 }
 
 /// convert the inbound message to xcm which will be forwarded to the destination chain
@@ -131,6 +133,7 @@ pub trait ConvertMessage {
 	type AccountId;
 	/// Converts a versioned message into an XCM message and an optional topicID
 	fn convert(
+		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		message: VersionedMessage,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
@@ -165,6 +168,7 @@ impl<
 	type AccountId = AccountId;
 
 	fn convert(
+		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		message: VersionedMessage,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError> {
@@ -178,8 +182,14 @@ impl<
 			V1(MessageV1 {
 				chain_id,
 				command: SendNativeToken { token_id, destination, amount },
-			}) =>
-				Self::convert_send_native_token(message_id, chain_id, token_id, destination, amount),
+			}) => Self::convert_send_native_token(
+				message_id,
+				chain_id,
+				token_id,
+				destination,
+				amount,
+				fee_asset_id,
+			),
 		}
 	}
 }
@@ -357,25 +367,25 @@ impl<
 		token_id: TokenId,
 		destination: Destination,
 		amount: u128,
+		fee_asset_id: VersionedLocation,
 	) -> Result<(Xcm<()>, Balance), ConvertMessageError> {
 		let network = Ethereum { chain_id };
 
-		let (para_id, beneficiary, dest_para_fee) = match destination {
+		let (beneficiary, destination_fee) = match destination {
 			// Final destination is a 32-byte account on a sibling of AssetHub
-			Destination::ForeignAccountId32 { para_id, id, fee } =>
-				Some((para_id, Location::new(0, [AccountId32 { network: None, id }]), fee)),
+			Destination::ForeignAccountId32 { id, fee, .. } =>
+				Some((Location::new(0, [AccountId32 { network: None, id }]), fee)),
 			// Final destination is a 20-byte account on a sibling of AssetHub
-			Destination::ForeignAccountId20 { para_id, id, fee } =>
-				Some((para_id, Location::new(0, [AccountKey20 { network: None, key: id }]), fee)),
+			Destination::ForeignAccountId20 { id, fee, .. } =>
+				Some((Location::new(0, [AccountKey20 { network: None, key: id }]), fee)),
 			_ => None,
 		}
 		.ok_or(ConvertMessageError::InvalidDestination)?;
 
-		let mut fee_asset: Asset = (Location::here(), dest_para_fee).into();
+		let fee_asset_id: Location =
+			fee_asset_id.try_into().map_err(|_| ConvertMessageError::UnsupportedFeeAsset)?;
 
-		if ParaId::from(para_id).is_system() {
-			fee_asset = (Location::parent(), dest_para_fee).into();
-		}
+		let fee_asset: Asset = (fee_asset_id, destination_fee).into();
 
 		let versioned_asset_id =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
@@ -399,7 +409,7 @@ impl<
 			SetTopic(message_id.into()),
 		];
 
-		Ok((instructions.into(), dest_para_fee.into()))
+		Ok((instructions.into(), Balance::zero()))
 	}
 }
 
