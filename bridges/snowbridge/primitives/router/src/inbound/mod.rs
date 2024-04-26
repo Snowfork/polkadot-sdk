@@ -9,7 +9,6 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::tokens::Balance as BalanceT, weights::Weight, PalletError};
 use scale_info::TypeInfo;
-use snowbridge_core::{IsSystem, ParaId};
 use sp_core::{Get, RuntimeDebug, H160, H256};
 use sp_io::hashing::blake2_256;
 use sp_runtime::MultiAddress;
@@ -122,6 +121,8 @@ pub struct MessageToXcm<
 pub enum ConvertMessageError {
 	/// The message version is not supported for conversion.
 	UnsupportedVersion,
+	/// The fee asset is not supported for conversion.
+	UnsupportedFeeAsset,
 }
 
 /// convert the inbound message to xcm which will be forwarded to the destination chain
@@ -130,7 +131,7 @@ pub trait ConvertMessage {
 	type AccountId;
 	/// Converts a versioned message into an XCM message and an optional topicID
 	fn convert(
-		para_id: ParaId,
+		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		message: VersionedMessage,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
@@ -157,7 +158,7 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 	type AccountId = AccountId;
 
 	fn convert(
-		para_id: ParaId,
+		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		message: VersionedMessage,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError> {
@@ -171,8 +172,8 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 			V1(MessageV1 {
 				chain_id,
 				command: Transact { sender, origin_kind, fee, weight_at_most, payload },
-			}) => Ok(Self::convert_transact(
-				para_id,
+			}) => Self::convert_transact(
+				fee_asset_id,
 				message_id,
 				chain_id,
 				sender,
@@ -180,7 +181,7 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				fee,
 				weight_at_most,
 				payload,
-			)),
+			),
 		}
 	}
 }
@@ -339,7 +340,7 @@ where
 	}
 
 	fn convert_transact(
-		para_id: ParaId,
+		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		chain_id: u64,
 		sender: H160,
@@ -347,14 +348,10 @@ where
 		fee: u128,
 		weight_at_most: Weight,
 		payload: Vec<u8>,
-	) -> (Xcm<()>, Balance) {
-		// Fee in native token of destination chain
-		let mut xcm_fee: Asset = (Location::here(), fee).into();
-
-		// For system parachain use relay token as fee
-		if ParaId::from(para_id).is_system() {
-			xcm_fee = (Location::parent(), fee).into();
-		}
+	) -> Result<(Xcm<()>, Balance), ConvertMessageError> {
+		let fee_asset_id: Location =
+			fee_asset_id.try_into().map_err(|_| ConvertMessageError::UnsupportedFeeAsset)?;
+		let xcm_fee: Asset = (fee_asset_id, fee).into();
 
 		let message = vec![
 			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
@@ -369,7 +366,7 @@ where
 			// Forward message id
 			SetTopic(message_id.into()),
 		];
-		(message.into(), fee.into())
+		Ok((message.into(), fee.into()))
 	}
 }
 

@@ -8,7 +8,10 @@ use snowbridge_core::{inbound::Proof, ChannelId};
 use sp_keyring::AccountKeyring as Keyring;
 use sp_runtime::DispatchError;
 use sp_std::convert::From;
-use xcm::prelude::{OriginKind, Transact};
+use xcm::{
+	prelude::{OriginKind, Transact},
+	VersionedLocation,
+};
 
 use crate::{Error, Event as InboundQueueEvent};
 
@@ -265,7 +268,12 @@ fn test_convert_transact() {
 			},
 		});
 		// Convert the message to XCM
-		let (xcm, dest_fee) = InboundQueue::do_convert(1000.into(), message_id, message).unwrap();
+		let (xcm, dest_fee) = InboundQueue::do_convert(
+			VersionedLocation::from(Location::parent()),
+			message_id,
+			message,
+		)
+		.unwrap();
 		let instructions = xcm.into_inner();
 		assert_eq!(instructions.len(), 7);
 		assert_eq!(dest_fee, fee.into());

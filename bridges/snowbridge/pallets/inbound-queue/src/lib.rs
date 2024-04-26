@@ -84,6 +84,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use xcm::VersionedLocation;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -281,7 +282,7 @@ pub mod pallet {
 
 			// Convert VersionMessage to XCM
 			let (xcm, fee) =
-				Self::do_convert(channel.para_id, envelope.message_id, message.clone())?;
+				Self::do_convert(channel.fee_asset_id, envelope.message_id, message.clone())?;
 
 			log::info!(
 				target: LOG_TARGET,
@@ -330,11 +331,11 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub fn do_convert(
-			para_id: ParaId,
+			fee_asset_id: VersionedLocation,
 			message_id: H256,
 			message: VersionedMessage,
 		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
-			let (xcm, fee) = T::MessageConverter::convert(para_id, message_id, message)
+			let (xcm, fee) = T::MessageConverter::convert(fee_asset_id, message_id, message)
 				.map_err(|e| Error::<T>::ConvertMessage(e))?;
 			Ok((xcm, fee))
 		}
