@@ -21,15 +21,16 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_core::{H160, H256};
-	use sp_std::{vec, vec::Vec};
+	use sp_std::{boxed::Box, vec, vec::Vec};
 	use xcm::prelude::*;
 	use xcm_executor::traits::XcmAssetTransfers;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_xcm::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type XcmRouter: SendXcm;
-		type XcmExecutor: ExecuteXcm<Self::RuntimeCall> + XcmAssetTransfers;
+		type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::RuntimeCall>
+			+ XcmAssetTransfers;
 	}
 
 	#[pallet::pallet]
@@ -38,8 +39,10 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// ExportMessage message was sent
+		/// ExportMessage was sent
 		SentExportMessage { message_id: XcmHash, sender_cost: Assets, message: Xcm<()> },
+		/// XCM message sent. \[to, message\]
+		Sent { to: Location, message: Xcm<()> },
 	}
 
 	#[pallet::error]
@@ -47,6 +50,8 @@ pub mod pallet {
 		InvalidMsg,
 		FeesNotMet,
 		SendFailure,
+		BadVersion,
+		Unreachable,
 	}
 
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -67,6 +72,27 @@ pub mod pallet {
 		[u8; 32]: From<<T as frame_system::Config>::AccountId>,
 	{
 		#[pallet::call_index(0)]
+		#[pallet::weight(Weight::from_parts(100_000_000, 0))]
+		pub fn send_as_sovereign(
+			origin: OriginFor<T>,
+			dest: Box<VersionedLocation>,
+			message: Box<VersionedXcm<()>>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			let dest = Location::try_from(*dest).map_err(|()| Error::<T>::BadVersion)?;
+			let message: Xcm<()> = (*message).try_into().map_err(|()| Error::<T>::BadVersion)?;
+
+			pallet_xcm::Pallet::<T>::send_xcm(Here, dest.clone(), message.clone()).map_err(
+				|e| match e {
+					SendError::Unroutable => Error::<T>::Unreachable,
+					_ => Error::<T>::SendFailure,
+				},
+			)?;
+			Self::deposit_event(Event::Sent { to: dest, message });
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
 		#[pallet::weight(Weight::from_parts(100_000_000, 0))]
 		pub fn transact_to_ethereum(
 			origin: OriginFor<T>,
@@ -95,7 +121,7 @@ pub mod pallet {
 			]);
 
 			let (ticket, price) =
-				validate_send::<T::XcmRouter>(dest.clone(), inner_message.clone())
+				validate_send::<<T as Config>::XcmRouter>(dest.clone(), inner_message.clone())
 					.map_err(|_| Error::<T>::InvalidMsg)?;
 			ensure!(price.len() > 0, Error::<T>::FeesNotMet);
 
@@ -104,10 +130,11 @@ pub mod pallet {
 
 			let origin = Location::from(AccountId32 { network: None, id: who.into() });
 
-			T::XcmExecutor::charge_fees(origin, fees.clone().into())
+			<T as Config>::XcmExecutor::charge_fees(origin, fees.clone().into())
 				.map_err(|_| Error::<T>::FeesNotMet)?;
 
-			let message_id = T::XcmRouter::deliver(ticket).map_err(|_| Error::<T>::SendFailure)?;
+			let message_id =
+				<T as Config>::XcmRouter::deliver(ticket).map_err(|_| Error::<T>::SendFailure)?;
 
 			Self::deposit_event(Event::SentExportMessage {
 				message_id,

@@ -47,7 +47,10 @@ where
 pub struct AllowSiblingsOnly;
 impl Contains<Location> for AllowSiblingsOnly {
 	fn contains(location: &Location) -> bool {
-		matches!(location.unpack(), (1, [Parachain(_)]))
+		return match (location.parent_count(), location.first_interior()) {
+			(1, Some(Parachain(_))) => true,
+			_ => false,
+		}
 	}
 }
 

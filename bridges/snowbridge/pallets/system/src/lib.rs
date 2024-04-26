@@ -89,8 +89,8 @@ fn ensure_sibling<T>(location: &Location) -> Result<(ParaId, H256), DispatchErro
 where
 	T: Config,
 {
-	match location.unpack() {
-		(1, [Parachain(para_id)]) => {
+	match (location.parent_count(), location.first_interior()) {
+		(1, Some(Parachain(para_id))) => {
 			let agent_id = agent_id_of::<T>(location)?;
 			Ok(((*para_id).into(), agent_id))
 		},

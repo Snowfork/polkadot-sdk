@@ -632,3 +632,57 @@ fn transact_from_penpal_to_ethereum() {
 		);
 	});
 }
+
+#[test]
+fn create_agent_for_penpal_pallet_instance() {
+	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
+
+	let destination = VersionedLocation::V4(Location {
+		parents: 1,
+		interior: Junctions::from([Parachain(BridgeHubRococo::para_id().into())]),
+	});
+
+	let fee_asset = Asset::from((Location::parent(), 40_000_000_000_000_u128));
+
+	let create_agent_call = SnowbridgeControl::Control(ControlCall::CreateAgent {});
+
+	let remote_xcm = VersionedXcm::from(Xcm::<()>(vec![
+		WithdrawAsset(fee_asset.clone().into()),
+		BuyExecution { fees: fee_asset, weight_limit: Unlimited },
+		DescendOrigin(PalletInstance(52).into()),
+		Transact {
+			require_weight_at_most: 4_000_000_000.into(),
+			origin_kind: OriginKind::Xcm,
+			call: create_agent_call.encode().into(),
+		},
+	]));
+
+	PenpalA::execute_with(|| {
+		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
+		type RuntimeOrigin = <PenpalA as Chain>::RuntimeOrigin;
+
+		assert_ok!(<PenpalA as PenpalAPallet>::TransactHelper::send_as_sovereign(
+			RuntimeOrigin::root(),
+			bx!(destination),
+			bx!(remote_xcm),
+		));
+
+		assert_expected_events!(
+			PenpalA,
+			vec![
+				RuntimeEvent::TransactHelper(penpal_runtime::pallets::transact_helper::Event::Sent { .. }) => {},
+			]
+		);
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::CreateAgent { .. }) => {},
+			]
+		);
+	});
+}
