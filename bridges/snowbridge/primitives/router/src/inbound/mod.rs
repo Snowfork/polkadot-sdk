@@ -366,7 +366,7 @@ where
 			// Forward message id
 			SetTopic(message_id.into()),
 		];
-		Ok((message.into(), fee.into()))
+		Ok((message.into(), Balance::zero()))
 	}
 }
 
