@@ -56,6 +56,24 @@ pub enum Command {
 		/// XCM execution fee on AssetHub
 		fee: u128,
 	},
+	/// Register a wrapped nft token on the AssetHub `ForeignAssets` pallet
+	RegisterNftToken {
+		/// The address of the ERC20 token to be bridged over to AssetHub
+		token: H160,
+		/// XCM execution fee on AssetHub
+		fee: u128,
+	},
+	/// Send nft token to AssetHub
+	SendNftToken {
+		/// The address of the ERC20 token to be bridged over to AssetHub
+		token: H160,
+		/// The tokenId to transfer
+		token_id: u128,
+		/// The destination for the transfer
+		destination: [u8; 32],
+		/// XCM execution fee on AssetHub
+		fee: u128,
+	},
 }
 
 /// Destination for bridged tokens
@@ -152,6 +170,19 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_register_token(message_id, chain_id, token, fee)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
 				Ok(Self::convert_send_token(message_id, chain_id, token, destination, amount, fee)),
+			V1(MessageV1 { chain_id, command: RegisterNftToken { token, fee } }) =>
+				Ok(Self::convert_register_nft_token(message_id, chain_id, token, fee)),
+			V1(MessageV1 {
+				chain_id,
+				command: SendNftToken { token, destination, token_id, fee },
+			}) => Ok(Self::convert_send_nft_token(
+				message_id,
+				chain_id,
+				token,
+				destination,
+				token_id,
+				fee,
+			)),
 		}
 	}
 }
@@ -307,6 +338,86 @@ where
 			2,
 			[GlobalConsensus(network), AccountKey20 { network: None, key: token.into() }],
 		)
+	}
+
+	fn convert_register_nft_token(
+		message_id: H256,
+		chain_id: u64,
+		token: H160,
+		fee: u128,
+	) -> (Xcm<()>, Balance) {
+		let network = Ethereum { chain_id };
+		let xcm_fee: Asset = (Location::parent(), fee).into();
+		let deposit: Asset = (Location::parent(), CreateAssetDeposit::get()).into();
+
+		let total_amount = fee + CreateAssetDeposit::get();
+		let total: Asset = (Location::parent(), total_amount).into();
+
+		let bridge_location: Location = (Parent, Parent, GlobalConsensus(network)).into();
+
+		let owner = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::from_chain_id(&chain_id);
+		let asset_id = Self::convert_token_address(network, token);
+		// Call create on uniques pallet.
+		let create_call_index: [u8; 2] = [57, 0];
+		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
+
+		let xcm: Xcm<()> = vec![
+			// Teleport required fees.
+			ReceiveTeleportedAsset(total.into()),
+			// Pay for execution.
+			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
+			// Fund the snowbridge sovereign with the required deposit for creation.
+			DepositAsset { assets: Definite(deposit.into()), beneficiary: bridge_location },
+			// Only our inbound-queue pallet is allowed to invoke `UniversalOrigin`
+			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
+			// Change origin to the bridge.
+			UniversalOrigin(GlobalConsensus(network)),
+			// Call create on uniques pallet.
+			Transact {
+				origin_kind: OriginKind::Xcm,
+				require_weight_at_most: Weight::from_parts(400_000_000, 8_000),
+				call: (create_call_index, asset_id, MultiAddress::<[u8; 32], ()>::Id(owner))
+					.encode()
+					.into(),
+			},
+			RefundSurplus,
+			// Clear the origin so that remaining assets in holding
+			// are claimable by the physical origin (BridgeHub)
+			ClearOrigin,
+			// Forward message id to Asset Hub
+			SetTopic(message_id.into()),
+		]
+		.into();
+
+		(xcm, total_amount.into())
+	}
+
+	fn convert_send_nft_token(
+		message_id: H256,
+		chain_id: u64,
+		token: H160,
+		destination: [u8; 32],
+		token_id: u128,
+		asset_hub_fee: u128,
+	) -> (Xcm<()>, Balance) {
+		let network = Ethereum { chain_id };
+		let asset_hub_fee_asset: Asset = (Location::parent(), asset_hub_fee).into();
+		let asset: Asset = (Self::convert_token_address(network, token), Index(token_id)).into();
+		let beneficiary = Location::new(0, [AccountId32 { network: None, id: destination }]);
+		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
+
+		let instructions = vec![
+			ReceiveTeleportedAsset(asset_hub_fee_asset.clone().into()),
+			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
+			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
+			UniversalOrigin(GlobalConsensus(network)),
+			ReserveAssetDeposited(asset.clone().into()),
+			ClearOrigin,
+			DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+			SetTopic(message_id.into()),
+		];
+
+		(instructions.into(), asset_hub_fee.into())
 	}
 }
 

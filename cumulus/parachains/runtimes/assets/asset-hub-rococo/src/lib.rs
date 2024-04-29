@@ -768,7 +768,8 @@ parameter_types! {
 	pub const UniquesDepositPerByte: Balance = deposit(0, 1);
 }
 
-impl pallet_uniques::Config for Runtime {
+pub type NftAssetsInstance = pallet_uniques::Instance1;
+impl pallet_uniques::Config<NftAssetsInstance> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type CollectionId = CollectionId;
 	type ItemId = ItemId;
@@ -786,6 +787,48 @@ impl pallet_uniques::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type Locker = ();
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct ForeignBenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<CollectionId: From<xcm::v4::Location>, ItemId: From<u16>>
+	pallet_uniques::BenchmarkHelper<CollectionId, ItemId> for ForeignBenchmarkHelper
+{
+	fn collection(_: u16) -> CollectionId {
+		Location::here().into()
+	}
+	fn item(i: u16) -> ItemId {
+		i.into()
+	}
+}
+
+pub type ForeignNftAssetsInstance = pallet_uniques::Instance2;
+impl pallet_uniques::Config<ForeignNftAssetsInstance> for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type CollectionId = xcm::v4::Location;
+	type ItemId = ItemId;
+	type Currency = Balances;
+	type ForceOrigin = AssetsForceOrigin;
+	type CollectionDeposit = UniquesCollectionDeposit;
+	type ItemDeposit = UniquesItemDeposit;
+	type MetadataDepositBase = UniquesMetadataDepositBase;
+	type AttributeDepositBase = UniquesAttributeDepositBase;
+	type DepositPerByte = UniquesDepositPerByte;
+	type StringLimit = ConstU32<128>;
+	type KeyLimit = ConstU32<32>;
+	type ValueLimit = ConstU32<64>;
+	type WeightInfo = weights::pallet_uniques::WeightInfo<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = ForeignBenchmarkHelper;
+	type CreateOrigin = ForeignCreators<
+		(FromNetwork<xcm_config::UniversalLocation, EthereumNetwork, xcm::v4::Location>,),
+		ForeignCreatorsSovereignAccountOf,
+		AccountId,
+		xcm::v4::Location,
+	>;
 	type Locker = ();
 }
 
@@ -925,12 +968,13 @@ construct_runtime!(
 
 		// The main stage.
 		Assets: pallet_assets::<Instance1> = 50,
-		Uniques: pallet_uniques = 51,
+		Uniques: pallet_uniques::<Instance1> = 51,
 		Nfts: pallet_nfts = 52,
 		ForeignAssets: pallet_assets::<Instance2> = 53,
 		NftFractionalization: pallet_nft_fractionalization = 54,
 		PoolAssets: pallet_assets::<Instance3> = 55,
 		AssetConversion: pallet_asset_conversion = 56,
+		ForeignUniques: pallet_uniques::<Instance2> = 57,
 
 		#[cfg(feature = "state-trie-version-1")]
 		StateTrieMigration: pallet_state_trie_migration = 70,

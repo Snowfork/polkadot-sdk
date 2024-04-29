@@ -40,6 +40,8 @@ const TREASURY_ACCOUNT: [u8; 32] =
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const INSUFFICIENT_XCM_FEE: u128 = 1000;
+const XCM_FEE: u128 = 4_000_000_000;
+const NFT_TOKEN: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
@@ -558,6 +560,195 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 			vec![
 				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:false, .. }) => { },
 			]
+		);
+	});
+}
+
+#[test]
+fn register_nft_on_asset_hub() {
+	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type EthereumInboundQueue =
+			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		type Converter = <bridge_hub_rococo_runtime::Runtime as snowbridge_pallet_inbound_queue::Config>::MessageConverter;
+
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::RegisterNftToken { token: NFT_TOKEN.into(), fee: XCM_FEE },
+		});
+		let (xcm, _) = Converter::convert(message_id, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::MessageQueue(pallet_message_queue::Event::Processed { success:true, .. }) => { },
+			]
+		);
+
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::ForeignUniques(pallet_uniques::Event::Created { .. }) => {},
+			]
+		);
+	});
+}
+
+#[test]
+fn send_nft_token_from_ethereum_to_asset_hub() {
+	// Fund AssetHub sovereign on BridgeHub
+	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
+	// Fund ethereum sovereign on AssetHub
+	let origin_location = (Parent, Parent, EthereumNetwork::get()).into();
+	let ethereum_sovereign: AccountId =
+		GlobalConsensusEthereumConvertsFor::<AccountId>::convert_location(&origin_location)
+			.unwrap();
+	AssetHubRococo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
+
+	// Create asset on AssetHub.
+	AssetHubRococo::execute_with(|| {
+		let nft_asset_id: Location = (
+			Parent,
+			Parent,
+			EthereumNetwork::get(),
+			AccountKey20 { network: None, key: NFT_TOKEN },
+		)
+			.into();
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignUniques::force_create(
+			<AssetHubRococo as Chain>::RuntimeOrigin::root(),
+			nft_asset_id.clone(),
+			ethereum_sovereign.into(),
+			false,
+		));
+
+		assert!(<AssetHubRococo as AssetHubRococoPallet>::ForeignUniques::collection_owner(
+			nft_asset_id
+		)
+		.is_some());
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		type EthereumInboundQueue =
+			<BridgeHubRococo as BridgeHubRococoPallet>::EthereumInboundQueue;
+		type Converter = <bridge_hub_rococo_runtime::Runtime as snowbridge_pallet_inbound_queue::Config>::MessageConverter;
+
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendNftToken {
+				token: NFT_TOKEN.into(),
+				destination: AssetHubRococoReceiver::get().into(),
+				token_id: 1,
+				fee: XCM_FEE,
+			},
+		});
+		let (xcm, _) = Converter::convert(message_id, message).unwrap();
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+
+		// Check that the token was received and issued as a foreign asset on AssetHub
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::ForeignUniques(pallet_uniques::Event::Issued { .. }) => {},
+			]
+		);
+	});
+}
+
+#[test]
+fn send_nft_token_from_asset_hub_to_ethereum() {
+	// First send nft token to asset hub
+	send_nft_token_from_ethereum_to_asset_hub();
+
+	// force set xcm version for Ethereum
+	AssetHubRococo::force_xcm_version(
+		Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]),
+		XCM_VERSION,
+	);
+
+	// Send the nft token back to Ethereum
+	AssetHubRococo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
+
+		let nft_asset_id: Location = (
+			Parent,
+			Parent,
+			EthereumNetwork::get(),
+			AccountKey20 { network: None, key: NFT_TOKEN },
+		)
+			.into();
+		let assets = vec![Asset { id: AssetId(nft_asset_id), fun: NonFungible(Index(1)) }];
+		let multi_assets = VersionedAssets::V4(Assets::from(assets));
+
+		let destination = VersionedLocation::V4(Location::new(
+			2,
+			[GlobalConsensus(Ethereum { chain_id: CHAIN_ID })],
+		));
+
+		let beneficiary = VersionedLocation::V4(Location::new(
+			0,
+			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
+		));
+
+		assert_ok!(
+			<AssetHubRococo as AssetHubRococoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+				RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
+				Box::new(destination),
+				Box::new(beneficiary),
+				Box::new(multi_assets),
+				0,
+				Unlimited,
+			)
+		);
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		// Check that the transfer token back to Ethereum message was queue in the Ethereum
+		// Outbound Queue
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
+			]
+		);
+		let events = BridgeHubRococo::events();
+		// Check that the local fee was credited to the Snowbridge sovereign account and deposit to
+		// the Treasury
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, .. })
+					if *who == TREASURY_ACCOUNT.into()
+			)),
+			"Snowbridge sovereign takes local fee."
 		);
 	});
 }

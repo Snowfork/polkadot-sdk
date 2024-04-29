@@ -15,10 +15,10 @@
 
 use super::{
 	AccountId, AllPalletsWithSystem, Assets, Authorship, Balance, Balances, BaseDeliveryFee,
-	CollatorSelection, FeeAssetId, ForeignAssets, ForeignAssetsInstance, ParachainInfo,
-	ParachainSystem, PolkadotXcm, PoolAssets, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
-	ToWestendXcmRouter, TransactionByteFee, TrustBackedAssetsInstance, Uniques, WeightToFee,
-	XcmpQueue,
+	CollatorSelection, FeeAssetId, ForeignAssets, ForeignAssetsInstance, ForeignUniques,
+	ParachainInfo, ParachainSystem, PolkadotXcm, PoolAssets, Runtime, RuntimeCall, RuntimeEvent,
+	RuntimeOrigin, ToWestendXcmRouter, TransactionByteFee, TrustBackedAssetsInstance, Uniques,
+	WeightToFee, XcmpQueue,
 };
 use assets_common::{
 	matching::{FromNetwork, FromSiblingParachain, IsForeignConcreteAsset},
@@ -38,12 +38,12 @@ use parachains_common::{
 		AllSiblingSystemParachains, AssetFeeAsExistentialDepositMultiplier,
 		ConcreteAssetFromSystem, ParentRelayOrSiblingParachains, RelayOrOtherSystemParachains,
 	},
-	TREASURY_PALLET_ID,
+	ItemId, TREASURY_PALLET_ID,
 };
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
-use sp_runtime::traits::{AccountIdConversion, ConvertInto};
+use sp_runtime::traits::{AccountIdConversion, ConvertInto, MaybeEquivalence};
 use testnet_parachains_constants::rococo::snowbridge::{
 	EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX,
 };
@@ -53,15 +53,18 @@ use xcm_builder::{
 	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom, DenyReserveTransferToRelayChain,
 	DenyThenTry, DescribeAllTerminal, DescribeFamily, EnsureXcmOrigin, FrameTransactionalProcessor,
 	FungibleAdapter, FungiblesAdapter, GlobalConsensusParachainConvertsFor, HashedDescription,
-	IsConcrete, LocalMint, NetworkExportTableItem, NoChecking, NonFungiblesAdapter,
-	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignPaidRemoteExporter, SovereignSignedViaLocation, StartsWith,
+	IsConcrete, LocalMint, MatchedConvertedConcreteId, NetworkExportTableItem, NoChecking,
+	NonFungiblesAdapter, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignPaidRemoteExporter, SovereignSignedViaLocation, StartsWith,
 	StartsWithExplicitGlobalConsensus, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
 	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
 	XcmFeeToAccount,
 };
-use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
+use xcm_executor::{
+	traits::{JustTry, WithOriginFilter},
+	XcmExecutor,
+};
 
 parameter_types! {
 	pub const TokenLocation: Location = Location::parent();
@@ -89,6 +92,7 @@ parameter_types! {
 	pub StakingPot: AccountId = CollatorSelection::account_id();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(rococo_runtime_constants::TREASURY_PALLET_ID)).into();
+	pub EthereumLocation: Location = (Parent,Parent,EthereumNetwork::get()).into();
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -218,6 +222,39 @@ pub type PoolFungiblesTransactor = FungiblesAdapter<
 	CheckingAccount,
 >;
 
+// ConvertedConcreteId cfg
+pub struct ClassInstanceIdConverter;
+impl MaybeEquivalence<AssetInstance, ItemId> for ClassInstanceIdConverter {
+	fn convert(value: &AssetInstance) -> Option<ItemId> {
+		(*value).try_into().ok()
+	}
+
+	fn convert_back(value: &ItemId) -> Option<AssetInstance> {
+		Some(AssetInstance::from(*value))
+	}
+}
+
+pub type ForeignUniquesTransactor = NonFungiblesAdapter<
+	// Use this non-fungibles implementation:
+	ForeignUniques,
+	// This adapter will handle any non-fungible asset from the uniques pallet.
+	MatchedConvertedConcreteId<
+		Location,
+		ItemId,
+		StartsWith<EthereumLocation>,
+		JustTry,
+		ClassInstanceIdConverter,
+	>,
+	// Convert an XCM Location into a local account id:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// Does not check teleports.
+	NoChecking,
+	// The account to use for tracking teleports.
+	CheckingAccount,
+>;
+
 /// Means for transacting assets on this chain.
 pub type AssetTransactors = (
 	FungibleTransactor,
@@ -225,6 +262,7 @@ pub type AssetTransactors = (
 	ForeignFungiblesTransactor,
 	PoolFungiblesTransactor,
 	UniquesTransactor,
+	ForeignUniquesTransactor,
 );
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -476,6 +514,32 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 					pallet_uniques::Call::buy_item { .. }
 			) | RuntimeCall::ToWestendXcmRouter(
 				pallet_xcm_bridge_hub_router::Call::report_bridge_status { .. }
+			) | RuntimeCall::ForeignUniques(
+				pallet_uniques::Call::create { .. } |
+					pallet_uniques::Call::force_create { .. } |
+					pallet_uniques::Call::destroy { .. } |
+					pallet_uniques::Call::mint { .. } |
+					pallet_uniques::Call::burn { .. } |
+					pallet_uniques::Call::transfer { .. } |
+					pallet_uniques::Call::freeze { .. } |
+					pallet_uniques::Call::thaw { .. } |
+					pallet_uniques::Call::freeze_collection { .. } |
+					pallet_uniques::Call::thaw_collection { .. } |
+					pallet_uniques::Call::transfer_ownership { .. } |
+					pallet_uniques::Call::set_team { .. } |
+					pallet_uniques::Call::approve_transfer { .. } |
+					pallet_uniques::Call::cancel_approval { .. } |
+					pallet_uniques::Call::force_item_status { .. } |
+					pallet_uniques::Call::set_attribute { .. } |
+					pallet_uniques::Call::clear_attribute { .. } |
+					pallet_uniques::Call::set_metadata { .. } |
+					pallet_uniques::Call::clear_metadata { .. } |
+					pallet_uniques::Call::set_collection_metadata { .. } |
+					pallet_uniques::Call::clear_collection_metadata { .. } |
+					pallet_uniques::Call::set_accept_ownership { .. } |
+					pallet_uniques::Call::set_collection_max_supply { .. } |
+					pallet_uniques::Call::set_price { .. } |
+					pallet_uniques::Call::buy_item { .. }
 			)
 		)
 	}
@@ -850,7 +914,7 @@ pub mod bridging {
 			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
 			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
 			/// Polkadot uses 10 decimals, Kusama and Rococo 12 decimals.
-			pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+			pub const DefaultBridgeHubEthereumBaseFee: Balance = 3_000_000_000_000;
 			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
 				1,
