@@ -245,24 +245,41 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			}
 		}
 
-		let (token, amount) = match reserve_asset {
+		// For nft token amount is the token_id
+		let (token, amount, is_erc20) = match reserve_asset {
 			Asset { id: AssetId(inner_location), fun: Fungible(amount) } =>
 				match inner_location.unpack() {
 					(0, [AccountKey20 { network, key }]) if self.network_matches(network) =>
-						Some((H160(*key), *amount)),
+						Some((H160(*key), *amount, true)),
 					_ => None,
 				},
+			Asset {
+				id: AssetId(inner_location),
+				fun: NonFungible(AssetInstance::Index(index)),
+			} => match inner_location.unpack() {
+				(0, [AccountKey20 { network, key }]) if self.network_matches(network) =>
+					Some((H160(*key), *index, false)),
+				_ => None,
+			},
 			_ => None,
 		}
 		.ok_or(AssetResolutionFailed)?;
 
 		// transfer amount must be greater than 0.
-		ensure!(amount > 0, ZeroAssetTransfer);
-
+		if is_erc20 {
+			ensure!(amount > 0, ZeroAssetTransfer);
+		}
 		// Check if there is a SetTopic and skip over it if found.
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
-		Ok((AgentExecuteCommand::TransferToken { token, recipient, amount }, *topic_id))
+		if is_erc20 {
+			Ok((AgentExecuteCommand::TransferToken { token, recipient, amount }, *topic_id))
+		} else {
+			Ok((
+				AgentExecuteCommand::TransferNftToken { token, recipient, token_id: amount },
+				*topic_id,
+			))
+		}
 	}
 
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {

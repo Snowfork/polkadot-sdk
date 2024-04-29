@@ -681,3 +681,74 @@ fn send_nft_token_from_ethereum_to_asset_hub() {
 		);
 	});
 }
+
+#[test]
+fn send_nft_token_from_asset_hub_to_ethereum() {
+	// First send nft token to asset hub
+	send_nft_token_from_ethereum_to_asset_hub();
+
+	// force set xcm version for Ethereum
+	AssetHubRococo::force_xcm_version(
+		Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]),
+		XCM_VERSION,
+	);
+
+	// Send the nft token back to Ethereum
+	AssetHubRococo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
+
+		let nft_asset_id: Location = (
+			Parent,
+			Parent,
+			EthereumNetwork::get(),
+			AccountKey20 { network: None, key: NFT_TOKEN },
+		)
+			.into();
+		let assets = vec![Asset { id: AssetId(nft_asset_id), fun: NonFungible(Index(1)) }];
+		let multi_assets = VersionedAssets::V4(Assets::from(assets));
+
+		let destination = VersionedLocation::V4(Location::new(
+			2,
+			[GlobalConsensus(Ethereum { chain_id: CHAIN_ID })],
+		));
+
+		let beneficiary = VersionedLocation::V4(Location::new(
+			0,
+			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
+		));
+
+		assert_ok!(
+			<AssetHubRococo as AssetHubRococoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+				RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
+				Box::new(destination),
+				Box::new(beneficiary),
+				Box::new(multi_assets),
+				0,
+				Unlimited,
+			)
+		);
+	});
+
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+		// Check that the transfer token back to Ethereum message was queue in the Ethereum
+		// Outbound Queue
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
+			]
+		);
+		let events = BridgeHubRococo::events();
+		// Check that the local fee was credited to the Snowbridge sovereign account and deposit to
+		// the Treasury
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, .. })
+					if *who == TREASURY_ACCOUNT.into()
+			)),
+			"Snowbridge sovereign takes local fee."
+		);
+	});
+}

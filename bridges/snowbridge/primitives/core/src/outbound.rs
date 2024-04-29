@@ -238,12 +238,22 @@ mod v1 {
 			/// The amount of tokens to transfer
 			amount: u128,
 		},
+		/// Transfer Nft tokens
+		TransferNftToken {
+			/// Address of the ERC20 token
+			token: H160,
+			/// The recipient of the tokens
+			recipient: H160,
+			/// The amount of tokens to transfer
+			token_id: u128,
+		},
 	}
 
 	impl AgentExecuteCommand {
 		fn index(&self) -> u8 {
 			match self {
 				AgentExecuteCommand::TransferToken { .. } => 0,
+				AgentExecuteCommand::TransferNftToken { .. } => 1,
 			}
 		}
 
@@ -257,6 +267,15 @@ mod v1 {
 							Token::Address(*token),
 							Token::Address(*recipient),
 							Token::Uint(U256::from(*amount)),
+						])),
+					]),
+				AgentExecuteCommand::TransferNftToken { token, recipient, token_id } =>
+					ethabi::encode(&[
+						Token::Uint(self.index().into()),
+						Token::Bytes(ethabi::encode(&[
+							Token::Address(*token),
+							Token::Address(*recipient),
+							Token::Uint(U256::from(*token_id)),
 						])),
 					]),
 			}
@@ -391,6 +410,7 @@ impl GasMeter for ConstantGasMeter {
 				// * Assume dest account in ERC20 contract does not yet have a storage slot
 				// * ERC20.transferFrom possibly does other business logic besides updating balances
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
+				AgentExecuteCommand::TransferNftToken { .. } => 120_000,
 			},
 			Command::Upgrade { initializer, .. } => {
 				let initializer_max_gas = match *initializer {
