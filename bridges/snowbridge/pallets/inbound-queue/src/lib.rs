@@ -233,7 +233,6 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
-			#[cfg(not(any(feature = "std", test)))]
 			// submit message to verifier for verification,ignore for integration tests
 			T::Verifier::verify(&message.event_log, &message.proof)
 				.map_err(|e| Error::<T>::Verification(e))?;
