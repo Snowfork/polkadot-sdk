@@ -63,6 +63,17 @@ pub enum Command {
 		/// XCM execution fee on AssetHub
 		fee: u128,
 	},
+	/// Send nft token to AssetHub
+	SendNftToken {
+		/// The address of the ERC20 token to be bridged over to AssetHub
+		token: H160,
+		/// The tokenId to transfer
+		token_id: u128,
+		/// The destination for the transfer
+		destination: [u8; 32],
+		/// XCM execution fee on AssetHub
+		fee: u128,
+	},
 }
 
 /// Destination for bridged tokens
@@ -161,6 +172,17 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_send_token(message_id, chain_id, token, destination, amount, fee)),
 			V1(MessageV1 { chain_id, command: RegisterNftToken { token, fee } }) =>
 				Ok(Self::convert_register_nft_token(message_id, chain_id, token, fee)),
+			V1(MessageV1 {
+				chain_id,
+				command: SendNftToken { token, destination, token_id, fee },
+			}) => Ok(Self::convert_send_nft_token(
+				message_id,
+				chain_id,
+				token,
+				destination,
+				token_id,
+				fee,
+			)),
 		}
 	}
 }
@@ -368,6 +390,34 @@ where
 		.into();
 
 		(xcm, total_amount.into())
+	}
+
+	fn convert_send_nft_token(
+		message_id: H256,
+		chain_id: u64,
+		token: H160,
+		destination: [u8; 32],
+		token_id: u128,
+		asset_hub_fee: u128,
+	) -> (Xcm<()>, Balance) {
+		let network = Ethereum { chain_id };
+		let asset_hub_fee_asset: Asset = (Location::parent(), asset_hub_fee).into();
+		let asset: Asset = (Self::convert_token_address(network, token), Index(token_id)).into();
+		let beneficiary = Location::new(0, [AccountId32 { network: None, id: destination }]);
+		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
+
+		let instructions = vec![
+			ReceiveTeleportedAsset(asset_hub_fee_asset.clone().into()),
+			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
+			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
+			UniversalOrigin(GlobalConsensus(network)),
+			ReserveAssetDeposited(asset.clone().into()),
+			ClearOrigin,
+			DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+			SetTopic(message_id.into()),
+		];
+
+		(instructions.into(), asset_hub_fee.into())
 	}
 }
 
