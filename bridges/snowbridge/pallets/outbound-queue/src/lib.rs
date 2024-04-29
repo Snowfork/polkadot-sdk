@@ -402,7 +402,7 @@ pub mod pallet {
 		}
 
 		/// The local component of the message processing fees in native currency
-		pub(crate) fn calculate_local_fee() -> T::Balance {
+		pub fn calculate_local_fee() -> T::Balance {
 			T::WeightToFee::weight_to_fee(
 				&T::WeightInfo::do_process_message().saturating_add(T::WeightInfo::commit_single()),
 			)

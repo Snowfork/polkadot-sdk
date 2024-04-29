@@ -4540,20 +4540,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "snowbridge-inbound-queue-runtime-api"
-version = "0.2.0"
-dependencies = [
- "frame-support",
- "parity-scale-codec",
- "scale-info",
- "snowbridge-core",
- "snowbridge-router-primitives",
- "sp-api",
- "sp-std 14.0.0",
- "staging-xcm",
-]
-
-[[package]]
 name = "snowbridge-milagro-bls"
 version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4775,6 +4761,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-pallet-ethereum-client",
  "snowbridge-pallet-ethereum-client-fixtures",
+ "snowbridge-pallet-inbound-queue",
  "snowbridge-pallet-outbound-queue",
  "snowbridge-pallet-system",
  "sp-core",

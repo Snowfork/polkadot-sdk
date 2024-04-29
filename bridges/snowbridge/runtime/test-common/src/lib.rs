@@ -12,7 +12,7 @@ use parachains_runtimes_test_utils::{
 };
 use snowbridge_core::{ChannelId, ParaId};
 use snowbridge_pallet_ethereum_client_fixtures::*;
-use sp_core::{H160, U256};
+use sp_core::{Get, H160, U256};
 use sp_keyring::AccountKeyring::*;
 use sp_runtime::{traits::Header, AccountId32, DigestItem, SaturatedConversion, Saturating};
 use xcm::{
@@ -560,4 +560,51 @@ pub fn ethereum_to_polkadot_message_extrinsics_work<Runtime>(
 				construct_and_apply_extrinsic(alice, update_sync_committee_call.into());
 			assert_ok!(sync_committee_outcome);
 		});
+}
+
+pub fn fetch_delivery_cost<Runtime, XcmConfig>(collator_session_key: CollatorSessionKeys<Runtime>)
+where
+	Runtime: frame_system::Config
+		+ pallet_balances::Config
+		+ pallet_session::Config
+		+ pallet_xcm::Config
+		+ parachain_info::Config
+		+ pallet_collator_selection::Config
+		+ cumulus_pallet_parachain_system::Config
+		+ snowbridge_pallet_outbound_queue::Config
+		+ snowbridge_pallet_inbound_queue::Config
+		+ pallet_timestamp::Config,
+	XcmConfig: xcm_executor::Config,
+	ValidatorIdOf<Runtime>: From<AccountIdOf<Runtime>>,
+	<Runtime as frame_system::Config>::AccountId: From<sp_runtime::AccountId32> + AsRef<[u8]>,
+{
+	ExtBuilder::<Runtime>::default()
+		.with_collators(collator_session_key.collators())
+		.with_session_keys(collator_session_key.session_keys())
+		.with_para_id(1013.into())
+		.with_tracing()
+		.build()
+		.execute_with(|| {
+			let _ = <pallet_xcm::Pallet<Runtime>>::force_xcm_version(
+				RuntimeHelper::<Runtime>::root_origin(),
+				Box::new(Location { parents: 1, interior: [Parachain(1000)].into() }),
+				XCM_VERSION,
+			);
+			let inbound_delivery_cost =
+				<snowbridge_pallet_inbound_queue::Pallet<Runtime>>::calculate_delivery_cost(
+					<Runtime as snowbridge_pallet_inbound_queue::Config>::MaxMessageSize::get(),
+				);
+			let inbound_send_cost =
+				<snowbridge_pallet_inbound_queue::Pallet<Runtime>>::calculate_send_cost(
+					1000.into(),
+					<Runtime as snowbridge_pallet_inbound_queue::Config>::MaxSendCostXcm::get(),
+				)
+				.unwrap();
+			let outbound_delivery_cost =
+				<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::calculate_local_fee();
+
+			println!("inbound_delivery_cost:{:?}", inbound_delivery_cost);
+			println!("inbound_send_cost:{:?}", inbound_send_cost);
+			println!("outbound_delivery_cost:{:?}", outbound_delivery_cost);
+		})
 }

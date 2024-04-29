@@ -202,3 +202,10 @@ fn construct_and_apply_extrinsic(
 	let r = Executive::apply_extrinsic(xt);
 	r.unwrap()
 }
+
+#[test]
+fn fetch_delivery_cost() {
+	snowbridge_runtime_test_common::fetch_delivery_cost::<Runtime, XcmConfig>(
+		collator_session_keys(),
+	);
+}
