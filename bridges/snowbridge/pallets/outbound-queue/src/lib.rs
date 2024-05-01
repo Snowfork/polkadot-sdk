@@ -171,6 +171,9 @@ pub mod pallet {
 		/// Convert a weight value into a deductible fee based.
 		type WeightToFee: WeightToFee<Balance = Self::Balance>;
 
+		/// Provider for the latest base fee per gas from Ethereum.
+		type GasFeeProvider = GasFeeProvider;
+
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
 	}

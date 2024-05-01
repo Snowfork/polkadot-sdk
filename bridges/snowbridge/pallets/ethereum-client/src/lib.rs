@@ -82,6 +82,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
+		type GasFeeStore: GasFeeStore;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -394,6 +395,28 @@ pub mod pallet {
 						update.attested_header.state_root
 					),
 					Error::<T>::InvalidSyncCommitteeMerkleProof
+				);
+			}
+
+			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
+			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
+			if let Some(version_execution_header) = &update.execution_header {
+				let execution_header_root: H256 = version_execution_header
+					.hash_tree_root()
+					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+				ensure!(
+					&update.execution_branch.is_some(),
+					Error::<T>::InvalidExecutionHeaderProof
+				);
+				ensure!(
+					verify_merkle_branch(
+						execution_header_root,
+						&update.execution_branch.clone().unwrap(),
+						config::EXECUTION_HEADER_SUBTREE_INDEX,
+						config::EXECUTION_HEADER_DEPTH,
+						update.finalized_header.body_root
+					),
+					Error::<T>::InvalidExecutionHeaderProof
 				);
 			}
 
