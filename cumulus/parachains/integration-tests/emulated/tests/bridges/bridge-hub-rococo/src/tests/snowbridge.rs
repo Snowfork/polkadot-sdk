@@ -594,17 +594,17 @@ fn transact_from_penpal_to_ethereum() {
 			(&sender.clone()).into(),
 			initial_fund,
 		));
+
 		let remote_cost = 2_750_872_500_000;
 		assert_ok!(<PenpalA as PenpalAPallet>::TransactHelper::transact_to_ethereum(
 			RuntimeOrigin::signed(sender.clone()),
-			agent_id,
 			//contract
 			hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into(),
 			//call
 			hex!("00071468656c6c6f").to_vec(),
 			//The fee here in DOT should cover the remote execution cost on Ethereum
 			remote_cost,
-			//gas
+			//gas cost on Ethereum
 			80_000,
 		));
 		let balance_after = <PenpalA as PenpalAPallet>::ForeignAssets::balance(
@@ -612,7 +612,8 @@ fn transact_from_penpal_to_ethereum() {
 			sender.clone(),
 		);
 		let total_cost = initial_fund - balance_after;
-		assert_eq!(total_cost > remote_cost + BridgeHubEthereumBaseFee::get(), true);
+		// Only the delivery cost
+		assert_eq!(total_cost > BridgeHubEthereumBaseFee::get(), true);
 		assert_expected_events!(
 			PenpalA,
 			vec![

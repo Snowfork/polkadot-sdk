@@ -119,7 +119,8 @@ impl<Balance, AccountId, FeeAssetLocation, EthereumNetwork, AssetTransactor, Fee
 		let local_fee = FeeProvider::local_fee();
 		let remote_fee = total_fee.saturating_sub(local_fee);
 		if local_fee == Balance::zero() || remote_fee == Balance::zero() {
-			log::error!(
+			// For transact remote_fee is zero which is a normal case
+			log::warn!(
 				target: LOG_TARGET,
 				"calculated refund incorrect with local_fee: {:?} and remote_fee: {:?}",
 				local_fee,

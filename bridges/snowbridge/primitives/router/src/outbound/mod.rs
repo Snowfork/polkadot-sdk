@@ -9,11 +9,10 @@ use core::slice::Iter;
 
 use codec::{Decode, DecodeAll, Encode};
 
-use crate::outbound::XcmConverterError::SetTopicExpected;
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{
 	outbound::{AgentExecuteCommand, Command, Message, SendMessage, TransactInfo},
-	ChannelId, ParaId,
+	AgentIdOf, ChannelId, ParaId,
 };
 use sp_core::{H160, H256};
 use sp_std::{iter::Peekable, marker::PhantomData, prelude::*};
@@ -155,7 +154,8 @@ enum XcmConverterError {
 	TransactSovereignAccountExpected,
 	TransactDecodeFailed,
 	UnexpectedInstruction,
-	Unroutable,
+	ConvertAgentFailed,
+	TransactDescendOriginExpected,
 }
 
 macro_rules! match_expression {
@@ -168,6 +168,7 @@ macro_rules! match_expression {
 }
 
 struct XcmConverter<'a, AgentHashedDescription, Call> {
+	xcm: &'a Xcm<Call>,
 	iter: Peekable<Iter<'a, Instruction<Call>>>,
 	ethereum_network: NetworkId,
 	para_id: ParaId,
@@ -177,21 +178,17 @@ impl<'a, AgentHashedDescription, Call> XcmConverter<'a, AgentHashedDescription, 
 where
 	AgentHashedDescription: ConvertLocation<H256>,
 {
-	fn new(message: &'a Xcm<Call>, ethereum_network: NetworkId, para_id: ParaId) -> Self {
-		Self {
-			iter: message.inner().iter().peekable(),
-			ethereum_network,
-			para_id,
-			_marker: Default::default(),
-		}
+	fn new(xcm: &'a Xcm<Call>, ethereum_network: NetworkId, para_id: ParaId) -> Self {
+		let iter = xcm.inner().iter().peekable();
+		Self { xcm, iter, ethereum_network, para_id, _marker: Default::default() }
 	}
 
 	fn convert(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
-		let result = match self.peek() {
+		let result = match self.peek2() {
 			// Transact message
-			Ok(Transact { .. }) => self.transact_message(),
+			Ok([DescendOrigin { .. }, Transact { .. }]) => self.transact_message(),
 			// Get withdraw/deposit and make native tokens create message.
-			Ok(WithdrawAsset { .. }) => self.native_tokens_unlock_message(),
+			Ok([WithdrawAsset { .. }, ..]) => self.native_tokens_unlock_message(),
 			Err(e) => Err(e),
 			_ => return Err(XcmConverterError::UnexpectedInstruction),
 		}?;
@@ -205,23 +202,30 @@ where
 	}
 
 	fn transact_message(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
+		use XcmConverterError::*;
+		let interior_origin = match_expression!(self.next()?, DescendOrigin(origin), origin)
+			.ok_or(TransactDescendOriginExpected)?
+			.first()
+			.ok_or(TransactDescendOriginExpected)?;
+
+		let origin =
+			Location::new(1, [Parachain(self.para_id.into()), interior_origin.clone().into()]);
+		let agent_id = AgentIdOf::convert_location(&origin).ok_or(ConvertAgentFailed)?;
+
 		let call_data = if let Transact { origin_kind, call, .. } = self.next()? {
-			ensure!(
-				*origin_kind == OriginKind::SovereignAccount,
-				XcmConverterError::TransactSovereignAccountExpected
-			);
+			ensure!(*origin_kind == OriginKind::SovereignAccount, TransactSovereignAccountExpected);
 			call
 		} else {
-			return Err(XcmConverterError::TransactExpected)
+			return Err(TransactExpected)
 		};
 
 		let message = TransactInfo::decode_all(&mut call_data.clone().into_encoded().as_slice())
-			.map_err(|_| XcmConverterError::TransactDecodeFailed)?;
+			.map_err(|_| TransactDecodeFailed)?;
 
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 		Ok((
 			Command::Transact {
-				agent_id: message.agent_id,
+				agent_id,
 				target: message.target,
 				payload: message.call,
 				gas_limit: message.gas_limit,
@@ -309,7 +313,7 @@ where
 			1,
 			Parachain(self.para_id.into()),
 		))
-		.ok_or(Unroutable)?;
+		.ok_or(ConvertAgentFailed)?;
 
 		Ok((
 			Command::AgentExecute {
@@ -334,5 +338,13 @@ where
 		} else {
 			true
 		}
+	}
+
+	fn peek2(&self) -> Result<[Instruction<Call>; 2], XcmConverterError> {
+		let instructions = self.xcm.clone().into_inner();
+		ensure!(instructions.len() >= 2, XcmConverterError::UnexpectedEndOfXcm);
+		let first = instructions.get(0).ok_or(XcmConverterError::UnexpectedEndOfXcm)?;
+		let second = instructions.get(1).ok_or(XcmConverterError::UnexpectedEndOfXcm)?;
+		Ok([first.clone(), second.clone()])
 	}
 }

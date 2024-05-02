@@ -442,7 +442,6 @@ pub const ETHER_DECIMALS: u8 = 18;
 
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct TransactInfo {
-	pub agent_id: H256,
 	pub target: H160,
 	pub call: Vec<u8>,
 	pub gas_limit: u64,
