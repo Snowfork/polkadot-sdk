@@ -32,6 +32,7 @@ bridge-hub-common = { path = "../../../../cumulus/parachains/runtimes/bridge-hub
 
 snowbridge-core = { path = "../../primitives/core", default-features = false, features = ["serde"] }
 snowbridge-outbound-queue-merkle-tree = { path = "merkle-tree", default-features = false }
+snowbridge-pallet-gas-price = { path = "../gas-price", default-features = false, optional = true }
 ethabi = { package = "ethabi-decode", version = "1.0.0", default-features = false }
 
 [dev-dependencies]
@@ -52,6 +53,7 @@ std = [
 	"serde/std",
 	"snowbridge-core/std",
 	"snowbridge-outbound-queue-merkle-tree/std",
+	"snowbridge-pallet-gas-price/std",
 	"sp-arithmetic/std",
 	"sp-core/std",
 	"sp-io/std",
@@ -66,6 +68,7 @@ runtime-benchmarks = [
 	"frame-system/runtime-benchmarks",
 	"pallet-message-queue/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
+	"snowbridge-pallet-gas-price/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [

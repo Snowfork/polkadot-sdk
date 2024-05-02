@@ -11,8 +11,6 @@ pub struct PricingParameters<Balance> {
 	pub exchange_rate: FixedU128,
 	/// Relayer rewards
 	pub rewards: Rewards<Balance>,
-	/// Ether (wei) fee per gas unit
-	pub fee_per_gas: U256,
 	/// Fee multiplier
 	pub multiplier: FixedU128,
 }
@@ -34,9 +32,6 @@ where
 {
 	pub fn validate(&self) -> Result<(), InvalidPricingParameters> {
 		if self.exchange_rate == FixedU128::zero() {
-			return Err(InvalidPricingParameters)
-		}
-		if self.fee_per_gas == U256::zero() {
 			return Err(InvalidPricingParameters)
 		}
 		if self.rewards.local.is_zero() {

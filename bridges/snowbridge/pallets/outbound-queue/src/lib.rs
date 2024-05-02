@@ -116,6 +116,7 @@ use snowbridge_core::{
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
+use snowbridge_pallet_gas_price::impls::GasFeeProvider;
 use sp_core::{H256, U256};
 use sp_runtime::{
 	traits::{CheckedDiv, Hash},
@@ -172,7 +173,7 @@ pub mod pallet {
 		type WeightToFee: WeightToFee<Balance = Self::Balance>;
 
 		/// Provider for the latest base fee per gas from Ethereum.
-		type GasFeeProvider = GasFeeProvider;
+		type GasFeeProvider: GasFeeProvider;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -346,8 +347,8 @@ pub mod pallet {
 				command,
 				params,
 				max_dispatch_gas,
-				max_fee_per_gas: pricing_params
-					.fee_per_gas
+				max_fee_per_gas: T::GasFeeProvider::get()
+					.value
 					.try_into()
 					.defensive_unwrap_or(u128::MAX),
 				reward: reward.try_into().defensive_unwrap_or(u128::MAX),
@@ -375,7 +376,7 @@ pub mod pallet {
 			// Remote fee in ether
 			let fee = Self::calculate_remote_fee(
 				gas_used_at_most,
-				params.fee_per_gas,
+				T::GasFeeProvider::get().value,
 				params.rewards.remote,
 			);
 
