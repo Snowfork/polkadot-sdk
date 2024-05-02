@@ -8,6 +8,7 @@ resolver = "2"
 members = [
 	"pallets/ethereum-client",
 	"pallets/ethereum-client/fixtures",
+	"pallets/gas-price", "pallets/gas-price-2",
 	"pallets/inbound-queue",
 	"pallets/inbound-queue/fixtures",
 	"pallets/outbound-queue",

@@ -98,6 +98,30 @@ pub fn make_sync_committee_update() -> Box<Update> {
             hex!("{{.}}").into(),
         {{/SyncCommitteeUpdate.BlockRootsBranch}}
         ],
+            execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
+            parent_hash: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.ParentHash}}").into(),
+            fee_recipient: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.FeeRecipient}}").into(),
+            state_root: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.StateRoot}}").into(),
+            receipts_root: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.ReceiptsRoot}}").into(),
+            logs_bloom: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.LogsBloom}}").into(),
+            prev_randao: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.PrevRandao}}").into(),
+            block_number: {{SyncCommitteeUpdate.ExecutionHeader.Deneb.BlockNumber}},
+            gas_limit: {{SyncCommitteeUpdate.ExecutionHeader.Deneb.GasLimit}},
+            gas_used: {{SyncCommitteeUpdate.ExecutionHeader.Deneb.GasUsed}},
+            timestamp: {{SyncCommitteeUpdate.ExecutionHeader.Deneb.Timestamp}},
+            extra_data: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.ExtraData}}").into(),
+            base_fee_per_gas: U256::from({{SyncCommitteeUpdate.ExecutionHeader.Deneb.BaseFeePerGas}}u64),
+            block_hash: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.BlockHash}}").into(),
+            transactions_root: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.TransactionsRoot}}").into(),
+            withdrawals_root: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.WithdrawalsRoot}}").into(),
+            blob_gas_used: {{SyncCommitteeUpdate.ExecutionHeader.Deneb.BlobGasUsed}},
+            excess_blob_gas: {{SyncCommitteeUpdate.ExecutionHeader.Deneb.ExcessBlobGas}},
+        }),
+        execution_branch: vec![
+        {{#SyncCommitteeUpdate.ExecutionBranch}}
+            hex!("{{.}}").into(),
+        {{/SyncCommitteeUpdate.ExecutionBranch}}
+        ],
     })
 }
 
@@ -134,6 +158,30 @@ pub fn make_finalized_header_update() -> Box<Update> {
             hex!("{{.}}").into(),
         {{/FinalizedHeaderUpdate.BlockRootsBranch}}
         ]
+            execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
+            parent_hash: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.ParentHash}}").into(),
+            fee_recipient: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.FeeRecipient}}").into(),
+            state_root: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.StateRoot}}").into(),
+            receipts_root: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.ReceiptsRoot}}").into(),
+            logs_bloom: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.LogsBloom}}").into(),
+            prev_randao: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.PrevRandao}}").into(),
+            block_number: {{FinalizedHeaderUpdate.ExecutionHeader.Deneb.BlockNumber}},
+            gas_limit: {{FinalizedHeaderUpdate.ExecutionHeader.Deneb.GasLimit}},
+            gas_used: {{FinalizedHeaderUpdate.ExecutionHeader.Deneb.GasUsed}},
+            timestamp: {{FinalizedHeaderUpdate.ExecutionHeader.Deneb.Timestamp}},
+            extra_data: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.ExtraData}}").into(),
+            base_fee_per_gas: U256::from({{FinalizedHeaderUpdate.ExecutionHeader.Deneb.BaseFeePerGas}}u64),
+            block_hash: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.BlockHash}}").into(),
+            transactions_root: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.TransactionsRoot}}").into(),
+            withdrawals_root: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.WithdrawalsRoot}}").into(),
+            blob_gas_used: {{FinalizedHeaderUpdate.ExecutionHeader.Deneb.BlobGasUsed}},
+            excess_blob_gas: {{FinalizedHeaderUpdate.ExecutionHeader.Deneb.ExcessBlobGas}},
+        }),
+        execution_branch: vec![
+        {{#FinalizedHeaderUpdate.ExecutionBranch}}
+            hex!("{{.}}").into(),
+        {{/FinalizedHeaderUpdate.ExecutionBranch}}
+        ],
     })
 }
 

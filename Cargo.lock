@@ -2116,6 +2116,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-outbound-queue-runtime-api",
  "snowbridge-pallet-ethereum-client",
+ "snowbridge-pallet-gas-price",
  "snowbridge-pallet-inbound-queue",
  "snowbridge-pallet-outbound-queue",
  "snowbridge-pallet-system",
@@ -18721,6 +18722,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-ethereum",
  "snowbridge-pallet-ethereum-client-fixtures",
+ "snowbridge-pallet-gas-price",
  "sp-core",
  "sp-io",
  "sp-keyring",
@@ -18737,6 +18739,22 @@ dependencies = [
  "snowbridge-beacon-primitives",
  "snowbridge-core",
  "sp-core",
+ "sp-std 14.0.0",
+]
+
+[[package]]
+name = "snowbridge-pallet-gas-price"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
  "sp-std 14.0.0",
 ]
 
@@ -18795,6 +18813,7 @@ dependencies = [
  "serde",
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
+ "snowbridge-pallet-gas-price",
  "sp-arithmetic",
  "sp-core",
  "sp-io",

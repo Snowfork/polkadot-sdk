@@ -4691,6 +4691,7 @@ dependencies = [
  "serde",
  "snowbridge-core",
  "snowbridge-outbound-queue-merkle-tree",
+ "snowbridge-pallet-gas-price",
  "sp-arithmetic",
  "sp-core",
  "sp-io",

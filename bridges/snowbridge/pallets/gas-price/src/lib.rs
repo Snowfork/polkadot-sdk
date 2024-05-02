@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 #![cfg_attr(not(feature = "std"), no_std)]
-
 pub mod impls;
 pub mod types;
 
-use crate::{impls::{GasFeeStore, GasFeeProvider}, types::BaseFeePerGas};
+use crate::{impls::GasPriceProvider, types::BaseFeePerGas};
 use frame_system::WeightInfo;
 pub use pallet::*;
 use sp_core::U256;
@@ -44,15 +43,13 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {}
 }
 
-impl<T: Config> GasFeeStore for Pallet<T> {
+impl<T: Config> GasPriceProvider for Pallet<T> {
 	fn store(value: U256, slot: u64) {
 		<GasPrice<T>>::set(BaseFeePerGas { value, slot });
 
 		Self::deposit_event(Event::GasPriceUpdate { value, slot });
 	}
-}
 
-impl<T: Config> GasFeeProvider for Pallet<T> {
 	fn get() -> BaseFeePerGas {
 		GasPrice::<T>::get()
 	}

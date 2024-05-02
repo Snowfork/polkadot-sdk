@@ -49,7 +49,7 @@ use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
 pub use pallet::*;
-use snowbridge_pallet_gas_price::impls::GasFeeStore;
+use snowbridge_pallet_gas_price::impls::GasPriceProvider;
 use types::{CheckpointUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared, Update};
 
 pub use config::SLOTS_PER_HISTORICAL_ROOT;
@@ -82,7 +82,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
-		type GasFeeStore: GasFeeStore;
+		type GasPrice: GasPriceProvider;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -114,6 +114,7 @@ pub mod pallet {
 		InvalidExecutionHeaderProof,
 		InvalidAncestryMerkleProof,
 		InvalidBlockRootsRootMerkleProof,
+		ExpectedExecutionHeader,
 		/// The gap between the finalized headers is larger than the sync committee period,
 		/// rendering execution headers unprovable using ancestry proofs (blocks root size is
 		/// the same as the sync committee period slots).
@@ -418,6 +419,8 @@ pub mod pallet {
 					),
 					Error::<T>::InvalidExecutionHeaderProof
 				);
+			} else {
+				return Err(Error::<T>::ExpectedExecutionHeader.into());
 			}
 
 			// Verify sync committee aggregate signature.
@@ -488,7 +491,7 @@ pub mod pallet {
 			}
 
 			if let Some(versioned_execution_header) = &update.execution_header {
-				T::GasFeeStore::store(
+				T::GasPrice::store(
 					versioned_execution_header.base_fee_per_gas(),
 					update.finalized_header.slot,
 				);

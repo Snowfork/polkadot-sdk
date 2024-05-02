@@ -587,6 +587,7 @@ impl snowbridge_pallet_outbound_queue::Config for Runtime {
 	type WeightToFee = WeightToFee;
 	type WeightInfo = weights::snowbridge_pallet_outbound_queue::WeightInfo<Runtime>;
 	type PricingParameters = EthereumSystem;
+	type GasPrice = EthereumGasPrice;
 	type Channels = EthereumSystem;
 }
 
@@ -645,6 +646,7 @@ parameter_types! {
 impl snowbridge_pallet_ethereum_client::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
+	type GasPrice = EthereumGasPrice;
 	type WeightInfo = weights::snowbridge_pallet_ethereum_client::WeightInfo<Runtime>;
 }
 
@@ -660,6 +662,11 @@ impl snowbridge_pallet_system::Config for Runtime {
 	type Helper = ();
 	type DefaultPricingParameters = Parameters;
 	type InboundDeliveryCost = EthereumInboundQueue;
+}
+
+impl snowbridge_pallet_gas_price::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -723,6 +730,7 @@ construct_runtime!(
 		EthereumOutboundQueue: snowbridge_pallet_outbound_queue = 81,
 		EthereumBeaconClient: snowbridge_pallet_ethereum_client = 82,
 		EthereumSystem: snowbridge_pallet_system = 83,
+		EthereumGasPrice: snowbridge_pallet_gas_price = 84,
 
 		// Message Queue. Importantly, is registered last so that messages are processed after
 		// the `on_initialize` hooks of bridging pallets.

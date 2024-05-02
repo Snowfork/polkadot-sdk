@@ -9,7 +9,7 @@ use frame_support::{
 };
 
 use snowbridge_core::{
-	gwei, meth,
+	meth,
 	outbound::*,
 	pricing::{PricingParameters, Rewards},
 	ParaId, PRIMARY_GOVERNANCE_CHANNEL,
@@ -30,6 +30,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
 		OutboundQueue: crate::{Pallet, Storage, Event<T>},
+		GasPrice: snowbridge_pallet_gas_price::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -77,7 +78,6 @@ parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
-		fee_per_gas: gwei(20),
 		rewards: Rewards { local: DOT, remote: meth(1) },
 		multiplier: FixedU128::from_rational(4, 3),
 	};
@@ -97,6 +97,12 @@ impl crate::Config for Test {
 	type PricingParameters = Parameters;
 	type Channels = Everything;
 	type WeightToFee = IdentityFee<u128>;
+	type WeightInfo = ();
+	type GasPrice = GasPrice;
+}
+
+impl snowbridge_pallet_gas_price::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 }
 

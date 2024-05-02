@@ -113,6 +113,7 @@ snowbridge-pallet-system = { path = "../../../../../bridges/snowbridge/pallets/s
 snowbridge-system-runtime-api = { path = "../../../../../bridges/snowbridge/pallets/system/runtime-api", default-features = false }
 snowbridge-core = { path = "../../../../../bridges/snowbridge/primitives/core", default-features = false }
 snowbridge-pallet-ethereum-client = { path = "../../../../../bridges/snowbridge/pallets/ethereum-client", default-features = false }
+snowbridge-pallet-gas-price = { path = "../../../../../bridges/snowbridge/pallets/gas-price", default-features = false }
 snowbridge-pallet-inbound-queue = { path = "../../../../../bridges/snowbridge/pallets/inbound-queue", default-features = false }
 snowbridge-pallet-outbound-queue = { path = "../../../../../bridges/snowbridge/pallets/outbound-queue", default-features = false }
 snowbridge-outbound-queue-runtime-api = { path = "../../../../../bridges/snowbridge/pallets/outbound-queue/runtime-api", default-features = false }
@@ -196,6 +197,7 @@ std = [
 	"snowbridge-core/std",
 	"snowbridge-outbound-queue-runtime-api/std",
 	"snowbridge-pallet-ethereum-client/std",
+	"snowbridge-pallet-gas-price/std",
 	"snowbridge-pallet-inbound-queue/std",
 	"snowbridge-pallet-outbound-queue/std",
 	"snowbridge-pallet-system/std",

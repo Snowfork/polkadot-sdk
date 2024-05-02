@@ -270,10 +270,10 @@ fn encode_digest_item() {
 #[test]
 fn test_calculate_fees_with_unit_multiplier() {
 	new_tester().execute_with(|| {
+		<Test as Config>::GasPrice::store(10000_u32.into(), 400);
 		let gas_used: u64 = 250000;
 		let price_params: PricingParameters<<Test as Config>::Balance> = PricingParameters {
 			exchange_rate: FixedU128::from_rational(1, 400),
-			fee_per_gas: 10000_u32.into(),
 			rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
 			multiplier: FixedU128::from_rational(1, 1),
 		};
@@ -286,10 +286,10 @@ fn test_calculate_fees_with_unit_multiplier() {
 #[test]
 fn test_calculate_fees_with_multiplier() {
 	new_tester().execute_with(|| {
+		<Test as Config>::GasPrice::store(10000_u32.into(), 400);
 		let gas_used: u64 = 250000;
 		let price_params: PricingParameters<<Test as Config>::Balance> = PricingParameters {
 			exchange_rate: FixedU128::from_rational(1, 400),
-			fee_per_gas: 10000_u32.into(),
 			rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
 			multiplier: FixedU128::from_rational(4, 3),
 		};
@@ -302,10 +302,10 @@ fn test_calculate_fees_with_multiplier() {
 #[test]
 fn test_calculate_fees_with_valid_exchange_rate_but_remote_fee_calculated_as_zero() {
 	new_tester().execute_with(|| {
+		<Test as Config>::GasPrice::store(1_u32.into(), 400);
 		let gas_used: u64 = 250000;
 		let price_params: PricingParameters<<Test as Config>::Balance> = PricingParameters {
 			exchange_rate: FixedU128::from_rational(1, 1),
-			fee_per_gas: 1_u32.into(),
 			rewards: Rewards { local: 1_u32.into(), remote: 1_u32.into() },
 			multiplier: FixedU128::from_rational(1, 1),
 		};

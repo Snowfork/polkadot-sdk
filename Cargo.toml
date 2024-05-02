@@ -48,6 +48,7 @@ members = [
 	"bridges/relays/utils",
 	"bridges/snowbridge/pallets/ethereum-client",
 	"bridges/snowbridge/pallets/ethereum-client/fixtures",
+	"bridges/snowbridge/pallets/gas-price",
 	"bridges/snowbridge/pallets/inbound-queue",
 	"bridges/snowbridge/pallets/inbound-queue/fixtures",
 	"bridges/snowbridge/pallets/outbound-queue",

@@ -60,12 +60,18 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		EthereumBeaconClient: ethereum_beacon_client::{Pallet, Call, Storage, Event<T>},
+		GasPrice: snowbridge_pallet_gas_price::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
 	type Block = Block;
+}
+
+impl snowbridge_pallet_gas_price::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
 }
 
 impl pallet_timestamp::Config for Test {
@@ -104,6 +110,7 @@ impl ethereum_beacon_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
 	type WeightInfo = ();
+	type GasPrice = GasPrice;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -120,3 +127,4 @@ pub fn initialize_storage() -> DispatchResult {
 		inbound_fixture.block_roots_root,
 	)
 }
+
