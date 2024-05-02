@@ -16,7 +16,6 @@ pub mod pallet {
 	use super::*;
 
 	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -30,7 +29,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		GasPriceUpdate { base_fee_per_gas: U256, slot: u64 },
+		GasPriceUpdate { value: U256, slot: u64 },
 	}
 
 	#[pallet::error]
@@ -48,5 +47,7 @@ pub mod pallet {
 impl<T: Config> GasFeeStore for Pallet<T> {
 	fn store(value: U256, slot: u64) {
 		<GasPrice<T>>::set(BaseFeePerGas { value, slot });
+
+		Self::deposit_event(Event::GasPriceUpdate { value, slot });
 	}
 }

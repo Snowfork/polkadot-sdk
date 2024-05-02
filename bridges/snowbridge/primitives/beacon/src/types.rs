@@ -408,6 +408,15 @@ impl VersionedExecutionPayloadHeader {
 				execution_payload_header.receipts_root,
 		}
 	}
+
+	pub fn base_fee_per_gas(&self) -> U256 {
+		match self {
+			VersionedExecutionPayloadHeader::Capella(execution_payload_header) =>
+				execution_payload_header.base_fee_per_gas,
+			VersionedExecutionPayloadHeader::Deneb(execution_payload_header) =>
+				execution_payload_header.base_fee_per_gas,
+		}
+	}
 }
 
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]

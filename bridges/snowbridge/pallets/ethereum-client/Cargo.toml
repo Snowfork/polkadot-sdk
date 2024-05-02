@@ -69,6 +69,7 @@ std = [
 	"snowbridge-core/std",
 	"snowbridge-ethereum/std",
 	"snowbridge-pallet-ethereum-client-fixtures/std",
+	"snowbridge-pallet-gas-price/std",
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
@@ -83,6 +84,7 @@ runtime-benchmarks = [
 	"pallet-timestamp?/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
 	"snowbridge-pallet-ethereum-client-fixtures/runtime-benchmarks",
+	"snowbridge-pallet-gas-price/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [

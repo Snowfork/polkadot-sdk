@@ -1,4 +1,3 @@
-use crate::inbound::{Log, Proof, VerificationError};
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned, Zero};

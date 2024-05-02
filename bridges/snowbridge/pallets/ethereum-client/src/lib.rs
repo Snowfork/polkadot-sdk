@@ -48,9 +48,9 @@ pub use weights::WeightInfo;
 use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
-use types::{CheckpointUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared, Update};
-
 pub use pallet::*;
+use snowbridge_pallet_gas_price::impls::GasFeeStore;
+use types::{CheckpointUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared, Update};
 
 pub use config::SLOTS_PER_HISTORICAL_ROOT;
 
@@ -485,6 +485,13 @@ pub mod pallet {
 
 			if update.finalized_header.slot > latest_finalized_state.slot {
 				Self::store_finalized_header(update.finalized_header, update.block_roots_root)?;
+			}
+
+			if let Some(versioned_execution_header) = &update.execution_header {
+				T::GasFeeStore::store(
+					versioned_execution_header.base_fee_per_gas(),
+					update.finalized_header.slot,
+				);
 			}
 
 			Ok(())

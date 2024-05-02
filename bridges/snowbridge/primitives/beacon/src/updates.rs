@@ -6,7 +6,7 @@ use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_std::prelude::*;
 
-use crate::types::{BeaconHeader, SyncAggregate, SyncCommittee};
+use crate::types::{BeaconHeader, SyncAggregate, SyncCommittee, VersionedExecutionPayloadHeader};
 
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 #[cfg_attr(
@@ -51,6 +51,10 @@ pub struct Update<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 	pub block_roots_root: H256,
 	/// The merkle path to prove the `block_roots_root` value.
 	pub block_roots_branch: Vec<H256>,
+	/// The execution header to be imported
+	pub execution_header: Option<VersionedExecutionPayloadHeader>,
+	/// The merkle proof for the execution_header
+	pub execution_branch: Option<Vec<H256>>,
 }
 
 #[derive(
