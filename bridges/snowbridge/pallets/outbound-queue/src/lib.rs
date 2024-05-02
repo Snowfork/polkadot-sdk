@@ -116,7 +116,7 @@ use snowbridge_core::{
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
-use snowbridge_pallet_gas_price::impls::GasPriceProvider;
+pub use snowbridge_pallet_gas_price::GasPriceProvider;
 use sp_core::{H256, U256};
 use sp_runtime::{
 	traits::{CheckedDiv, Hash},
