@@ -362,9 +362,21 @@ where
 			WithdrawAsset(xcm_fee.clone().into()),
 			// Pay for execution.
 			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
+			SetAppendix(Xcm(vec![
+				RefundSurplus,
+				DepositAsset {
+					assets: Wild(AllCounted(1)),
+					beneficiary: Location::new(
+						0,
+						[
+							GlobalConsensus(Ethereum { chain_id }),
+							AccountKey20 { network: None, key: sender.into() },
+						],
+					),
+				},
+				SetTopic(message_id.into()),
+			])),
 			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() },
-			// Forward message id
-			SetTopic(message_id.into()),
 		];
 		Ok((message.into(), Balance::zero()))
 	}

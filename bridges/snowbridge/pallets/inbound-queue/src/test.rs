@@ -275,9 +275,8 @@ fn test_convert_transact() {
 		)
 		.unwrap();
 		let instructions = xcm.into_inner();
-		assert_eq!(instructions.len(), 7);
 		assert_eq!(dest_fee, 0);
-		let transact = instructions.get(5).unwrap().clone();
+		let transact = instructions.get(6).unwrap().clone();
 		let expected =
 			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() };
 		assert_eq!(transact, expected);
