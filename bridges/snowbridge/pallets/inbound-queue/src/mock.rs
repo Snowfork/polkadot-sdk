@@ -195,7 +195,11 @@ impl StaticLookup for MockChannelLookup {
 		{
 			return None
 		}
-		Some(Channel { agent_id: H256::zero(), para_id: ASSET_HUB_PARAID.into() })
+		Some(Channel {
+			agent_id: H256::zero(),
+			para_id: ASSET_HUB_PARAID.into(),
+			fee_asset_id: VersionedLocation::from(Location::here()),
+		})
 	}
 }
 

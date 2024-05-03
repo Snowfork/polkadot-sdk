@@ -48,7 +48,7 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
-use sp_core::H160;
+use sp_core::{H160, H256};
 use sp_runtime::traits::Zero;
 use sp_std::{convert::TryFrom, vec};
 use xcm::prelude::{
@@ -61,9 +61,8 @@ use snowbridge_core::{
 	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, PricingParameters,
 	StaticLookup,
 };
-use snowbridge_router_primitives::{
-	inbound,
-	inbound::{ConvertMessage, ConvertMessageError},
+use snowbridge_router_primitives::inbound::{
+	Command, ConvertMessage, ConvertMessageError, MessageV1, VersionedMessage,
 };
 use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
@@ -71,8 +70,6 @@ pub use weights::WeightInfo;
 
 #[cfg(feature = "runtime-benchmarks")]
 use snowbridge_beacon_primitives::BeaconHeader;
-#[cfg(feature = "runtime-benchmarks")]
-use sp_core::H256;
 
 type BalanceOf<T> =
 	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
@@ -87,6 +84,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use xcm::VersionedLocation;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -235,7 +233,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
 
-			// submit message to verifier for verification
+			// submit message to verifier for verification,ignore for integration tests
 			T::Verifier::verify(&message.event_log, &message.proof)
 				.map_err(|e| Error::<T>::Verification(e))?;
 
@@ -277,13 +275,13 @@ pub mod pallet {
 				T::Token::transfer(&sovereign_account, &who, amount, Preservation::Preserve)?;
 			}
 
-			// Decode message into XCM
+			// Decode payload into VersionMessage
+			let message = VersionedMessage::decode_all(&mut envelope.payload.as_ref())
+				.map_err(|_| Error::<T>::InvalidPayload)?;
+
+			// Convert VersionMessage to XCM
 			let (xcm, fee) =
-				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(message) => T::MessageConverter::convert(envelope.message_id, message)
-						.map_err(|e| Error::<T>::ConvertMessage(e))?,
-					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-				};
+				Self::do_convert(channel.fee_asset_id, envelope.message_id, message.clone())?;
 
 			log::info!(
 				target: LOG_TARGET,
@@ -292,8 +290,10 @@ pub mod pallet {
 				fee
 			);
 
-			// Burning fees for teleport
-			Self::burn_fees(channel.para_id, fee)?;
+			if fee > BalanceOf::<T>::zero() {
+				// Burning fees for teleport
+				Self::burn_fees(channel.para_id, fee)?;
+			}
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;
@@ -323,6 +323,16 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		pub fn do_convert(
+			fee_asset_id: VersionedLocation,
+			message_id: H256,
+			message: VersionedMessage,
+		) -> Result<(Xcm<()>, BalanceOf<T>), Error<T>> {
+			let (xcm, fee) = T::MessageConverter::convert(fee_asset_id, message_id, message)
+				.map_err(|e| Error::<T>::ConvertMessage(e))?;
+			Ok((xcm, fee))
+		}
+
 		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {
 			let dest = Location::new(1, [Parachain(dest.into())]);
 			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;

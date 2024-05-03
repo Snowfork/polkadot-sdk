@@ -56,6 +56,19 @@ pub enum Command {
 		/// XCM execution fee on AssetHub
 		fee: u128,
 	},
+	/// call arbitrary transact on dest chain
+	Transact {
+		/// The address of the sender
+		sender: H160,
+		/// OriginKind
+		origin_kind: OriginKind,
+		/// XCM execution fee on dest chain
+		fee: u128,
+		/// The weight required at most on dest chain
+		weight_at_most: Weight,
+		/// The payload of the transact
+		payload: Vec<u8>,
+	},
 }
 
 /// Destination for bridged tokens
@@ -108,6 +121,8 @@ pub struct MessageToXcm<
 pub enum ConvertMessageError {
 	/// The message version is not supported for conversion.
 	UnsupportedVersion,
+	/// The fee asset is not supported for conversion.
+	UnsupportedFeeAsset,
 }
 
 /// convert the inbound message to xcm which will be forwarded to the destination chain
@@ -116,6 +131,7 @@ pub trait ConvertMessage {
 	type AccountId;
 	/// Converts a versioned message into an XCM message and an optional topicID
 	fn convert(
+		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		message: VersionedMessage,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
@@ -142,6 +158,7 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 	type AccountId = AccountId;
 
 	fn convert(
+		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		message: VersionedMessage,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError> {
@@ -152,6 +169,19 @@ impl<CreateAssetCall, CreateAssetDeposit, InboundQueuePalletInstance, AccountId,
 				Ok(Self::convert_register_token(message_id, chain_id, token, fee)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
 				Ok(Self::convert_send_token(message_id, chain_id, token, destination, amount, fee)),
+			V1(MessageV1 {
+				chain_id,
+				command: Transact { sender, origin_kind, fee, weight_at_most, payload },
+			}) => Self::convert_transact(
+				fee_asset_id,
+				message_id,
+				chain_id,
+				sender,
+				origin_kind,
+				fee,
+				weight_at_most,
+				payload,
+			),
 		}
 	}
 }
@@ -307,6 +337,48 @@ where
 			2,
 			[GlobalConsensus(network), AccountKey20 { network: None, key: token.into() }],
 		)
+	}
+
+	fn convert_transact(
+		fee_asset_id: VersionedLocation,
+		message_id: H256,
+		chain_id: u64,
+		sender: H160,
+		origin_kind: OriginKind,
+		fee: u128,
+		weight_at_most: Weight,
+		payload: Vec<u8>,
+	) -> Result<(Xcm<()>, Balance), ConvertMessageError> {
+		let fee_asset_id: Location =
+			fee_asset_id.try_into().map_err(|_| ConvertMessageError::UnsupportedFeeAsset)?;
+		let xcm_fee: Asset = (fee_asset_id, fee).into();
+
+		let message = vec![
+			DescendOrigin(PalletInstance(InboundQueuePalletInstance::get()).into()),
+			// Change origin to the bridge.
+			UniversalOrigin(GlobalConsensus(Ethereum { chain_id })),
+			// DescendOrigin to the sender.
+			DescendOrigin(AccountKey20 { network: None, key: sender.into() }.into()),
+			WithdrawAsset(xcm_fee.clone().into()),
+			// Pay for execution.
+			BuyExecution { fees: xcm_fee, weight_limit: Unlimited },
+			SetAppendix(Xcm(vec![
+				RefundSurplus,
+				DepositAsset {
+					assets: Wild(AllCounted(1)),
+					beneficiary: Location::new(
+						0,
+						[
+							GlobalConsensus(Ethereum { chain_id }),
+							AccountKey20 { network: None, key: sender.into() },
+						],
+					),
+				},
+				SetTopic(message_id.into()),
+			])),
+			Transact { origin_kind, require_weight_at_most: weight_at_most, call: payload.into() },
+		];
+		Ok((message.into(), Balance::zero()))
 	}
 }
 

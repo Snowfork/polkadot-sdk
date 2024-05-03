@@ -29,6 +29,7 @@ use super::{
 	XcmpQueue,
 };
 use crate::{BaseDeliveryFee, FeeAssetId, TransactionByteFee};
+use codec::Encode;
 use core::marker::PhantomData;
 use frame_support::{
 	parameter_types,
@@ -40,7 +41,9 @@ use pallet_xcm::XcmPassthrough;
 use parachains_common::{xcm_config::AssetFeeAsExistentialDepositMultiplier, TREASURY_PALLET_ID};
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::{impls::ToAuthor, xcm_sender::ExponentialPrice};
+use sp_core::blake2_256;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
+use sp_std::collections::btree_set::BTreeSet;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -52,16 +55,33 @@ use xcm_builder::{
 	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
 	XcmFeeManagerFromComponents, XcmFeeToAccount,
 };
-use xcm_executor::{traits::JustTry, XcmExecutor};
+use xcm_executor::{
+	traits::{ConvertLocation, JustTry},
+	XcmExecutor,
+};
 
 parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
 	// Local native currency which is stored in `pallet_balances``
 	pub const PenpalNativeCurrency: Location = Location::here();
-	pub const RelayNetwork: Option<NetworkId> = None;
+	pub storage RelayNetwork: NetworkId = Rococo;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
-	pub UniversalLocation: InteriorLocation = [Parachain(ParachainInfo::parachain_id().into())].into();
+	pub UniversalLocation: InteriorLocation = [GlobalConsensus(RelayNetwork::get()),Parachain(ParachainInfo::parachain_id().into())].into();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
+	pub storage EthereumNetwork: NetworkId = Ethereum { chain_id: 11155111 };
+	pub storage SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
+				1,
+				[
+					Parachain(1013),
+					PalletInstance(80)
+				]
+			);
+	pub storage UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(
+			sp_std::vec![
+				(SiblingBridgeHubWithEthereumInboundQueueInstance::get(),GlobalConsensus(EthereumNetwork::get())),
+			]
+	);
+	pub storage SiblingBridgeHub: Location = Location::new(1, [Parachain(1013)]);
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -74,6 +94,7 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
+	GlobalConsensusEthereumAddressConvertsFor<AccountId>,
 );
 
 /// Means for transacting assets on this chain.
@@ -193,6 +214,13 @@ impl Contains<Location> for ParentOrParentsExecutivePlurality {
 	}
 }
 
+pub struct CommonGoodAssetsParachain;
+impl Contains<Location> for CommonGoodAssetsParachain {
+	fn contains(location: &Location) -> bool {
+		matches!(location.unpack(), (1, [Parachain(1000)]))
+	}
+}
+
 pub type Barrier = TrailingSetTopicAsId<(
 	TakeWeightCredit,
 	// Expected responses are OK.
@@ -294,8 +322,30 @@ pub type TrustedReserves = (
 	NativeAssetFrom<SystemAssetHubLocation>,
 	AssetPrefixFrom<CustomizableAssetFromSystemAssetHub, SystemAssetHubLocation>,
 );
+
 pub type TrustedTeleporters =
 	(AssetFromChain<LocalTeleportableToAssetHub, SystemAssetHubLocation>,);
+
+pub struct GlobalConsensusEthereumAddressConvertsFor<AccountId>(PhantomData<AccountId>);
+impl<AccountId> ConvertLocation<AccountId> for GlobalConsensusEthereumAddressConvertsFor<AccountId>
+where
+	AccountId: From<[u8; 32]> + Clone,
+{
+	fn convert_location(location: &Location) -> Option<AccountId> {
+		match location.unpack() {
+			(_, [first_loc, AccountKey20 { network: None, key: sender }])
+				if *first_loc == Junction::from(EthereumNetwork::get()) =>
+				Some(blake2_256(&(b"AccountKey20", sender).encode()).into()),
+			_ => None,
+		}
+	}
+}
+
+impl Contains<(Location, Junction)> for UniversalAliases {
+	fn contains(alias: &(Location, Junction)) -> bool {
+		UniversalAliases::get().contains(alias)
+	}
+}
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -312,6 +362,7 @@ impl xcm_executor::Config for XcmConfig {
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type Trader = (
 		UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>,
+		UsingComponents<WeightToFee, PenpalNativeCurrency, AccountId, Balances, ToAuthor<Runtime>>,
 		// This trader allows to pay with `is_sufficient=true` "Foreign" assets from dedicated
 		// `pallet_assets` instance - `ForeignAssets`.
 		cumulus_primitives_utility::TakeFirstAssetTrader<
@@ -339,7 +390,7 @@ impl xcm_executor::Config for XcmConfig {
 		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 	>;
 	type MessageExporter = ();
-	type UniversalAliases = Nothing;
+	type UniversalAliases = UniversalAliases;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
 	type Aliasers = Nothing;

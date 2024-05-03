@@ -14,15 +14,18 @@ workspace = true
 codec = { package = "parity-scale-codec", version = "3.4.0", default-features = false }
 scale-info = { version = "2.11.1", default-features = false, features = ["derive"] }
 hex-literal = "0.4.1"
+hex = "0.4.3"
 
 # Substrate
 sp-core = { path = "../../../../../../../substrate/primitives/core", default-features = false }
 frame-support = { path = "../../../../../../../substrate/frame/support", default-features = false }
+frame-system = { path = "../../../../../../../substrate/frame/system", default-features = false }
 pallet-assets = { path = "../../../../../../../substrate/frame/assets", default-features = false }
 pallet-asset-conversion = { path = "../../../../../../../substrate/frame/asset-conversion", default-features = false }
 pallet-balances = { path = "../../../../../../../substrate/frame/balances", default-features = false }
 pallet-message-queue = { path = "../../../../../../../substrate/frame/message-queue" }
 sp-runtime = { path = "../../../../../../../substrate/primitives/runtime", default-features = false }
+sp-io = { path = "../../../../../../../substrate/primitives/io", default-features = false }
 
 # Polkadot
 xcm = { package = "staging-xcm", path = "../../../../../../../polkadot/xcm", default-features = false }
