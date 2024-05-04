@@ -52,9 +52,9 @@ pub struct Update<const COMMITTEE_SIZE: usize, const COMMITTEE_BITS_SIZE: usize>
 	/// The merkle path to prove the `block_roots_root` value.
 	pub block_roots_branch: Vec<H256>,
 	/// The execution header to be imported
-	pub execution_header: Option<VersionedExecutionPayloadHeader>,
+	pub execution_header: VersionedExecutionPayloadHeader,
 	/// The merkle proof for the execution_header
-	pub execution_branch: Option<Vec<H256>>,
+	pub execution_branch: Vec<H256>,
 }
 
 #[derive(

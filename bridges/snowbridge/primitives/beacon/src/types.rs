@@ -419,6 +419,12 @@ impl VersionedExecutionPayloadHeader {
 	}
 }
 
+impl Default for VersionedExecutionPayloadHeader {
+	fn default() -> Self {
+		VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader::default())
+	}
+}
+
 #[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo)]
 #[cfg_attr(
 	feature = "std",

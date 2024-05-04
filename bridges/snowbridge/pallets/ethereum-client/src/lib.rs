@@ -401,27 +401,23 @@ pub mod pallet {
 
 			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
 			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
-			if let Some(version_execution_header) = &update.execution_header {
-				let execution_header_root: H256 = version_execution_header
-					.hash_tree_root()
-					.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-				ensure!(
-					&update.execution_branch.is_some(),
-					Error::<T>::InvalidExecutionHeaderProof
-				);
-				ensure!(
-					verify_merkle_branch(
-						execution_header_root,
-						&update.execution_branch.clone().unwrap(),
-						config::EXECUTION_HEADER_SUBTREE_INDEX,
-						config::EXECUTION_HEADER_DEPTH,
-						update.finalized_header.body_root
-					),
-					Error::<T>::InvalidExecutionHeaderProof
-				);
-			} else {
-				return Err(Error::<T>::ExpectedExecutionHeader.into());
-			}
+			let execution_header_root: H256 = &update.execution_header
+				.hash_tree_root()
+				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
+			ensure!(
+				&update.execution_branch.is_some(),
+				Error::<T>::InvalidExecutionHeaderProof
+			);
+			ensure!(
+				verify_merkle_branch(
+					execution_header_root,
+					&update.execution_branch.clone().unwrap(),
+					config::EXECUTION_HEADER_SUBTREE_INDEX,
+					config::EXECUTION_HEADER_DEPTH,
+					update.finalized_header.body_root
+				),
+				Error::<T>::InvalidExecutionHeaderProof
+			);
 
 			// Verify sync committee aggregate signature.
 			let sync_committee = if signature_period == store_period {
@@ -490,12 +486,10 @@ pub mod pallet {
 				Self::store_finalized_header(update.finalized_header, update.block_roots_root)?;
 			}
 
-			if let Some(versioned_execution_header) = &update.execution_header {
-				T::GasPrice::store(
-					versioned_execution_header.base_fee_per_gas(),
-					update.finalized_header.slot,
-				);
-			}
+			T::GasPrice::store(
+				&update.execution_header.base_fee_per_gas(),
+				update.finalized_header.slot,
+			);
 
 			Ok(())
 		}
