@@ -638,7 +638,7 @@ fn transact_from_penpal_to_ethereum() {
 }
 
 #[test]
-fn create_agent_for_penpal_pallet_instance() {
+fn create_agent_for_penpal_sender() {
 	BridgeHubRococo::fund_para_sovereign(PenpalA::para_id().into(), INITIAL_FUND);
 
 	let destination = VersionedLocation::V4(Location {
