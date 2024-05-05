@@ -29,6 +29,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+pub mod pallets;
 mod weights;
 pub mod xcm_config;
 
@@ -675,6 +676,8 @@ construct_runtime!(
 		// The main stage.
 		Assets: pallet_assets::<Instance1> = 50,
 		ForeignAssets: pallet_assets::<Instance2> = 51,
+
+		TransactHelper: crate::pallets::transact_helper = 52,
 
 		Sudo: pallet_sudo = 255,
 	}

@@ -410,11 +410,14 @@ fn xcm_converter_convert_success() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
-	let expected_payload = AgentExecuteCommand::TransferToken {
-		token: token_address.into(),
-		recipient: beneficiary_address.into(),
-		amount: 1000,
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
+	let expected_payload = Command::AgentExecute {
+		agent_id: hex!("81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79").into(),
+		command: AgentExecuteCommand::TransferToken {
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
+			amount: 1000,
+		},
 	};
 	let result = converter.convert();
 	assert_eq!(result, Ok((expected_payload, [0; 32])));
@@ -443,11 +446,14 @@ fn xcm_converter_convert_without_buy_execution_yields_success() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
-	let expected_payload = AgentExecuteCommand::TransferToken {
-		token: token_address.into(),
-		recipient: beneficiary_address.into(),
-		amount: 1000,
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
+	let expected_payload = Command::AgentExecute {
+		agent_id: hex!("81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79").into(),
+		command: AgentExecuteCommand::TransferToken {
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
+			amount: 1000,
+		},
 	};
 	let result = converter.convert();
 	assert_eq!(result, Ok((expected_payload, [0; 32])));
@@ -478,11 +484,14 @@ fn xcm_converter_convert_with_wildcard_all_asset_filter_succeeds() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
-	let expected_payload = AgentExecuteCommand::TransferToken {
-		token: token_address.into(),
-		recipient: beneficiary_address.into(),
-		amount: 1000,
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
+	let expected_payload = Command::AgentExecute {
+		agent_id: hex!("81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79").into(),
+		command: AgentExecuteCommand::TransferToken {
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
+			amount: 1000,
+		},
 	};
 	let result = converter.convert();
 	assert_eq!(result, Ok((expected_payload, [0; 32])));
@@ -513,11 +522,14 @@ fn xcm_converter_convert_with_fees_less_than_reserve_yields_success() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
-	let expected_payload = AgentExecuteCommand::TransferToken {
-		token: token_address.into(),
-		recipient: beneficiary_address.into(),
-		amount: 1000,
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
+	let expected_payload = Command::AgentExecute {
+		agent_id: hex!("81c5ab2571199e3188135178f3c2c8e2d268be1313d029b30f534fa579b69b79").into(),
+		command: AgentExecuteCommand::TransferToken {
+			token: token_address.into(),
+			recipient: beneficiary_address.into(),
+			amount: 1000,
+		},
 	};
 	let result = converter.convert();
 	assert_eq!(result, Ok((expected_payload, [0; 32])));
@@ -547,7 +559,7 @@ fn xcm_converter_convert_without_set_topic_yields_set_topic_expected() {
 		ClearTopic,
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::SetTopicExpected));
 }
@@ -564,7 +576,8 @@ fn xcm_converter_convert_with_partial_message_yields_unexpected_end_of_xcm() {
 	.into();
 	let message: Xcm<()> = vec![WithdrawAsset(assets)].into();
 
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
+
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedEndOfXcm));
 }
@@ -595,7 +608,7 @@ fn xcm_converter_with_different_fee_asset_fails() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::InvalidFeeAsset));
 }
@@ -625,18 +638,18 @@ fn xcm_converter_with_fees_greater_than_reserve_fails() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::InvalidFeeAsset));
 }
 
 #[test]
-fn xcm_converter_convert_with_empty_xcm_yields_unexpected_end_of_xcm() {
+fn xcm_converter_convert_with_empty_xcm_yields_unexpected_instruction() {
 	let network = BridgedNetwork::get();
 
 	let message: Xcm<()> = vec![].into();
 
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedEndOfXcm));
@@ -668,14 +681,14 @@ fn xcm_converter_convert_with_extra_instructions_yields_end_of_xcm_message_expec
 		ClearError,
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::EndOfXcmMessageExpected));
 }
 
 #[test]
-fn xcm_converter_convert_without_withdraw_asset_yields_withdraw_expected() {
+fn xcm_converter_convert_without_withdraw_asset_yields_unexpected_instruction() {
 	let network = BridgedNetwork::get();
 
 	let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
@@ -698,10 +711,10 @@ fn xcm_converter_convert_without_withdraw_asset_yields_withdraw_expected() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::WithdrawAssetExpected));
+	assert_eq!(result.err(), Some(XcmConverterError::UnexpectedInstruction));
 }
 
 #[test]
@@ -723,7 +736,7 @@ fn xcm_converter_convert_without_withdraw_asset_yields_deposit_expected() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::DepositAssetExpected));
@@ -756,7 +769,7 @@ fn xcm_converter_convert_without_assets_yields_no_reserve_assets() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::NoReserveAssets));
@@ -794,7 +807,7 @@ fn xcm_converter_convert_with_two_assets_yields_too_many_assets() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::TooManyAssets));
@@ -825,7 +838,7 @@ fn xcm_converter_convert_without_consuming_filter_yields_filter_does_not_consume
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::FilterDoesNotConsumeAllAssets));
@@ -856,7 +869,7 @@ fn xcm_converter_convert_with_zero_amount_asset_yields_zero_asset_transfer() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::ZeroAssetTransfer));
@@ -886,7 +899,7 @@ fn xcm_converter_convert_non_ethereum_asset_yields_asset_resolution_failed() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
@@ -919,7 +932,7 @@ fn xcm_converter_convert_non_ethereum_chain_asset_yields_asset_resolution_failed
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
@@ -952,7 +965,7 @@ fn xcm_converter_convert_non_ethereum_chain_yields_asset_resolution_failed() {
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::AssetResolutionFailed));
@@ -989,7 +1002,7 @@ fn xcm_converter_convert_with_non_ethereum_beneficiary_yields_beneficiary_resolu
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::BeneficiaryResolutionFailed));
@@ -1025,7 +1038,7 @@ fn xcm_converter_convert_with_non_ethereum_chain_beneficiary_yields_beneficiary_
 		SetTopic([0; 32]),
 	]
 	.into();
-	let mut converter = XcmConverter::new(&message, &network);
+	let mut converter = XcmConverter::<AgentIdOf, ()>::new(&message, network, 1000.into());
 
 	let result = converter.convert();
 	assert_eq!(result.err(), Some(XcmConverterError::BeneficiaryResolutionFailed));

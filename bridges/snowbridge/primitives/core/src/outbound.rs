@@ -2,7 +2,8 @@ use codec::{Decode, Encode};
 use frame_support::PalletError;
 use scale_info::TypeInfo;
 use sp_arithmetic::traits::{BaseArithmetic, Unsigned};
-use sp_core::{RuntimeDebug, H256};
+use sp_core::{RuntimeDebug, H160, H256};
+use sp_std::vec::Vec;
 pub use v1::{AgentExecuteCommand, Command, Initializer, Message, OperatingMode, QueuedMessage};
 
 /// Enqueued outbound messages need to be versioned to prevent data corruption
@@ -139,6 +140,17 @@ mod v1 {
 			// Fee multiplier
 			multiplier: UD60x18,
 		},
+		/// Execute a contract on the target chain
+		Transact {
+			/// ID of the agent
+			agent_id: H256,
+			/// Target contract address
+			target: H160,
+			/// The call data to the contract
+			payload: Vec<u8>,
+			/// The dynamic gas component that needs to be specified when executing the contract
+			gas_limit: u64,
+		},
 	}
 
 	impl Command {
@@ -154,6 +166,7 @@ mod v1 {
 				Command::TransferNativeFromAgent { .. } => 6,
 				Command::SetTokenTransferFees { .. } => 7,
 				Command::SetPricingParameters { .. } => 8,
+				Command::Transact { .. } => 9,
 			}
 		}
 
@@ -210,6 +223,13 @@ mod v1 {
 						Token::Uint(exchange_rate.clone().into_inner()),
 						Token::Uint(U256::from(*delivery_cost)),
 						Token::Uint(multiplier.clone().into_inner()),
+					])]),
+				Command::Transact { agent_id, target, payload, gas_limit, .. } =>
+					ethabi::encode(&[Token::Tuple(vec![
+						Token::FixedBytes(agent_id.as_bytes().to_owned()),
+						Token::Address(*target),
+						Token::Bytes(payload.clone()),
+						Token::Uint(U256::from(*gas_limit)),
 					])]),
 			}
 		}
@@ -403,6 +423,7 @@ impl GasMeter for ConstantGasMeter {
 			},
 			Command::SetTokenTransferFees { .. } => 60_000,
 			Command::SetPricingParameters { .. } => 60_000,
+			Command::Transact { gas_limit, .. } => *gas_limit,
 		}
 	}
 }
@@ -416,3 +437,10 @@ impl GasMeter for () {
 }
 
 pub const ETHER_DECIMALS: u8 = 18;
+
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct TransactInfo {
+	pub target: H160,
+	pub call: Vec<u8>,
+	pub gas_limit: u64,
+}

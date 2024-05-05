@@ -285,7 +285,7 @@ fn create_channel_bad_origin() {
 			BadOrigin,
 		);
 
-		// child of sibling location not allowed
+		// child of sibling location is allowed
 		assert_noop!(
 			EthereumSystem::create_channel(
 				make_xcm_origin(Location::new(
@@ -294,7 +294,7 @@ fn create_channel_bad_origin() {
 				)),
 				OperatingMode::Normal,
 			),
-			BadOrigin,
+			Error::<Test>::NoAgent,
 		);
 
 		// local account location not allowed
@@ -357,7 +357,7 @@ fn update_channel_bad_origin() {
 			BadOrigin,
 		);
 
-		// child of sibling location not allowed
+		// child of sibling location is allowed
 		assert_noop!(
 			EthereumSystem::update_channel(
 				make_xcm_origin(Location::new(
@@ -366,7 +366,7 @@ fn update_channel_bad_origin() {
 				)),
 				mode,
 			),
-			BadOrigin,
+			Error::<Test>::NoChannel,
 		);
 
 		// local account location not allowed
