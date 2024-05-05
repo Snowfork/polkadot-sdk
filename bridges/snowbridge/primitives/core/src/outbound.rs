@@ -150,8 +150,6 @@ mod v1 {
 			payload: Vec<u8>,
 			/// The dynamic gas component that needs to be specified when executing the contract
 			gas_limit: u64,
-			/// The fee to cover the delivery cost
-			fee: u128,
 		},
 	}
 
@@ -445,5 +443,4 @@ pub struct TransactInfo {
 	pub target: H160,
 	pub call: Vec<u8>,
 	pub gas_limit: u64,
-	pub fee: u128,
 }

@@ -569,7 +569,13 @@ fn transact_from_penpal_to_ethereum() {
 
 	// Agent as PalletInstance
 	let agent_id = snowbridge_pallet_system::agent_id_of::<<BridgeHubRococo as Chain>::Runtime>(
-		&Location::new(1, [Parachain(PenpalA::para_id().into()), PalletInstance(52)]),
+		&Location::new(
+			1,
+			[
+				Parachain(PenpalA::para_id().into()),
+				AccountId32 { network: None, id: PenpalASender::get().into() },
+			],
+		),
 	)
 	.unwrap();
 
@@ -595,16 +601,13 @@ fn transact_from_penpal_to_ethereum() {
 			initial_fund,
 		));
 
-		let remote_cost = 2_750_872_500_000;
 		assert_ok!(<PenpalA as PenpalAPallet>::TransactHelper::transact_to_ethereum(
 			RuntimeOrigin::signed(sender.clone()),
 			//contract
 			hex!("ee9170abfbf9421ad6dd07f6bdec9d89f2b581e0").into(),
 			//call
 			hex!("00071468656c6c6f").to_vec(),
-			//The fee here in DOT should cover the remote execution cost on Ethereum
-			remote_cost,
-			//gas cost on Ethereum
+			//gas limit on Ethereum
 			80_000,
 		));
 		let balance_after = <PenpalA as PenpalAPallet>::ForeignAssets::balance(
@@ -650,7 +653,7 @@ fn create_agent_for_penpal_pallet_instance() {
 	let remote_xcm = VersionedXcm::from(Xcm::<()>(vec![
 		WithdrawAsset(fee_asset.clone().into()),
 		BuyExecution { fees: fee_asset, weight_limit: Unlimited },
-		DescendOrigin(PalletInstance(52).into()),
+		DescendOrigin([AccountId32 { network: None, id: PenpalASender::get().into() }].into()),
 		Transact {
 			require_weight_at_most: 4_000_000_000.into(),
 			origin_kind: OriginKind::Xcm,

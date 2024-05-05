@@ -108,10 +108,8 @@ where
 			SendError::Unroutable
 		})?;
 		let fee = match command {
-			Command::Transact { fee, .. } => {
-				ensure!(fee > fees.remote, SendError::Fees);
-				Ok::<Assets, SendError>(Asset::from((Location::parent(), fees.local)).into())
-			},
+			Command::Transact { .. } =>
+				Ok::<Assets, SendError>(Asset::from((Location::parent(), fees.local)).into()),
 			_ => Ok::<Assets, SendError>(Asset::from((Location::parent(), fees.total())).into()),
 		}?;
 
@@ -229,7 +227,6 @@ where
 				target: message.target,
 				payload: message.call,
 				gas_limit: message.gas_limit,
-				fee: message.fee,
 			},
 			*topic_id,
 		))

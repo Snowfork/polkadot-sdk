@@ -57,7 +57,6 @@ pub mod pallet {
 		pub target: H160,
 		pub call: Vec<u8>,
 		pub gas_limit: u64,
-		pub fee: u128,
 	}
 
 	#[pallet::hooks]
@@ -94,7 +93,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			target: H160,
 			call: Vec<u8>,
-			fee: u128,
 			gas_limit: u64,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -106,7 +104,7 @@ pub mod pallet {
 			};
 
 			// construct the inner xcm of ExportMessage
-			let transact = TransactInfo { target, call, gas_limit, fee };
+			let transact = TransactInfo { target, call, gas_limit };
 			let mut message = Xcm(vec![Transact {
 				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: Weight::default(),
