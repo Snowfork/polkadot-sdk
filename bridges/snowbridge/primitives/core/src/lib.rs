@@ -38,7 +38,6 @@ pub type AgentId = H256;
 pub use operating_mode::BasicOperatingMode;
 
 pub use pricing::{PricingParameters, Rewards};
-use xcm::VersionedLocation;
 
 pub fn sibling_sovereign_account<T>(para_id: ParaId) -> T::AccountId
 where
@@ -135,8 +134,6 @@ pub struct Channel {
 	pub agent_id: AgentId,
 	/// ID of the parachain who will receive or send messages using this channel
 	pub para_id: ParaId,
-	/// ID of the fee asset
-	pub fee_asset_id: VersionedLocation,
 }
 
 pub trait StaticLookup {

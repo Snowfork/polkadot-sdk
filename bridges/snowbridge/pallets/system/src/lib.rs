@@ -405,11 +405,7 @@ pub mod pallet {
 		/// - `mode`: Initial operating mode of the channel
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::create_channel())]
-		pub fn create_channel(
-			origin: OriginFor<T>,
-			mode: OperatingMode,
-			fee_asset_id: VersionedLocation,
-		) -> DispatchResult {
+		pub fn create_channel(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
 			let origin_location: Location = T::SiblingOrigin::ensure_origin(origin)?;
 
 			// Ensure that origin location is a sibling parachain
@@ -420,7 +416,7 @@ pub mod pallet {
 			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
 			ensure!(!Channels::<T>::contains_key(channel_id), Error::<T>::ChannelAlreadyCreated);
 
-			let channel = Channel { agent_id, para_id, fee_asset_id };
+			let channel = Channel { agent_id, para_id };
 			Channels::<T>::insert(channel_id, channel);
 
 			let command = Command::CreateChannel { channel_id, agent_id, mode };
@@ -441,11 +437,7 @@ pub mod pallet {
 		/// - `mode`: Initial operating mode of the channel
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::update_channel())]
-		pub fn update_channel(
-			origin: OriginFor<T>,
-			mode: OperatingMode,
-			fee_asset_id: VersionedLocation,
-		) -> DispatchResult {
+		pub fn update_channel(origin: OriginFor<T>, mode: OperatingMode) -> DispatchResult {
 			let origin_location: Location = T::SiblingOrigin::ensure_origin(origin)?;
 
 			// Ensure that origin location is a sibling parachain
@@ -454,10 +446,6 @@ pub mod pallet {
 			let channel_id: ChannelId = para_id.into();
 
 			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::NoChannel);
-
-			Channels::<T>::mutate_extant(channel_id, |channel| {
-				channel.fee_asset_id = fee_asset_id;
-			});
 
 			let command = Command::UpdateChannel { channel_id, mode };
 			let pays_fee = PaysFee::<T>::Partial(sibling_sovereign_account::<T>(para_id));
@@ -483,15 +471,10 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			channel_id: ChannelId,
 			mode: OperatingMode,
-			fee_asset_id: VersionedLocation,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
 			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::NoChannel);
-
-			Channels::<T>::mutate_extant(channel_id, |channel| {
-				channel.fee_asset_id = fee_asset_id;
-			});
 
 			let command = Command::UpdateChannel { channel_id, mode };
 			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
@@ -722,11 +705,7 @@ pub mod pallet {
 			Agents::<T>::insert(asset_hub_agent_id, ());
 			Channels::<T>::insert(
 				asset_hub_channel_id,
-				Channel {
-					agent_id: asset_hub_agent_id,
-					para_id: asset_hub_para_id,
-					fee_asset_id: VersionedLocation::from(Location::parent()),
-				},
+				Channel { agent_id: asset_hub_agent_id, para_id: asset_hub_para_id },
 			);
 
 			// Governance channels
@@ -737,21 +716,13 @@ pub mod pallet {
 			// Primary governance channel
 			Channels::<T>::insert(
 				PRIMARY_GOVERNANCE_CHANNEL,
-				Channel {
-					agent_id: bridge_hub_agent_id,
-					para_id,
-					fee_asset_id: VersionedLocation::from(Location::parent()),
-				},
+				Channel { agent_id: bridge_hub_agent_id, para_id },
 			);
 
 			// Secondary governance channel
 			Channels::<T>::insert(
 				SECONDARY_GOVERNANCE_CHANNEL,
-				Channel {
-					agent_id: bridge_hub_agent_id,
-					para_id,
-					fee_asset_id: VersionedLocation::from(Location::parent()),
-				},
+				Channel { agent_id: bridge_hub_agent_id, para_id },
 			);
 
 			Ok(())

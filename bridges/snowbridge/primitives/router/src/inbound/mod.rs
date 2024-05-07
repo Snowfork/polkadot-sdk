@@ -133,7 +133,6 @@ pub trait ConvertMessage {
 	type AccountId;
 	/// Converts a versioned message into an XCM message and an optional topicID
 	fn convert(
-		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		message: VersionedMessage,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
@@ -168,7 +167,6 @@ impl<
 	type AccountId = AccountId;
 
 	fn convert(
-		fee_asset_id: VersionedLocation,
 		message_id: H256,
 		message: VersionedMessage,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError> {
@@ -182,14 +180,8 @@ impl<
 			V1(MessageV1 {
 				chain_id,
 				command: SendNativeToken { token_id, destination, amount },
-			}) => Self::convert_send_native_token(
-				message_id,
-				chain_id,
-				token_id,
-				destination,
-				amount,
-				fee_asset_id,
-			),
+			}) =>
+				Self::convert_send_native_token(message_id, chain_id, token_id, destination, amount),
 		}
 	}
 }
@@ -367,7 +359,6 @@ impl<
 		token_id: TokenId,
 		destination: Destination,
 		amount: u128,
-		fee_asset_id: VersionedLocation,
 	) -> Result<(Xcm<()>, Balance), ConvertMessageError> {
 		let network = Ethereum { chain_id };
 
@@ -382,10 +373,7 @@ impl<
 		}
 		.ok_or(ConvertMessageError::InvalidDestination)?;
 
-		let fee_asset_id: Location =
-			fee_asset_id.try_into().map_err(|_| ConvertMessageError::UnsupportedFeeAsset)?;
-
-		let fee_asset: Asset = (fee_asset_id, destination_fee).into();
+		let fee_asset: Asset = (Location::here(), destination_fee).into();
 
 		let versioned_asset_id =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
