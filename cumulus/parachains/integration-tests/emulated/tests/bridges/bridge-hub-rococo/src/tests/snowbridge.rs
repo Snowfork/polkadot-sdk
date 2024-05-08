@@ -28,7 +28,6 @@ use snowbridge_core::{
 };
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message, send_token::make_send_token_message,
-	send_token_to_penpal::make_send_token_to_penpal_message,
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
@@ -302,12 +301,6 @@ fn send_token_from_ethereum_to_penpal() {
 	// Fund AssetHub sovereign account so it can pay execution fees for the asset transfer
 	BridgeHubRococo::fund_accounts(vec![(asset_hub_sovereign.clone(), INITIAL_FUND)]);
 
-	// Fund PenPal sender and receiver
-	PenpalA::fund_accounts(vec![
-		(PenpalAReceiver::get(), INITIAL_FUND),
-		(PenpalASender::get(), INITIAL_FUND),
-	]);
-
 	PenpalA::execute_with(|| {
 		assert_ok!(<PenpalA as Chain>::System::set_storage(
 			<PenpalA as Chain>::RuntimeOrigin::root(),
@@ -332,30 +325,56 @@ fn send_token_from_ethereum_to_penpal() {
 			.unwrap();
 	AssetHubRococo::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
 
-	// Create asset on the Penpal parachain.
+	// Create weth on Penpal as sufficient.
 	PenpalA::execute_with(|| {
-		assert_ok!(<PenpalA as PenpalAPallet>::ForeignAssets::create(
-			<PenpalA as Chain>::RuntimeOrigin::signed(PenpalASender::get()),
+		assert_ok!(<PenpalA as PenpalAPallet>::ForeignAssets::force_create(
+			<PenpalA as Chain>::RuntimeOrigin::root(),
 			weth_asset_id,
 			asset_hub_sovereign.into(),
+			true,
 			1000,
 		));
 
 		assert!(<PenpalA as PenpalAPallet>::ForeignAssets::asset_exists(weth_asset_id));
 	});
 
+	// Create weth on AH as sufficient.
+	AssetHubRococo::execute_with(|| {
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::force_create(
+			<AssetHubRococo as Chain>::RuntimeOrigin::root(),
+			weth_asset_id,
+			ethereum_sovereign.clone().into(),
+			true,
+			1,
+		));
+
+		assert!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::asset_exists(
+			weth_asset_id
+		));
+	});
+
+	// Send weth to penpal through AH
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
 
-		// Construct RegisterToken message and sent to inbound queue
-		send_inbound_message(make_register_token_message()).unwrap();
-
-		// Construct SendToken message to AssetHub(only for increase the nonce as the same order in
-		// smoke test)
-		send_inbound_message(make_send_token_message()).unwrap();
-
-		// Construct SendToken message and sent to inbound queue
-		send_inbound_message(make_send_token_to_penpal_message()).unwrap();
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendToken {
+				token: WETH.into(),
+				destination: Destination::ForeignAccountId32 {
+					para_id: PenpalA::para_id().into(),
+					id: ethereum_sovereign.clone().into(),
+					fee: XCM_FEE,
+				},
+				amount: TOKEN_AMOUNT,
+				fee: XCM_FEE,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
 		assert_expected_events!(
 			BridgeHubRococo,
@@ -764,15 +783,112 @@ fn send_penpal_native_token_from_ethereum() {
 	};
 	let token_id = TokenIdOf::convert_location(&asset_id).unwrap();
 
-	let ethereum_sovereign = GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(
+	let ethereum_sovereign = GlobalConsensusEthereumConvertsFor::<AccountId>::convert_location(
 		&Location::new(2, [GlobalConsensus(EthereumNetwork::get())]),
 	)
 	.unwrap();
 
-	PenpalA::fund_accounts(vec![(ethereum_sovereign.into(), INITIAL_FUND)]);
+	PenpalA::fund_accounts(vec![(ethereum_sovereign.clone().into(), INITIAL_FUND)]);
 
 	// Run the previous test to prepare everything
 	send_penpal_native_token_to_ethereum();
+
+	// Create WETH on AH as sufficient
+	let weth_asset_location: Location =
+		(Parent, Parent, EthereumNetwork::get(), AccountKey20 { network: None, key: WETH }).into();
+	let weth_asset_id: v3::Location = weth_asset_location.try_into().unwrap();
+	let asset_hub_sovereign = PenpalA::sovereign_account_id_of(Location::new(
+		1,
+		[Parachain(AssetHubRococo::para_id().into())],
+	));
+	AssetHubRococo::execute_with(|| {
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::force_create(
+			<AssetHubRococo as Chain>::RuntimeOrigin::root(),
+			weth_asset_id,
+			ethereum_sovereign.clone().into(),
+			true,
+			1,
+		));
+
+		assert!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::asset_exists(
+			weth_asset_id
+		));
+	});
+
+	// Create WETH on Penpal as sufficient
+	PenpalA::execute_with(|| {
+		assert_ok!(<PenpalA as Chain>::System::set_storage(
+			<PenpalA as Chain>::RuntimeOrigin::root(),
+			vec![(
+				CustomizableAssetFromSystemAssetHub::key().to_vec(),
+				Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]).encode(),
+			)],
+		));
+		assert_ok!(<PenpalA as PenpalAPallet>::ForeignAssets::force_create(
+			<PenpalA as Chain>::RuntimeOrigin::root(),
+			weth_asset_id,
+			asset_hub_sovereign.into(),
+			true,
+			1,
+		));
+
+		assert!(<PenpalA as PenpalAPallet>::ForeignAssets::asset_exists(weth_asset_id));
+	});
+
+	// Send weth to penpal to prefund the ethereum sovereign
+	BridgeHubRococo::execute_with(|| {
+		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendToken {
+				token: WETH.into(),
+				destination: Destination::ForeignAccountId32 {
+					para_id: PenpalA::para_id().into(),
+					id: ethereum_sovereign.clone().into(),
+					fee: XCM_FEE,
+				},
+				amount: TOKEN_AMOUNT,
+				fee: XCM_FEE,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubRococo,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubRococo::execute_with(|| {
+		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
+		// Check that the assets were issued on AssetHub
+		assert_expected_events!(
+			AssetHubRococo,
+			vec![
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	// Check weth issued
+	PenpalA::execute_with(|| {
+		type RuntimeEvent = <PenpalA as Chain>::RuntimeEvent;
+		// Check that the assets were issued on PenPal
+		assert_expected_events!(
+			PenpalA,
+			vec![
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
+			]
+		);
+	});
 
 	// Send native token back to penpal
 	BridgeHubRococo::execute_with(|| {

@@ -8,6 +8,7 @@ mod tests;
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use frame_support::{traits::tokens::Balance as BalanceT, weights::Weight, PalletError};
+use hex_literal::hex;
 use scale_info::TypeInfo;
 use snowbridge_core::TokenId;
 use sp_core::{Get, RuntimeDebug, H160, H256};
@@ -312,7 +313,18 @@ impl<
 
 		match dest_para_id {
 			Some(dest_para_id) => {
-				let dest_para_fee_asset: Asset = (Location::parent(), dest_para_fee).into();
+				// fee asset always in WETH
+				let weth_asset_id: Location = Location::new(
+					2,
+					[
+						GlobalConsensus(network),
+						AccountKey20 {
+							network: None,
+							key: hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d"),
+						},
+					],
+				);
+				let dest_para_fee_asset: Asset = (weth_asset_id, dest_para_fee).into();
 
 				instructions.extend(vec![
 					// Perform a deposit reserve to send to destination chain.
@@ -373,7 +385,18 @@ impl<
 		}
 		.ok_or(ConvertMessageError::InvalidDestination)?;
 
-		let fee_asset: Asset = (Location::here(), destination_fee).into();
+		// fee asset always in WETH
+		let weth_asset_id: Location = Location::new(
+			2,
+			[
+				GlobalConsensus(network),
+				AccountKey20 {
+					network: None,
+					key: hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d"),
+				},
+			],
+		);
+		let fee_asset: Asset = (weth_asset_id, destination_fee).into();
 
 		let versioned_asset_id =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
