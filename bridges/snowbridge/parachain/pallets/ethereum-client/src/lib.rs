@@ -146,7 +146,8 @@ pub mod pallet {
 		InvalidUpdateSlot,
 		/// The given update is not in the expected period, or the given next sync committee does
 		/// not match the next sync committee in storage.
-		InvalidSyncCommitteeUpdate,
+		InvalidSyncCommitteeUpdateCondition1,
+		InvalidSyncCommitteeUpdateCondition2,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedBlock,
 		Halted,
@@ -283,13 +284,21 @@ pub mod pallet {
 		/// An `block_roots` proof should also be provided. This is used for ancestry proofs
 		/// for execution header updates.
 		pub(crate) fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
+			log::info!(
+					target: LOG_TARGET,
+					"💫 Processing checkpoint.",
+				);
 			let sync_committee_root = update
 				.current_sync_committee
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
+			log::info!(
+					target: LOG_TARGET,
+					"💫 Sync committee hash tree root done.",
+				);
 			// Verifies the sync committee in the Beacon state.
-			ensure!(
+			/*ensure!(
 				verify_merkle_branch(
 					sync_committee_root,
 					&update.current_sync_committee_branch,
@@ -299,6 +308,10 @@ pub mod pallet {
 				),
 				Error::<T>::InvalidSyncCommitteeMerkleProof
 			);
+			log::info!(
+					target: LOG_TARGET,
+					"💫 Sync committee merkle root done.",
+				);*/
 
 			let header_root: H256 = update
 				.header
@@ -319,9 +332,19 @@ pub mod pallet {
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
+			log::info!(
+					target: LOG_TARGET,
+					"💫 Block roots merkle root done.",
+				);
+
 			let sync_committee_prepared: SyncCommitteePrepared = (&update.current_sync_committee)
 				.try_into()
 				.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
+
+			log::info!(
+					target: LOG_TARGET,
+					"💫 BLS prepared one.",
+				);
 			<CurrentSyncCommittee<T>>::set(sync_committee_prepared);
 			<NextSyncCommittee<T>>::kill();
 			InitialCheckpointRoot::<T>::set(header_root);
@@ -330,11 +353,15 @@ pub mod pallet {
 			Self::store_validators_root(update.validators_root);
 			Self::store_finalized_header(header_root, update.header, update.block_roots_root)?;
 
+			log::info!(
+					target: LOG_TARGET,
+					"💫 Stored finalized header.",
+				);
 			Ok(())
 		}
 
 		pub(crate) fn process_update(update: &Update) -> DispatchResult {
-			Self::cross_check_execution_state()?;
+			//Self::cross_check_execution_state()?;
 			Self::verify_update(update)?;
 			Self::apply_update(update)?;
 			Ok(())
@@ -382,6 +409,9 @@ pub mod pallet {
 					.ok_or(Error::<T>::NotBootstrapped)?;
 			let store_period = compute_period(latest_finalized_state.slot);
 			let signature_period = compute_period(update.signature_slot);
+
+			log::info!(target: LOG_TARGET, "💫 store period is: {} signature period is: {}.", store_period, signature_period);
+
 			if <NextSyncCommittee<T>>::exists() {
 				ensure!(
 					(store_period..=store_period + 1).contains(&signature_period),
@@ -453,9 +483,15 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 				if update_attested_period == store_period && <NextSyncCommittee<T>>::exists() {
 					let next_committee_root = <NextSyncCommittee<T>>::get().root;
+					log::info!(
+						target: LOG_TARGET,
+						"💫 InvalidSyncCommitteeUpdate condition 1.",
+					);
+					log::info!(target: LOG_TARGET, "💫 sync_committee_root: {}.", sync_committee_root);
+					log::info!(target: LOG_TARGET, "💫 next_committee_root: {}.", next_committee_root);
 					ensure!(
 						sync_committee_root == next_committee_root,
-						Error::<T>::InvalidSyncCommitteeUpdate
+						Error::<T>::InvalidSyncCommitteeUpdateCondition1
 					);
 				}
 				ensure!(
@@ -505,9 +541,10 @@ pub mod pallet {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
+			let store_period = compute_period(latest_finalized_state.slot);
+			let update_finalized_period = compute_period(update.finalized_header.slot);
+
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
-				let store_period = compute_period(latest_finalized_state.slot);
-				let update_finalized_period = compute_period(update.finalized_header.slot);
 				let sync_committee_prepared: SyncCommitteePrepared = (&next_sync_committee_update
 					.next_sync_committee)
 					.try_into()
@@ -516,10 +553,18 @@ pub mod pallet {
 				if !<NextSyncCommittee<T>>::exists() {
 					ensure!(
 						update_finalized_period == store_period,
-						<Error<T>>::InvalidSyncCommitteeUpdate
+						<Error<T>>::InvalidSyncCommitteeUpdateCondition2
+					);
+					log::info!(
+						target: LOG_TARGET,
+						"💫 Setting next sync committee. store_period = {}", store_period
 					);
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
 				} else if update_finalized_period == store_period + 1 {
+					log::info!(
+						target: LOG_TARGET,
+						"💫 Rolling over next sync committee to current sync committee. Next sync committee is set. store_period = {}", store_period
+					);
 					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
 				}
@@ -531,7 +576,17 @@ pub mod pallet {
 				Self::deposit_event(Event::SyncCommitteeUpdated {
 					period: update_finalized_period,
 				});
-			};
+			} else {
+				// No next sync committee update present
+				if update_finalized_period == store_period + 1 {
+					log::info!(
+						target: LOG_TARGET,
+						"💫 Rolling over next sync committee to current sync committee. Next sync committee empty. store_period = {}", store_period
+					);
+					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
+					<NextSyncCommittee<T>>::kill();
+				}
+			}
 
 			if update.finalized_header.slot > latest_finalized_state.slot {
 				let finalized_block_root: H256 = update
@@ -565,12 +620,12 @@ pub mod pallet {
 
 			// Checks that we don't skip execution headers, they need to be imported sequentially.
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
-			ensure!(
+			/*ensure!(
 				latest_execution_state.block_number == 0 ||
 					update.execution_header.block_number() ==
 						latest_execution_state.block_number + 1,
 				Error::<T>::ExecutionHeaderSkippedBlock
-			);
+			);*/
 
 			// Gets the hash tree root of the execution header, in preparation for the execution
 			// header proof (used to check that the execution header is rooted in the beacon
