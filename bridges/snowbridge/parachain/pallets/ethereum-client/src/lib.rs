@@ -421,6 +421,8 @@ pub mod pallet {
 				ensure!(signature_period == store_period, Error::<T>::SkippedSyncCommitteePeriod)
 			}
 
+			log::info!(target: LOG_TARGET, "💫 checked sync committee not skipped.");
+
 			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
 			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
@@ -432,6 +434,8 @@ pub mod pallet {
 				Error::<T>::IrrelevantUpdate
 			);
 
+			log::info!(target: LOG_TARGET, "💫 checked update is relevant.");
+
 			// Verify the finalized header gap between the current finalized header and new imported
 			// header is not larger than the sync committee period, otherwise we cannot do
 			// ancestry proofs for execution headers in the gap.
@@ -442,6 +446,8 @@ pub mod pallet {
 					update.finalized_header.slot,
 				Error::<T>::InvalidFinalizedHeaderGap
 			);
+
+			log::info!(target: LOG_TARGET, "💫 checked gap is not too large.");
 
 			// Verify that the `finality_branch`, if present, confirms `finalized_header` to match
 			// the finalized checkpoint root saved in the state of `attested_header`.
@@ -460,6 +466,8 @@ pub mod pallet {
 				Error::<T>::InvalidHeaderMerkleProof
 			);
 
+			log::info!(target: LOG_TARGET, "💫 header merkle proof passed.");
+
 			// Though following check does not belong to ALC spec we verify block_roots_root to
 			// match the finalized checkpoint root saved in the state of `finalized_header` so to
 			// cache it for later use in `verify_ancestry_proof`.
@@ -474,9 +482,12 @@ pub mod pallet {
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
+			log::info!(target: LOG_TARGET, "💫 ancestry merkle proof passed.");
+
 			// Verify that the `next_sync_committee`, if present, actually is the next sync
 			// committee saved in the state of the `attested_header`.
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
+				log::info!(target: LOG_TARGET, "💫 checking sync committee present.");
 				let sync_committee_root = next_sync_committee_update
 					.next_sync_committee
 					.hash_tree_root()
@@ -530,6 +541,8 @@ pub mod pallet {
 			)
 			.map_err(|e| Error::<T>::BLSVerificationFailed(e))?;
 
+			log::info!(target: LOG_TARGET, "💫 bls signature verification passed.");
+
 			Ok(())
 		}
 
@@ -561,10 +574,6 @@ pub mod pallet {
 					);
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
 				} else if update_finalized_period == store_period + 1 {
-					log::info!(
-						target: LOG_TARGET,
-						"💫 Rolling over next sync committee to current sync committee. Next sync committee is set. store_period = {}", store_period
-					);
 					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
 				}
