@@ -463,6 +463,27 @@ fn submit_update_with_skipped_period() {
 }
 
 #[test]
+fn submit_update_in_next_period_without_sync_committee_update() {
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let sync_committee_update = Box::new(load_sync_committee_update_fixture());
+	let mut update = Box::new(load_next_finalized_header_update_fixture());
+	let next_sync_committee_update = Box::new(load_next_sync_committee_update_fixture());
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(
+			RuntimeOrigin::signed(1),
+			sync_committee_update.clone()
+		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update));
+		assert_ok!(EthereumBeaconClient::submit(
+			RuntimeOrigin::signed(1),
+			next_sync_committee_update
+		),);
+	});
+}
+
+#[test]
 fn submit_update_with_sync_committee_in_next_period() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let update = Box::new(load_sync_committee_update_fixture());

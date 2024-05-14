@@ -432,9 +432,9 @@ pub mod pallet {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
+			let store_period = compute_period(latest_finalized_state.slot);
+			let update_finalized_period = compute_period(update.finalized_header.slot);
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
-				let store_period = compute_period(latest_finalized_state.slot);
-				let update_finalized_period = compute_period(update.finalized_header.slot);
 				let sync_committee_prepared: SyncCommitteePrepared = (&next_sync_committee_update
 					.next_sync_committee)
 					.try_into()
@@ -458,7 +458,15 @@ pub mod pallet {
 				Self::deposit_event(Event::SyncCommitteeUpdated {
 					period: update_finalized_period,
 				});
-			};
+			} else {
+				// If there was no sync committee in the update, but the finalized header provided
+				// is in the new period, we need to move the sync committee period forward.
+				if update_finalized_period == store_period + 1 {
+					log::info!(target: LOG_TARGET, "💫 Rolling over next sync committee to current sync committee. Next sync committee empty. store_period = {}", store_period);
+					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
+					<NextSyncCommittee<T>>::kill();
+				}
+			}
 
 			if update.finalized_header.slot > latest_finalized_state.slot {
 				Self::store_finalized_header(update.finalized_header, update.block_roots_root)?;
