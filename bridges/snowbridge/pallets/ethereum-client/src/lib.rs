@@ -462,7 +462,6 @@ pub mod pallet {
 				// If there was no sync committee in the update, but the finalized header provided
 				// is in the new period, we need to move the sync committee period forward.
 				if update_finalized_period == store_period + 1 {
-					log::info!(target: LOG_TARGET, "💫 Rolling over next sync committee to current sync committee. Next sync committee empty. store_period = {}", store_period);
 					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
 					<NextSyncCommittee<T>>::kill();
 				}
