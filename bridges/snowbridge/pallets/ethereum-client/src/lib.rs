@@ -400,7 +400,7 @@ pub mod pallet {
 			} else {
 				ensure!(
 					update_finalized_period == store_period,
-					<Error<T>>::SyncCommitteeUpdateRequired
+					Error::<T>::SyncCommitteeUpdateRequired
 				);
 			}
 
