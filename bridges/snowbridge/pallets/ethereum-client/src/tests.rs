@@ -475,11 +475,15 @@ fn submit_update_in_next_period_without_sync_committee_update() {
 			RuntimeOrigin::signed(1),
 			sync_committee_update.clone()
 		));
-		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update));
+		assert_err!(
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()), 
+			SyncCommitteeUpdateRequired
+		);
 		assert_ok!(EthereumBeaconClient::submit(
 			RuntimeOrigin::signed(1),
 			next_sync_committee_update
-		),);
+		));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update));
 	});
 }
 
