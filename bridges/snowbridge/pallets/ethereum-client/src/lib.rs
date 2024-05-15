@@ -321,6 +321,7 @@ pub mod pallet {
 
 			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
+			let update_finalized_period = compute_period(update.finalized_header.slot);
 			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
 				(update.next_sync_committee_update.is_some() &&
 					update_attested_period == store_period);
