@@ -398,7 +398,10 @@ pub mod pallet {
 					Error::<T>::InvalidSyncCommitteeMerkleProof
 				);
 			} else {
-				ensure!(update_finalized_period == store_period, <Error<T>>::SyncCommitteeUpdateRequired);
+				ensure!(
+					update_finalized_period == store_period,
+					<Error<T>>::SyncCommitteeUpdateRequired
+				);
 			}
 
 			// Verify sync committee aggregate signature.
