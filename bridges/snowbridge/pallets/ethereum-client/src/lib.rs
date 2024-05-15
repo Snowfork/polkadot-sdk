@@ -396,6 +396,8 @@ pub mod pallet {
 					),
 					Error::<T>::InvalidSyncCommitteeMerkleProof
 				);
+			} else if update_finalized_period == store_period + 1 {
+				ensure!(<NextSyncCommittee<T>>::exists(), <Error<T>>::NextSyncCommitteeUnknown);
 			}
 
 			// Verify sync committee aggregate signature.
