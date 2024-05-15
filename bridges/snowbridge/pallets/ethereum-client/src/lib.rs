@@ -465,7 +465,6 @@ pub mod pallet {
 				// If there was no sync committee in the update, but the finalized header provided
 				// is in the new period, we need to move the sync committee period forward.
 				if update_finalized_period == store_period + 1 {
-					ensure!(<NextSyncCommittee<T>>::exists(), <Error<T>>::NextSyncCommitteeUnknown);
 					CurrentSyncCommittee::<T>::set(NextSyncCommittee::<T>::take());
 				}
 			}
