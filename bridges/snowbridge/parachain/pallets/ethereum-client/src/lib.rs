@@ -121,6 +121,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		SkippedSyncCommitteePeriod,
+		SyncCommitteeUpdateRequired,
 		/// Attested header is older than latest finalized header.
 		IrrelevantUpdate,
 		NotBootstrapped,
@@ -146,8 +147,7 @@ pub mod pallet {
 		InvalidUpdateSlot,
 		/// The given update is not in the expected period, or the given next sync committee does
 		/// not match the next sync committee in storage.
-		InvalidSyncCommitteeUpdateCondition1,
-		InvalidSyncCommitteeUpdateCondition2,
+		InvalidSyncCommitteeUpdate,
 		ExecutionHeaderTooFarBehind,
 		ExecutionHeaderSkippedBlock,
 		Halted,
@@ -245,7 +245,13 @@ pub mod pallet {
 		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
 			ensure_signed(origin)?;
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
-			Self::process_update(&update)?;
+			match Self::process_update(&update) {
+				Ok(()) => return Ok(()),
+				Err(e) => {
+					log::error!(target: LOG_TARGET,"💫 Submit error: {:?}.", e);
+					return Err(e);
+				}
+			};
 			Ok(())
 		}
 
@@ -284,19 +290,11 @@ pub mod pallet {
 		/// An `block_roots` proof should also be provided. This is used for ancestry proofs
 		/// for execution header updates.
 		pub(crate) fn process_checkpoint_update(update: &CheckpointUpdate) -> DispatchResult {
-			log::info!(
-					target: LOG_TARGET,
-					"💫 Processing checkpoint.",
-				);
 			let sync_committee_root = update
 				.current_sync_committee
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 
-			log::info!(
-					target: LOG_TARGET,
-					"💫 Sync committee hash tree root done.",
-				);
 			// Verifies the sync committee in the Beacon state.
 			/*ensure!(
 				verify_merkle_branch(
@@ -307,11 +305,7 @@ pub mod pallet {
 					update.header.state_root
 				),
 				Error::<T>::InvalidSyncCommitteeMerkleProof
-			);
-			log::info!(
-					target: LOG_TARGET,
-					"💫 Sync committee merkle root done.",
-				);*/
+			);*/
 
 			let header_root: H256 = update
 				.header
@@ -332,19 +326,9 @@ pub mod pallet {
 				Error::<T>::InvalidBlockRootsRootMerkleProof
 			);
 
-			log::info!(
-					target: LOG_TARGET,
-					"💫 Block roots merkle root done.",
-				);
-
 			let sync_committee_prepared: SyncCommitteePrepared = (&update.current_sync_committee)
 				.try_into()
 				.map_err(|_| <Error<T>>::BLSPreparePublicKeysFailed)?;
-
-			log::info!(
-					target: LOG_TARGET,
-					"💫 BLS prepared one.",
-				);
 			<CurrentSyncCommittee<T>>::set(sync_committee_prepared);
 			<NextSyncCommittee<T>>::kill();
 			InitialCheckpointRoot::<T>::set(header_root);
@@ -353,10 +337,6 @@ pub mod pallet {
 			Self::store_validators_root(update.validators_root);
 			Self::store_finalized_header(header_root, update.header, update.block_roots_root)?;
 
-			log::info!(
-					target: LOG_TARGET,
-					"💫 Stored finalized header.",
-				);
 			Ok(())
 		}
 
@@ -425,6 +405,7 @@ pub mod pallet {
 
 			// Verify update is relevant.
 			let update_attested_period = compute_period(update.attested_header.slot);
+			let update_finalized_period = compute_period(update.finalized_header.slot);
 			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
 				(update.next_sync_committee_update.is_some() &&
 					update_attested_period == store_period);
@@ -494,15 +475,9 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::SyncCommitteeHashTreeRootFailed)?;
 				if update_attested_period == store_period && <NextSyncCommittee<T>>::exists() {
 					let next_committee_root = <NextSyncCommittee<T>>::get().root;
-					log::info!(
-						target: LOG_TARGET,
-						"💫 InvalidSyncCommitteeUpdate condition 1.",
-					);
-					log::info!(target: LOG_TARGET, "💫 sync_committee_root: {}.", sync_committee_root);
-					log::info!(target: LOG_TARGET, "💫 next_committee_root: {}.", next_committee_root);
 					ensure!(
 						sync_committee_root == next_committee_root,
-						Error::<T>::InvalidSyncCommitteeUpdateCondition1
+						Error::<T>::InvalidSyncCommitteeUpdate
 					);
 				}
 				ensure!(
@@ -515,12 +490,16 @@ pub mod pallet {
 					),
 					Error::<T>::InvalidSyncCommitteeMerkleProof
 				);
+			} else {
+				ensure!(update_finalized_period == store_period, <Error<T>>::SyncCommitteeUpdateRequired);
 			}
 
 			// Verify sync committee aggregate signature.
 			let sync_committee = if signature_period == store_period {
+				log::info!(target: LOG_TARGET, "💫 using current sync committee.");
 				<CurrentSyncCommittee<T>>::get()
 			} else {
+				log::info!(target: LOG_TARGET, "💫 using next sync committee.");
 				<NextSyncCommittee<T>>::get()
 			};
 			let absent_pubkeys =
@@ -554,10 +533,9 @@ pub mod pallet {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
-			let store_period = compute_period(latest_finalized_state.slot);
-			let update_finalized_period = compute_period(update.finalized_header.slot);
-
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
+				let store_period = compute_period(latest_finalized_state.slot);
+				let update_finalized_period = compute_period(update.finalized_header.slot);
 				let sync_committee_prepared: SyncCommitteePrepared = (&next_sync_committee_update
 					.next_sync_committee)
 					.try_into()
@@ -566,11 +544,7 @@ pub mod pallet {
 				if !<NextSyncCommittee<T>>::exists() {
 					ensure!(
 						update_finalized_period == store_period,
-						<Error<T>>::InvalidSyncCommitteeUpdateCondition2
-					);
-					log::info!(
-						target: LOG_TARGET,
-						"💫 Setting next sync committee. store_period = {}", store_period
+						<Error<T>>::InvalidSyncCommitteeUpdate
 					);
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
 				} else if update_finalized_period == store_period + 1 {
@@ -585,17 +559,7 @@ pub mod pallet {
 				Self::deposit_event(Event::SyncCommitteeUpdated {
 					period: update_finalized_period,
 				});
-			} else {
-				// No next sync committee update present
-				if update_finalized_period == store_period + 1 {
-					log::info!(
-						target: LOG_TARGET,
-						"💫 Rolling over next sync committee to current sync committee. Next sync committee empty. store_period = {}", store_period
-					);
-					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
-					<NextSyncCommittee<T>>::kill();
-				}
-			}
+			};
 
 			if update.finalized_header.slot > latest_finalized_state.slot {
 				let finalized_block_root: H256 = update
