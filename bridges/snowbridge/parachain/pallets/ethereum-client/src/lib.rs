@@ -341,7 +341,7 @@ pub mod pallet {
 		}
 
 		pub(crate) fn process_update(update: &Update) -> DispatchResult {
-			//Self::cross_check_execution_state()?;
+			Self::cross_check_execution_state()?;
 			Self::verify_update(update)?;
 			Self::apply_update(update)?;
 			Ok(())
@@ -593,12 +593,12 @@ pub mod pallet {
 
 			// Checks that we don't skip execution headers, they need to be imported sequentially.
 			let latest_execution_state: ExecutionHeaderState = Self::latest_execution_state();
-			/*ensure!(
+			ensure!(
 				latest_execution_state.block_number == 0 ||
 					update.execution_header.block_number() ==
 						latest_execution_state.block_number + 1,
 				Error::<T>::ExecutionHeaderSkippedBlock
-			);*/
+			);
 
 			// Gets the hash tree root of the execution header, in preparation for the execution
 			// header proof (used to check that the execution header is rooted in the beacon
