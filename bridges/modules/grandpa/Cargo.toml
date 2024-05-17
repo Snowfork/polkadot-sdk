@@ -20,11 +20,11 @@ scale-info = { version = "2.10.0", default-features = false, features = ["derive
 # Bridge Dependencies
 
 bp-runtime = { path = "../../primitives/runtime", default-features = false, version = "0.8.0" }
-bp-header-chain = { path = "../../primitives/header-chain", default-features = false, version = "0.8.0" }
+bp-header-chain = { path = "../../primitives/header-chain", default-features = false, version = "0.8.2" }
 
 # Substrate Dependencies
 
-frame-support = { path = "../../../substrate/frame/support", default-features = false, version = "29.0.0" }
+frame-support = { path = "../../../substrate/frame/support", default-features = false, version = "29.0.2" }
 frame-system = { path = "../../../substrate/frame/system", default-features = false, version = "29.0.0" }
 sp-consensus-grandpa = { path = "../../../substrate/primitives/consensus/grandpa", default-features = false, features = ["serde"], version = "14.0.0" }
 sp-runtime = { path = "../../../substrate/primitives/runtime", default-features = false, features = ["serde"], version = "32.0.0" }

@@ -12,14 +12,14 @@ codec = { package = "parity-scale-codec", version = "3.4.0", default-features = 
 
 # Substrate
 sp-runtime = { path = "../../../../../../../substrate/primitives/runtime", default-features = false, version = "32.0.0" }
-frame-support = { path = "../../../../../../../substrate/frame/support", default-features = false, version = "29.0.0" }
-pallet-balances = { path = "../../../../../../../substrate/frame/balances", default-features = false, version = "29.0.0" }
+frame-support = { path = "../../../../../../../substrate/frame/support", default-features = false, version = "29.0.2" }
+pallet-balances = { path = "../../../../../../../substrate/frame/balances", default-features = false, version = "29.0.2" }
 pallet-message-queue = { path = "../../../../../../../substrate/frame/message-queue", default-features = false, version = "32.0.0" }
 pallet-identity = { path = "../../../../../../../substrate/frame/identity", default-features = false, version = "29.0.0" }
 
 # Polkadot
 xcm = { package = "staging-xcm", path = "../../../../../../../polkadot/xcm", default-features = false, version = "8.0.1" }
-xcm-executor = { package = "staging-xcm-executor", path = "../../../../../../../polkadot/xcm/xcm-executor", default-features = false, version = "8.0.1" }
+xcm-executor = { package = "staging-xcm-executor", path = "../../../../../../../polkadot/xcm/xcm-executor", default-features = false, version = "8.0.2" }
 westend-runtime = { version = "8.0.0", path = "../../../../../../../polkadot/runtime/westend" }
 westend-runtime-constants = { version = "8.0.0", path = "../../../../../../../polkadot/runtime/westend/constants" }
 polkadot-runtime-common = { version = "8.0.1", path = "../../../../../../../polkadot/runtime/common" }

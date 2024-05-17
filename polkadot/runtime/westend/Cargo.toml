@@ -45,7 +45,7 @@ sp-npos-elections = { path = "../../../substrate/primitives/npos-elections", def
 
 frame-election-provider-support = { path = "../../../substrate/frame/election-provider-support", default-features = false, version = "29.0.0" }
 frame-executive = { path = "../../../substrate/frame/executive", default-features = false, version = "29.0.0" }
-frame-support = { path = "../../../substrate/frame/support", default-features = false, features = ["tuples-96"], version = "29.0.0" }
+frame-support = { path = "../../../substrate/frame/support", default-features = false, features = ["tuples-96"], version = "29.0.2" }
 frame-system = { path = "../../../substrate/frame/system", default-features = false, version = "29.0.0" }
 frame-system-rpc-runtime-api = { path = "../../../substrate/frame/system/rpc/runtime-api", default-features = false, version = "27.0.0" }
 westend-runtime-constants = { package = "westend-runtime-constants", path = "constants", default-features = false, version = "8.0.0" }
@@ -54,7 +54,7 @@ pallet-authority-discovery = { path = "../../../substrate/frame/authority-discov
 pallet-authorship = { path = "../../../substrate/frame/authorship", default-features = false, version = "29.0.0" }
 pallet-babe = { path = "../../../substrate/frame/babe", default-features = false, version = "29.0.0" }
 pallet-bags-list = { path = "../../../substrate/frame/bags-list", default-features = false, version = "28.0.0" }
-pallet-balances = { path = "../../../substrate/frame/balances", default-features = false, version = "29.0.0" }
+pallet-balances = { path = "../../../substrate/frame/balances", default-features = false, version = "29.0.2" }
 pallet-beefy = { path = "../../../substrate/frame/beefy", default-features = false, version = "29.0.0" }
 pallet-beefy-mmr = { path = "../../../substrate/frame/beefy-mmr", default-features = false, version = "29.0.0" }
 pallet-collective = { path = "../../../substrate/frame/collective", default-features = false, version = "29.0.0" }
@@ -80,7 +80,7 @@ pallet-referenda = { path = "../../../substrate/frame/referenda", default-featur
 pallet-scheduler = { path = "../../../substrate/frame/scheduler", default-features = false, version = "30.0.0" }
 pallet-session = { path = "../../../substrate/frame/session", default-features = false, version = "29.0.0" }
 pallet-society = { path = "../../../substrate/frame/society", default-features = false, version = "29.0.0" }
-pallet-staking = { path = "../../../substrate/frame/staking", default-features = false, version = "29.0.0" }
+pallet-staking = { path = "../../../substrate/frame/staking", default-features = false, version = "29.0.2" }
 pallet-staking-reward-curve = { package = "pallet-staking-reward-curve", path = "../../../substrate/frame/staking/reward-curve", version = "11.0.0" }
 pallet-staking-runtime-api = { path = "../../../substrate/frame/staking/runtime-api", default-features = false, version = "15.0.0" }
 pallet-state-trie-migration = { path = "../../../substrate/frame/state-trie-migration", default-features = false, version = "30.0.0" }
@@ -93,7 +93,7 @@ pallet-treasury = { path = "../../../substrate/frame/treasury", default-features
 pallet-utility = { path = "../../../substrate/frame/utility", default-features = false, version = "29.0.0" }
 pallet-vesting = { path = "../../../substrate/frame/vesting", default-features = false, version = "29.0.0" }
 pallet-whitelist = { path = "../../../substrate/frame/whitelist", default-features = false, version = "28.0.0" }
-pallet-xcm = { path = "../../xcm/pallet-xcm", default-features = false, version = "8.0.3" }
+pallet-xcm = { path = "../../xcm/pallet-xcm", default-features = false, version = "8.0.5" }
 pallet-xcm-benchmarks = { path = "../../xcm/pallet-xcm-benchmarks", default-features = false, optional = true, version = "8.0.2" }
 pallet-root-testing = { path = "../../../substrate/frame/root-testing", default-features = false, version = "5.0.0" }
 
@@ -112,7 +112,7 @@ polkadot-parachain-primitives = { path = "../../parachain", default-features = f
 runtime-parachains = { package = "polkadot-runtime-parachains", path = "../parachains", default-features = false, version = "8.0.1" }
 
 xcm = { package = "staging-xcm", path = "../../xcm", default-features = false, version = "8.0.1" }
-xcm-executor = { package = "staging-xcm-executor", path = "../../xcm/xcm-executor", default-features = false, version = "8.0.1" }
+xcm-executor = { package = "staging-xcm-executor", path = "../../xcm/xcm-executor", default-features = false, version = "8.0.2" }
 xcm-builder = { package = "staging-xcm-builder", path = "../../xcm/xcm-builder", default-features = false, version = "8.0.1" }
 
 [dev-dependencies]

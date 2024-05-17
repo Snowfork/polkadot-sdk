@@ -7,7 +7,7 @@ license = "Apache-2.0"
 name = "pallet-collator-selection"
 readme = "README.md"
 repository.workspace = true
-version = "10.0.0"
+version = "10.0.2"
 
 [lints]
 workspace = true
@@ -24,9 +24,10 @@ scale-info = { version = "2.10.0", default-features = false, features = ["derive
 sp-std = { path = "../../../substrate/primitives/std", default-features = false, version = "14.0.0" }
 sp-runtime = { path = "../../../substrate/primitives/runtime", default-features = false, version = "32.0.0" }
 sp-staking = { path = "../../../substrate/primitives/staking", default-features = false, version = "27.0.0" }
-frame-support = { path = "../../../substrate/frame/support", default-features = false, version = "29.0.0" }
+frame-support = { path = "../../../substrate/frame/support", default-features = false, version = "29.0.2" }
 frame-system = { path = "../../../substrate/frame/system", default-features = false, version = "29.0.0" }
 pallet-authorship = { path = "../../../substrate/frame/authorship", default-features = false, version = "29.0.0" }
+pallet-balances = { path = "../../../substrate/frame/balances", default-features = false, version = "29.0.2" }
 pallet-session = { path = "../../../substrate/frame/session", default-features = false, version = "29.0.0" }
 
 frame-benchmarking = { path = "../../../substrate/frame/benchmarking", default-features = false, optional = true, version = "29.0.0" }
@@ -38,7 +39,6 @@ sp-tracing = { path = "../../../substrate/primitives/tracing" }
 sp-runtime = { path = "../../../substrate/primitives/runtime" }
 pallet-timestamp = { path = "../../../substrate/frame/timestamp" }
 sp-consensus-aura = { path = "../../../substrate/primitives/consensus/aura" }
-pallet-balances = { path = "../../../substrate/frame/balances" }
 pallet-aura = { path = "../../../substrate/frame/aura" }
 
 [features]
@@ -57,6 +57,7 @@ std = [
 	"frame-system/std",
 	"log/std",
 	"pallet-authorship/std",
+	"pallet-balances/std",
 	"pallet-session/std",
 	"rand/std",
 	"scale-info/std",

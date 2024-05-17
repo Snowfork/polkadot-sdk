@@ -16,13 +16,13 @@ scale-info = { version = "2.10.0", default-features = false, features = ["derive
 
 # Bridge dependencies
 
-bp-header-chain = { path = "../header-chain", default-features = false, version = "0.8.0" }
+bp-header-chain = { path = "../header-chain", default-features = false, version = "0.8.2" }
 bp-polkadot-core = { path = "../polkadot-core", default-features = false, version = "0.8.0" }
 bp-runtime = { path = "../runtime", default-features = false, version = "0.8.0" }
 
 # Substrate dependencies
 
-frame-support = { path = "../../../substrate/frame/support", default-features = false, version = "29.0.0" }
+frame-support = { path = "../../../substrate/frame/support", default-features = false, version = "29.0.2" }
 sp-core = { path = "../../../substrate/primitives/core", default-features = false, version = "29.0.0" }
 sp-runtime = { path = "../../../substrate/primitives/runtime", default-features = false, version = "32.0.0" }
 sp-std = { path = "../../../substrate/primitives/std", default-features = false, version = "14.0.0" }

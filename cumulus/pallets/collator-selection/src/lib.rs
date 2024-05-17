@@ -119,7 +119,7 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 
 	/// The current storage version.
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 	type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as SystemConfig>::AccountId>>::Balance;
@@ -400,7 +400,7 @@ pub mod pallet {
 							Self::deposit_event(Event::InvalidInvulnerableSkipped {
 								account_id: account_id.clone(),
 							});
-							continue
+							continue;
 						}
 						// else condition passes; key is registered
 					},
@@ -409,7 +409,7 @@ pub mod pallet {
 						Self::deposit_event(Event::InvalidInvulnerableSkipped {
 							account_id: account_id.clone(),
 						});
-						continue
+						continue;
 					},
 				}
 
@@ -684,7 +684,7 @@ pub mod pallet {
 						);
 						T::Currency::unreserve(&who, old_deposit - new_deposit);
 					} else {
-						return Err(Error::<T>::IdenticalDeposit.into())
+						return Err(Error::<T>::IdenticalDeposit.into());
 					}
 
 					// Update the deposit and insert the candidate in the correct spot in the list.

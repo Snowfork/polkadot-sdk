@@ -15,7 +15,7 @@ paste = "1.0.14"
 log = { version = "0.4.20", default-features = false }
 lazy_static = "1.4.0"
 impl-trait-for-tuples = "0.2.2"
-frame-support = { version = "29.0.0", path = "../../../substrate/frame/support" }
+frame-support = { version = "29.0.2", path = "../../../substrate/frame/support" }
 frame-system = { version = "29.0.0", path = "../../../substrate/frame/system" }
 sp-io = { version = "31.0.0", path = "../../../substrate/primitives/io" }
 sp-core = { version = "29.0.0", path = "../../../substrate/primitives/core" }
@@ -24,7 +24,7 @@ sp-std = { version = "14.0.0", path = "../../../substrate/primitives/std" }
 sp-runtime = { version = "32.0.0", path = "../../../substrate/primitives/runtime" }
 sp-arithmetic = { version = "24.0.0", path = "../../../substrate/primitives/arithmetic" }
 sp-tracing = { version = "16.0.0", path = "../../../substrate/primitives/tracing" }
-pallet-balances = { version = "29.0.0", path = "../../../substrate/frame/balances" }
+pallet-balances = { version = "29.0.2", path = "../../../substrate/frame/balances" }
 pallet-message-queue = { version = "32.0.0", path = "../../../substrate/frame/message-queue" }
 cumulus-primitives-core = { version = "0.8.0", path = "../../primitives/core" }
 cumulus-pallet-xcmp-queue = { version = "0.8.0", path = "../../pallets/xcmp-queue" }
@@ -35,7 +35,7 @@ parachains-common = { version = "8.0.0", path = "../../parachains/common" }
 
 # Polkadot
 xcm = { package = "staging-xcm", path = "../../../polkadot/xcm", version = "8.0.1" }
-xcm-executor = { package = "staging-xcm-executor", path = "../../../polkadot/xcm/xcm-executor", version = "8.0.1" }
+xcm-executor = { package = "staging-xcm-executor", path = "../../../polkadot/xcm/xcm-executor", version = "8.0.2" }
 polkadot-primitives = { version = "8.0.1", path = "../../../polkadot/primitives" }
 polkadot-parachain-primitives = { version = "7.0.0", path = "../../../polkadot/parachain" }
 polkadot-runtime-parachains = { version = "8.0.1", path = "../../../polkadot/runtime/parachains" }
