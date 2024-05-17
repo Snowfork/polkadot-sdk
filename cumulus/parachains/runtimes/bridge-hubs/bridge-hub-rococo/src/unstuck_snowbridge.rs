@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::convert::TryInto;
 use crate::{
 	weights::RocksDbWeight, Runtime,
 };
 use codec::Decode;
 use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
+use sp_core::H256;
+use snowbridge_pallet_ethereum_client::CurrentSyncCommittee;
 
 #[cfg(feature = "try-runtime")]
 use sp_runtime::TryRuntimeError;
@@ -47,7 +48,7 @@ impl <T> OnRuntimeUpgrade for UnstuckSnowbridge<T> {
 
 		log::info!(target: LOG_TARGET, "Updating beacon checkpoint set to unstuck bridge.");
 
-		snowbridge_pallet_ethereum_client::Pallet::<CurrentSyncCommittee<T>>::set(sync_committee_keys());
+		CurrentSyncCommittee::<Runtime>::set(sync_committee_keys());
 		snowbridge_pallet_ethereum_client::Pallet::<NextSyncCommittee<T>>::kill();
 		snowbridge_pallet_ethereum_client::Pallet::<InitialCheckpointRoot<T>>::set(header_root);
 		snowbridge_pallet_ethereum_client::Pallet::<LatestExecutionState<T>>::kill();
@@ -55,7 +56,7 @@ impl <T> OnRuntimeUpgrade for UnstuckSnowbridge<T> {
 			header_root,
 			CompactBeaconState { slot: header.slot, block_roots_root },
 		);
-		<LatestFinalizedBlockRoot<T>>::set(header_root);
+		snowbridge_pallet_ethereum_client::Pallet::<LatestFinalizedBlockRoot<T>>::set(header_root);
 
 		RocksDbWeight::get().reads_writes(6, 6)
 	}
@@ -78,11 +79,11 @@ impl <T> OnRuntimeUpgrade for UnstuckSnowbridge<T> {
 }
 
 fn is_bridge_stuck() -> bool {
-	EthereumBeaconClient::LatestFinalizedBlockRoot::get() == LAST_IMPORTED_BEACON_HEADER
+	snowbridge_pallet_ethereum_client::Pallet::LatestFinalizedBlockRoot::get() == LAST_IMPORTED_BEACON_HEADER
 }
 
-fn checkpoint() -> snowbridge_pallet_ethereum_client::Checkpoint {
-	snowbridge_pallet_ethereum_client::Checkpoint::decode(&mut &NEW_CHECKPOINT[..]).expect("checked by tests; qed")
+fn checkpoint() -> snowbridge_pallet_ethereum_client::CheckpointUpdate {
+	snowbridge_pallet_ethereum_client::CheckpointUpdate::decode(&mut &NEW_CHECKPOINT[..]).expect("checked by tests; qed")
 }
 
 fn sync_committee_keys(sync_committee: snowbridge_pallet_ethereum_client::SyncCommittee) -> SyncCommitteePrepared {
