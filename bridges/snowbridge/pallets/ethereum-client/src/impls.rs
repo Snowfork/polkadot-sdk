@@ -165,7 +165,7 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config> CheckOverwrite<CompactBeaconState> for Pallet<T> {
 	fn can_overwrite(new_value: &CompactBeaconState, prev_value: &CompactBeaconState) -> bool {
-		let slots_difference = new_value.slot - prev_value.slot;
+		let slots_difference = new_value.slot.saturating_sub(prev_value.slot);
 		slots_difference < SLOTS_PER_HISTORICAL_ROOT as u64
 	}
 }
