@@ -212,12 +212,16 @@ impl<T: Config> Pallet<T> {
 				len,
 			);
 		}
+		let initialized_addresses = beefy_addresses
+			.iter()
+			.filter(|&addr| addr.as_slice().ne(&default_eth_addr))
+			.collect::<Vec<_>>();
 		let keyset_commitment = binary_merkle_tree::merkle_root::<
 			<T as pallet_mmr::Config>::Hashing,
 			_,
-		>(beefy_addresses)
+		>(initialized_addresses.clone())
 		.into();
-		BeefyAuthoritySet { id, len, keyset_commitment }
+		BeefyAuthoritySet { id, len: initialized_addresses.len() as u32, keyset_commitment }
 	}
 }
 
