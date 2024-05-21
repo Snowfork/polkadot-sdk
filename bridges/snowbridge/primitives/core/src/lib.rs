@@ -12,7 +12,6 @@ pub mod inbound;
 pub mod operating_mode;
 pub mod outbound;
 pub mod pricing;
-pub mod ringbuffer;
 
 pub use polkadot_parachain_primitives::primitives::{
 	Id as ParaId, IsSystem, Sibling as SiblingParaId,
