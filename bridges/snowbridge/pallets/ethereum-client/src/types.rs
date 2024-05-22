@@ -16,3 +16,14 @@ pub type Update = primitives::Update<SC_SIZE, SC_BITS_SIZE>;
 pub type NextSyncCommitteeUpdate = primitives::NextSyncCommitteeUpdate<SC_SIZE>;
 
 pub use primitives::{AncestryProof, ExecutionProof};
+
+/// FinalizedState ring buffer implementation
+pub(crate) type FinalizedBeaconStateBuffer<T> = RingBufferMapImplWithConditionalOverWrite<
+	u32,
+	crate::MaxFinalizedHeadersToKeep<T>,
+	crate::FinalizedBeaconStateIndex<T>,
+	crate::FinalizedBeaconStateMapping<T>,
+	crate::FinalizedBeaconState<T>,
+	OptionQuery,
+	Pallet<T>,
+>;

@@ -151,11 +151,11 @@ pub mod pallet {
 	pub(super) type FinalizedBeaconState<T: Config> =
 		StorageMap<_, Identity, H256, CompactBeaconState, OptionQuery>;
 
-	/// Finalized Headers: Last imported beacon header.
+	/// Finalized Headers: Current position in ring buffer
 	#[pallet::storage]
 	pub(crate) type FinalizedBeaconStateIndex<T: Config> = StorageValue<_, u32, ValueQuery>;
 
-	/// Finalized Headers: An index to beacon header mapping.
+	/// Finalized Headers: Mapping of ring buffer index to a pruning candidate
 	#[pallet::storage]
 	pub(crate) type FinalizedBeaconStateMapping<T: Config> =
 		StorageMap<_, Identity, u32, H256, ValueQuery>;
@@ -497,36 +497,11 @@ pub mod pallet {
 			let header_root: H256 =
 				header.hash_tree_root().map_err(|_| Error::<T>::HeaderHashTreeRootFailed)?;
 
-			let index = FinalizedBeaconStateIndex::<T>::get();
-			let prev_value_root = FinalizedBeaconStateMapping::<T>::get(index.saturating_sub(1));
-			let prev_value = FinalizedBeaconState::<T>::get(prev_value_root);
-
-			let slots_difference = header.slot.saturating_sub(prev_value.unwrap().slot);
-			let can_overwrite = slots_difference < crate::config::SLOTS_PER_HISTORICAL_ROOT as u64;
-
-			if can_overwrite {
-				<FinalizedBeaconState<T>>::insert(
-					header_root,
-					CompactBeaconState { slot: header.slot, block_roots_root },
-				);
-				<FinalizedBeaconStateMapping<T>>::insert(
-					index,
-					header_root,
-				);
-				<LatestFinalizedBlockRoot<T>>::set(header_root);
-				<FinalizedBeaconState<T>>::remove(prev_value_root);
-			} else {
-				<FinalizedBeaconState<T>>::insert(
-					header_root,
-					CompactBeaconState { slot: header.slot, block_roots_root },
-				);
-				<FinalizedBeaconStateMapping<T>>::insert(
-					index.saturating_add(1),
-					header_root,
-				);
-				<FinalizedBeaconStateIndex::<T>>::set(index.saturating_add(1));
-				<LatestFinalizedBlockRoot<T>>::set(header_root);
-			}
+			<FinalizedBeaconStateBuffer<T>>::insert(
+				header_root,
+				CompactBeaconState { slot: header.slot, block_roots_root },
+			);
+			<LatestFinalizedBlockRoot<T>>::set(header_root);
 
 			log::info!(
 				target: LOG_TARGET,
