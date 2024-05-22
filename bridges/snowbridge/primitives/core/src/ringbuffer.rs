@@ -67,48 +67,61 @@ impl<Key, Value, Index, B, CurrentIndex, Intermediate, M, QueryKind, OverwriteCo
 {
 	/// Insert a map entry.
 	fn insert(k: Key, v: Value) {
-		let current_index = CurrentIndex::get();
-		let mut prev_value_option = None;
 		let bound = B::get();
+		let mut current_index = CurrentIndex::get();
+		let mut prev_value_option = None;
 
-		// Retrieve previous value if it exists
+		// Retrieve the last inserted value, if it exists.
 		if Intermediate::contains_key(current_index) {
+			// If the index of the last inserted item is 0, we need to look for the
+			// previous value in the array at the end of the ringbuffer (to wrap around).
 			let prev_index = if current_index == Index::zero() {
 				bound.sub(Index::one())
 			} else {
+				// Else the index is just current_index - 1
 				current_index.sub(Index::one())
 			};
+			// Get the previous item's key
 			let prev_key = Intermediate::get(prev_index);
+			// Get the previous item's value, using the key
 			prev_value_option = QueryKind::from_query_to_optional_value(M::get(prev_key.clone()));
 		}
 
-		// Decide whether to overwrite or advance index
+		// Decide whether to overwrite or insert the next item. If a value
+		// at the previous index exists, use it to
 		if let Some(prev_value) = prev_value_option {
 			if OverwriteCondition::can_overwrite(&v, &prev_value) {
-				// overwrite the last index
-				let current_index = CurrentIndex::get();
+				// Store the last item's key so we can delete the old value.
 				let current_key = Intermediate::get(current_index);
+				// Insert the item at the same index as the last item,
+				// effectively overwriting it.
 				Intermediate::insert(current_index, k.clone());
+				// Insert the new item in the item map.
 				M::insert(k, v);
+				// Delete the old, now overwritten item using the current we
+				// stored in current_key.
 				M::remove(current_key);
 				return;
 			}
 		}
 
-		// If not overwriting, advance index and insert normally
-		let next_index = if current_index + Index::one() >= bound {
-			Index::zero()
+		// At this point, we have determined the new value should just
+		// be inserted normally.
+		// Adding one here as bound denotes number of items but our index starts with zero.
+		if (current_index + Index::one()) >= bound {
+			current_index = Index::zero();
 		} else {
-			current_index + Index::one()
-		};
+			current_index = current_index + Index::one();
+		}
 
-		if Intermediate::contains_key(next_index) {
-			let older_key = Intermediate::get(next_index);
+		// Deleting earlier entry if it exists
+		if Intermediate::contains_key(current_index) {
+			let older_key = Intermediate::get(current_index);
 			M::remove(older_key);
 		}
 
-		Intermediate::insert(next_index, k.clone());
-		CurrentIndex::set(next_index);
+		Intermediate::insert(current_index, k.clone());
+		CurrentIndex::set(current_index);
 		M::insert(k, v);
 	}
 
