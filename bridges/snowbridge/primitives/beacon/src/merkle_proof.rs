@@ -17,7 +17,9 @@ pub fn verify_merkle_branch(
 		return false
 	}
 	// verify the computed merkle root
-	root == compute_merkle_root(leaf, branch, index)
+	let merkle_root = compute_merkle_root(leaf, branch, index);
+	println!("expected merkle root: {:?}", merkle_root);
+	root == merkle_root
 }
 
 fn compute_merkle_root(leaf: H256, proof: &[H256], index: usize) -> H256 {

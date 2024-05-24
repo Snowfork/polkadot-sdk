@@ -145,6 +145,7 @@ impl<T: Config> Pallet<T> {
 		let index_in_array = block_slot % (SLOTS_PER_HISTORICAL_ROOT as u64);
 		let leaf_index = (SLOTS_PER_HISTORICAL_ROOT as u64) + index_in_array;
 
+		println!("before ancestry");
 		ensure!(
 			verify_merkle_branch(
 				block_root,
