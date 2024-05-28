@@ -362,7 +362,11 @@ pub mod pallet {
 			Messages::<T>::append(Box::new(message));
 			MessageLeaves::<T>::append(message_abi_encoded_hash);
 
-			Self::deposit_event(Event::MessageAccepted { channel_id: queued_message.channel_id, id: queued_message.id, nonce });
+			Self::deposit_event(Event::MessageAccepted {
+				channel_id: queued_message.channel_id,
+				id: queued_message.id,
+				nonce,
+			});
 
 			Ok(true)
 		}
