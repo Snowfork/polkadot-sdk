@@ -14,20 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::parameter_types;
-use crate::{xcm_config::UniversalLocation, Runtime, RuntimeEvent, Balances};
+use crate::{xcm_config::UniversalLocation, Runtime, RuntimeEvent, Balances, EthereumSystem,
+			EthereumOutboundQueue, TreasuryAccount, EthereumInboundQueue, MessageQueue, TransactionByteFee, xcm_config, XcmRouter};
 use snowbridge_router_primitives::outbound::EthereumBlobExporter;
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::{
-	gwei, meth,
-	outbound::{Command, Fee},
-	AgentId, AllowSiblingsOnly, PricingParameters, Rewards,
+	gwei, meth, AllowSiblingsOnly, PricingParameters, Rewards,
 };
 use snowbridge_router_primitives::inbound::MessageToXcm;
 use testnet_parachains_constants::rococo::snowbridge::INBOUND_QUEUE_PALLET_INDEX;
+use testnet_parachains_constants::rococo::{
+	currency::*, fee::WeightToFee,
+};
+use parachains_common::{AccountId, Balance};
+use sp_core::H160;
+
+use sp_runtime::{traits::{ConstU32, ConstU8, Keccak256}, FixedU128};
 #[cfg(feature = "runtime-benchmarks")]
 use benchmark_helpers::DoNothingRouter;
+use frame_support::{parameter_types, weights::ConstantMultiplier};
+use pallet_xcm::EnsureXcm;
 
 /// Exports message to the Ethereum Gateway contract.
 pub type SnowbridgeExporter = EthereumBlobExporter<
@@ -75,7 +82,7 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type MaxMessageSize = ConstU32<2048>;
-	type WeightInfo = weights::snowbridge_pallet_inbound_queue::WeightInfo<Runtime>;
+	type WeightInfo = crate::weights::snowbridge_pallet_inbound_queue::WeightInfo<Runtime>;
 	type PricingParameters = EthereumSystem;
 	type AssetTransactor = <xcm_config::XcmConfig as xcm_executor::Config>::AssetTransactor;
 }
@@ -90,7 +97,7 @@ impl snowbridge_pallet_outbound_queue::Config for Runtime {
 	type GasMeter = snowbridge_core::outbound::ConstantGasMeter;
 	type Balance = Balance;
 	type WeightToFee = WeightToFee;
-	type WeightInfo = weights::snowbridge_pallet_outbound_queue::WeightInfo<Runtime>;
+	type WeightInfo = crate::weights::snowbridge_pallet_outbound_queue::WeightInfo<Runtime>;
 	type PricingParameters = EthereumSystem;
 	type Channels = EthereumSystem;
 }
@@ -150,7 +157,7 @@ parameter_types! {
 impl snowbridge_pallet_ethereum_client::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
-	type WeightInfo = weights::snowbridge_pallet_ethereum_client::WeightInfo<Runtime>;
+	type WeightInfo = crate::weights::snowbridge_pallet_ethereum_client::WeightInfo<Runtime>;
 }
 
 impl snowbridge_pallet_system::Config for Runtime {
@@ -160,7 +167,7 @@ impl snowbridge_pallet_system::Config for Runtime {
 	type AgentIdOf = snowbridge_core::AgentIdOf;
 	type TreasuryAccount = TreasuryAccount;
 	type Token = Balances;
-	type WeightInfo = weights::snowbridge_pallet_system::WeightInfo<Runtime>;
+	type WeightInfo = crate::weights::snowbridge_pallet_system::WeightInfo<Runtime>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 	type DefaultPricingParameters = Parameters;
