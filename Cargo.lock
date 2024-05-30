@@ -2050,6 +2050,7 @@ dependencies = [
  "pallet-bridge-relayers",
  "pallet-collator-selection",
  "pallet-message-queue",
+ "pallet-migrations",
  "pallet-multisig",
  "pallet-session",
  "pallet-timestamp",

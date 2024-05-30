@@ -31,6 +31,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+mod migration;
 
 use frame_support::{
 	dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get, transactional,
