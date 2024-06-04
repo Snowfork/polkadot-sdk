@@ -6,7 +6,6 @@ use frame_support::{
 	pallet_prelude::PhantomData,
 	weights::WeightMeter,
 };
-use scale_info::TypeInfo;
 use sp_core::Get;
 
 mod test;
@@ -40,7 +39,7 @@ mod v0 {
 	pub type ExecutionHeaderMapping<T: Config> =
 		StorageMap<Pallet<T>, Identity, u32, H256, ValueQuery>;
 
-	#[derive(Copy, Clone, Default, Encode, Decode, TypeInfo, MaxEncodedLen)]
+	#[derive(Copy, Clone, Default, Encode, Decode, Debug, TypeInfo, MaxEncodedLen, PartialEq)]
 	pub struct ExecutionHeaderState {
 		pub beacon_block_root: H256,
 		pub beacon_slot: u64,
@@ -84,6 +83,7 @@ impl<T: Config, W: weights::WeightInfo, M: Get<u32>> SteppedMigration
 		mut cursor: Option<Self::Cursor>,
 		meter: &mut WeightMeter,
 	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
+		log::info!(target: LOG_TARGET, "Starting stepped migration iteration.");
 		let required = W::step();
 		// If there is not enough weight for a single step, return an error. This case can be
 		// problematic if it is the first migration that ran in this block. But there is nothing

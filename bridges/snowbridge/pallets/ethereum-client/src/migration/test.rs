@@ -12,7 +12,8 @@ use crate::{
 	},
 	mock::new_tester,
 	tests::{
-		run_to_block_with_migrator, AllPalletsWithSystem, MigratorServiceWeight, System, Test,
+		run_to_block_with_migrator, AllPalletsWithSystem, ExecutionHeaderCount,
+		MigratorServiceWeight, System, Test,
 	},
 };
 use frame_support::traits::OnRuntimeUpgrade;
@@ -32,7 +33,10 @@ fn ethereum_execution_header_migration_works() {
 		});
 		ExecutionHeaderIndex::<Test>::set(5500);
 
-		for index in 0..10 {
+		let execution_header_count = 5500;
+
+		let mut block_roots: Vec<H256> = vec![];
+		for index in 0..execution_header_count {
 			let block_root = H256::random();
 			ExecutionHeaders::<Test>::insert(
 				block_root,
@@ -44,7 +48,7 @@ fn ethereum_execution_header_migration_works() {
 				},
 			);
 			ExecutionHeaderMapping::<Test>::insert(index as u32, block_root);
-			println!("block: {}", block_root);
+			block_roots.push(block_root);
 		}
 
 		// Give it enough weight to do exactly 16 iterations:
@@ -52,15 +56,19 @@ fn ethereum_execution_header_migration_works() {
 			pallet_migrations::Pallet::<Test>::exec_migration_max_weight() +
 			SubstrateWeight::<Test>::step() * 16;
 		MigratorServiceWeight::set(&limit);
+		ExecutionHeaderCount::set(&(execution_header_count as u32));
 
 		System::set_block_number(1);
 		AllPalletsWithSystem::on_runtime_upgrade(); // onboard MBMs
 
 		// Check everything is empty
-		for index in 0..10 {
+		for index in 0..execution_header_count {
 			run_to_block_with_migrator(index + 2);
-			let value = ExecutionHeaderMapping::<Test>::get(index as u32);
-			assert_eq!(value, H256::zero())
+			let block_root_hash = block_roots.get(index as usize).unwrap();
+			assert_eq!(ExecutionHeaderMapping::<Test>::get(index as u32), H256::zero());
+			assert!(ExecutionHeaders::<Test>::get(block_root_hash).is_none());
 		}
+		assert_eq!(LatestExecutionState::<Test>::get(), ExecutionHeaderState::default());
+		assert_eq!(ExecutionHeaderIndex::<Test>::get(), 0);
 	});
 }

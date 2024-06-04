@@ -106,7 +106,7 @@ impl ethereum_beacon_client::Config for Test {
 }
 
 parameter_types! {
-	pub const ExecutionHeaderCount: u32 = 10;
+	pub storage ExecutionHeaderCount: u32 = 100;
 	pub storage MigratorServiceWeight: Weight = Weight::from_parts(100, 100);
 }
 
