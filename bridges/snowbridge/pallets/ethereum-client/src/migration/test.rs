@@ -3,18 +3,16 @@
 #![cfg(all(test, not(feature = "runtime-benchmarks")))]
 
 use crate::{
-	migration::{
-		v0::{
-			CompactExecutionHeader, ExecutionHeaderIndex, ExecutionHeaderMapping,
-			ExecutionHeaderState, ExecutionHeaders, LatestExecutionState,
-		},
-		weights::{SubstrateWeight, WeightInfo},
+	migration::v0::{
+		CompactExecutionHeader, ExecutionHeaderIndex, ExecutionHeaderMapping, ExecutionHeaderState,
+		ExecutionHeaders, LatestExecutionState,
 	},
-	mock::new_tester,
-	tests::{
-		run_to_block_with_migrator, AllPalletsWithSystem, ExecutionHeaderCount,
+	mock::{
+		new_tester, run_to_block_with_migrator, AllPalletsWithSystem, ExecutionHeaderCount,
 		MigratorServiceWeight, System, Test,
 	},
+	pallet,
+	weights::WeightInfo as _,
 };
 use frame_support::traits::OnRuntimeUpgrade;
 use pallet_migrations::WeightInfo as _;
@@ -51,10 +49,10 @@ fn ethereum_execution_header_migration_works() {
 			block_roots.push(block_root);
 		}
 
-		// Give it enough weight to do exactly 16 iterations:
+		// Give it enough weight to do 16 iterations:
 		let limit = <Test as pallet_migrations::Config>::WeightInfo::progress_mbms_none() +
 			pallet_migrations::Pallet::<Test>::exec_migration_max_weight() +
-			SubstrateWeight::<Test>::step() * 16;
+			<Test as pallet::Config>::WeightInfo::step() * 16;
 		MigratorServiceWeight::set(&limit);
 		ExecutionHeaderCount::set(&(execution_header_count as u32));
 

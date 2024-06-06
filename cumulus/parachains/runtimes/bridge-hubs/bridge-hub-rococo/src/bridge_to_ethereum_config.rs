@@ -14,27 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{xcm_config::UniversalLocation, Runtime, RuntimeEvent, Balances, EthereumSystem,
-			EthereumOutboundQueue, TreasuryAccount, EthereumInboundQueue, MessageQueue, TransactionByteFee, xcm_config, XcmRouter};
-use snowbridge_router_primitives::outbound::EthereumBlobExporter;
-use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
-use snowbridge_beacon_primitives::{Fork, ForkVersions};
-use snowbridge_core::{
-	gwei, meth, AllowSiblingsOnly, PricingParameters, Rewards,
-};
-use snowbridge_router_primitives::inbound::MessageToXcm;
-use testnet_parachains_constants::rococo::snowbridge::INBOUND_QUEUE_PALLET_INDEX;
-use testnet_parachains_constants::rococo::{
-	currency::*, fee::WeightToFee,
+use crate::{
+	xcm_config, xcm_config::UniversalLocation, Balances, EthereumInboundQueue,
+	EthereumOutboundQueue, EthereumSystem, MessageQueue, Runtime, RuntimeEvent, TransactionByteFee,
+	TreasuryAccount,
 };
 use parachains_common::{AccountId, Balance};
+use snowbridge_beacon_primitives::{Fork, ForkVersions};
+use snowbridge_core::{gwei, meth, AllowSiblingsOnly, PricingParameters, Rewards};
+use snowbridge_router_primitives::{inbound::MessageToXcm, outbound::EthereumBlobExporter};
 use sp_core::H160;
+use testnet_parachains_constants::rococo::{
+	currency::*,
+	fee::WeightToFee,
+	snowbridge::{EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX},
+};
 
-use sp_runtime::{traits::{ConstU32, ConstU8, Keccak256}, FixedU128};
 #[cfg(feature = "runtime-benchmarks")]
 use benchmark_helpers::DoNothingRouter;
 use frame_support::{parameter_types, weights::ConstantMultiplier};
 use pallet_xcm::EnsureXcm;
+use sp_runtime::{
+	traits::{ConstU32, ConstU8, Keccak256},
+	FixedU128,
+};
 
 /// Exports message to the Ethereum Gateway contract.
 pub type SnowbridgeExporter = EthereumBlobExporter<

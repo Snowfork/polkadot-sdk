@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
-use crate::pallet::Config;
+use crate::{pallet::Config, WeightInfo};
 use frame_support::{
 	migrations::{MigrationId, SteppedMigration, SteppedMigrationError},
 	pallet_prelude::PhantomData,
@@ -9,15 +9,13 @@ use frame_support::{
 use sp_core::Get;
 
 mod test;
-pub mod weights;
 
 pub const PALLET_MIGRATIONS_ID: &[u8; 26] = b"ethereum-execution-headers";
 pub const LOG_TARGET: &str = "ethereum-client-migration";
 
 /// Module containing the old Ethereum execution headers that should be cleaned up.
-mod v0 {
-	use super::Config;
-	use crate::pallet::Pallet;
+pub mod v0 {
+	use crate::pallet::{Config, Pallet};
 	use frame_support::{
 		pallet_prelude::{Decode, Encode, MaxEncodedLen, OptionQuery, TypeInfo, ValueQuery},
 		storage_alias, CloneNoBound, Identity, PartialEqNoBound, RuntimeDebugNoBound,
@@ -25,7 +23,7 @@ mod v0 {
 	use sp_core::H256;
 
 	#[storage_alias]
-	pub(super) type LatestExecutionState<T: Config> =
+	pub type LatestExecutionState<T: Config> =
 		StorageValue<Pallet<T>, ExecutionHeaderState, ValueQuery>;
 
 	#[storage_alias]
@@ -66,10 +64,10 @@ mod v0 {
 	}
 }
 
-pub struct EthereumExecutionHeaderCleanup<T: Config, W: weights::WeightInfo, M: Get<u32>>(
+pub struct EthereumExecutionHeaderCleanup<T: Config, W: WeightInfo, M: Get<u32>>(
 	PhantomData<(T, W, M)>,
 );
-impl<T: Config, W: weights::WeightInfo, M: Get<u32>> SteppedMigration
+impl<T: Config, W: WeightInfo, M: Get<u32>> SteppedMigration
 	for EthereumExecutionHeaderCleanup<T, W, M>
 {
 	type Cursor = u32;
@@ -83,7 +81,7 @@ impl<T: Config, W: weights::WeightInfo, M: Get<u32>> SteppedMigration
 		mut cursor: Option<Self::Cursor>,
 		meter: &mut WeightMeter,
 	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
-		log::info!(target: LOG_TARGET, "Starting stepped migration iteration.");
+		log::info!(target: LOG_TARGET, "Starting step iteration for Ethereum execution header cleanup.");
 		let required = W::step();
 		// If there is not enough weight for a single step, return an error. This case can be
 		// problematic if it is the first migration that ran in this block. But there is nothing
@@ -101,7 +99,7 @@ impl<T: Config, W: weights::WeightInfo, M: Get<u32>> SteppedMigration
 			let index = if let Some(last_key) = cursor {
 				last_key.saturating_add(1)
 			} else {
-				log::info!(target: LOG_TARGET, "Starting migration");
+				log::info!(target: LOG_TARGET, "Cursor is 0, starting migration.");
 				// If no cursor is provided, start iterating from the beginning.
 				0
 			};
