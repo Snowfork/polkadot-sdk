@@ -222,6 +222,7 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"pallet-migrations/std"
 ]
 
 runtime-benchmarks = [
@@ -263,6 +264,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
+	"pallet-migrations/runtime-benchmarks"
 ]
 
 try-runtime = [
@@ -297,6 +299,7 @@ try-runtime = [
 	"snowbridge-pallet-outbound-queue/try-runtime",
 	"snowbridge-pallet-system/try-runtime",
 	"sp-runtime/try-runtime",
+	"pallet-migrations/try-runtime"
 ]
 
 fast-runtime = []
