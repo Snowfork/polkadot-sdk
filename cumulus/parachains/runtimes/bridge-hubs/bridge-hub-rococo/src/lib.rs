@@ -504,11 +504,16 @@ impl pallet_utility::Config for Runtime {
 
 parameter_types! {
 	pub MbmServiceWeight: Weight = Perbill::from_percent(80) * RuntimeBlockWeights::get().max_block;
+	pub const ExecutionHeaderCount: u32 = 8192 * 20;
 }
 
 impl pallet_migrations::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Migrations = ();
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type Migrations =
+		snowbridge_pallet_ethereum_client::migration::EthereumExecutionHeaderCleanup<Runtime, crate::weights::snowbridge_pallet_ethereum_client::WeightInfo<Runtime>, ExecutionHeaderCount>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type Migrations = pallet_migrations::mock_helpers::MockedMigrations;
 	type CursorMaxLen = ConstU32<65_536>;
 	type IdentifierMaxLen = ConstU32<256>;
 	type MigrationStatusHandler = ();

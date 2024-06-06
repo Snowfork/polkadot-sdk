@@ -22,6 +22,7 @@ pub mod functions;
 pub mod impls;
 pub mod types;
 pub mod weights;
+pub mod migration;
 
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod mock;
@@ -31,7 +32,6 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-mod migration;
 
 use frame_support::{
 	dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get, transactional,
