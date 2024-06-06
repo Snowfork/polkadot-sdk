@@ -54,8 +54,8 @@ impl<T: frame_system::Config> snowbridge_pallet_ethereum_client::WeightInfo for 
 		// Proof Size summary in bytes:
 		//  Measured:  `76`
 		//  Estimated: `3501`
-		// Minimum execution time: 72_635_000_000 picoseconds.
-		Weight::from_parts(74_575_000_000, 0)
+		// Minimum execution time: 67_553_000_000 picoseconds.
+		Weight::from_parts(68_677_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3501))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(8))
@@ -76,8 +76,8 @@ impl<T: frame_system::Config> snowbridge_pallet_ethereum_client::WeightInfo for 
 		// Proof Size summary in bytes:
 		//  Measured:  `92749`
 		//  Estimated: `93857`
-		// Minimum execution time: 18_487_000_000 picoseconds.
-		Weight::from_parts(26_424_000_000, 0)
+		// Minimum execution time: 16_988_000_000 picoseconds.
+		Weight::from_parts(17_125_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 93857))
 			.saturating_add(T::DbWeight::get().reads(6))
 	}
@@ -97,24 +97,28 @@ impl<T: frame_system::Config> snowbridge_pallet_ethereum_client::WeightInfo for 
 		// Proof Size summary in bytes:
 		//  Measured:  `92749`
 		//  Estimated: `93857`
-		// Minimum execution time: 91_539_000_000 picoseconds.
-		Weight::from_parts(96_048_000_000, 0)
+		// Minimum execution time: 84_553_000_000 picoseconds.
+		Weight::from_parts(87_459_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 93857))
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	/// Storage: UNKNOWN KEY `0xada12a87b9ccce83f328569cf9934e83e6d574e897864a327c716c553f277037` (r:1 w:1)
 	/// Proof: UNKNOWN KEY `0xada12a87b9ccce83f328569cf9934e83e6d574e897864a327c716c553f277037` (r:1 w:1)
+	/// Storage: UNKNOWN KEY `0xada12a87b9ccce83f328569cf9934e834209354bdd86a5d7050a9b80004c2d6d` (r:0 w:1)
+	/// Proof: UNKNOWN KEY `0xada12a87b9ccce83f328569cf9934e834209354bdd86a5d7050a9b80004c2d6d` (r:0 w:1)
 	/// Storage: UNKNOWN KEY `0xada12a87b9ccce83f328569cf9934e83964405908d330d65518e9e60960ba9f1` (r:0 w:1)
 	/// Proof: UNKNOWN KEY `0xada12a87b9ccce83f328569cf9934e83964405908d330d65518e9e60960ba9f1` (r:0 w:1)
+	/// Storage: UNKNOWN KEY `0xada12a87b9ccce83f328569cf9934e83d98b4ec57d38fb2970ffc6289380767d` (r:0 w:1)
+	/// Proof: UNKNOWN KEY `0xada12a87b9ccce83f328569cf9934e83d98b4ec57d38fb2970ffc6289380767d` (r:0 w:1)
 	fn step() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `215`
 		//  Estimated: `3680`
-		// Minimum execution time: 9_000_000 picoseconds.
-		Weight::from_parts(10_000_000, 0)
+		// Minimum execution time: 10_000_000 picoseconds.
+		Weight::from_parts(12_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3680))
 			.saturating_add(T::DbWeight::get().reads(1))
-			.saturating_add(T::DbWeight::get().writes(2))
+			.saturating_add(T::DbWeight::get().writes(4))
 	}
 }
