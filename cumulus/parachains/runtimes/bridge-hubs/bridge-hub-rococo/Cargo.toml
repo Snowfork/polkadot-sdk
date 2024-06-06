@@ -176,6 +176,7 @@ std = [
 	"pallet-bridge-relayers/std",
 	"pallet-collator-selection/std",
 	"pallet-message-queue/std",
+	"pallet-migrations/std",
 	"pallet-multisig/std",
 	"pallet-session/std",
 	"pallet-timestamp/std",
@@ -222,7 +223,6 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
-	"pallet-migrations/std"
 ]
 
 runtime-benchmarks = [
@@ -244,6 +244,7 @@ runtime-benchmarks = [
 	"pallet-bridge-relayers/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
 	"pallet-message-queue/runtime-benchmarks",
+	"pallet-migrations/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
@@ -264,7 +265,6 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"xcm-executor/runtime-benchmarks",
-	"pallet-migrations/runtime-benchmarks"
 ]
 
 try-runtime = [
@@ -285,6 +285,7 @@ try-runtime = [
 	"pallet-bridge-relayers/try-runtime",
 	"pallet-collator-selection/try-runtime",
 	"pallet-message-queue/try-runtime",
+	"pallet-migrations/try-runtime",
 	"pallet-multisig/try-runtime",
 	"pallet-session/try-runtime",
 	"pallet-timestamp/try-runtime",
@@ -299,7 +300,6 @@ try-runtime = [
 	"snowbridge-pallet-outbound-queue/try-runtime",
 	"snowbridge-pallet-system/try-runtime",
 	"sp-runtime/try-runtime",
-	"pallet-migrations/try-runtime"
 ]
 
 fast-runtime = []
