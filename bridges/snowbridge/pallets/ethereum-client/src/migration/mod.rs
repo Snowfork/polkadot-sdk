@@ -83,9 +83,6 @@ impl<T: Config, W: WeightInfo, M: Get<u32>> SteppedMigration
 	) -> Result<Option<Self::Cursor>, SteppedMigrationError> {
 		log::info!(target: LOG_TARGET, "Starting step iteration for Ethereum execution header cleanup.");
 		let required = W::step();
-		// If there is not enough weight for a single step, return an error. This case can be
-		// problematic if it is the first migration that ran in this block. But there is nothing
-		// that we can do about it here.
 		if meter.remaining().any_lt(required) {
 			return Err(SteppedMigrationError::InsufficientWeight { required });
 		}
