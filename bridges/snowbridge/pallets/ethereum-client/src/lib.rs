@@ -20,9 +20,9 @@
 pub mod config;
 pub mod functions;
 pub mod impls;
+pub mod migration;
 pub mod types;
 pub mod weights;
-pub mod migration;
 
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod mock;
