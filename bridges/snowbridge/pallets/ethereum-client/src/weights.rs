@@ -61,9 +61,9 @@ impl WeightInfo for () {
 	}
 
 	fn step() -> Weight {
-		Weight::from_parts(10_000_000, 0)
+		Weight::from_parts(12_000_000, 0)
 			.saturating_add(Weight::from_parts(0, 3680))
-			.saturating_add(RocksDbWeight::get().reads(1))
-			.saturating_add(RocksDbWeight::get().writes(2))
+			.saturating_add(T::DbWeight::get().reads(1))
+			.saturating_add(T::DbWeight::get().writes(4))
 	}
 }
