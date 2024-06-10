@@ -811,7 +811,7 @@ fn test_candidate_validation_msg() -> CandidateValidationMessage {
 
 fn test_candidate_backing_msg() -> CandidateBackingMessage {
 	let (sender, _) = oneshot::channel();
-	CandidateBackingMessage::GetBackedCandidates(Vec::new(), sender)
+	CandidateBackingMessage::GetBackedCandidates(Default::default(), sender)
 }
 
 fn test_chain_api_msg() -> ChainApiMessage {
@@ -855,6 +855,7 @@ fn test_availability_recovery_msg() -> AvailabilityRecoveryMessage {
 	AvailabilityRecoveryMessage::RecoverAvailableData(
 		dummy_candidate_receipt(dummy_hash()),
 		Default::default(),
+		None,
 		None,
 		sender,
 	)
