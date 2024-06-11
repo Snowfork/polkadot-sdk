@@ -26,7 +26,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		GasPriceUpdate { value: U256, slot: u64 },
+		Updated { value: U256, slot: u64 },
 	}
 
 	#[pallet::error]
