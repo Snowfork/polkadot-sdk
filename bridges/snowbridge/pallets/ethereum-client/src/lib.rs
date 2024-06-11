@@ -406,17 +406,15 @@ pub mod pallet {
 
 			// Execution payload header corresponding to `beacon.body_root` (from Capella onward)
 			// https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/light-client/sync-protocol.md#modified-lightclientheader
-			let execution_header_root: H256 = &update.execution_header
+			let execution_header_root: H256 = update
+				.execution_header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-			ensure!(
-				&update.execution_branch.is_some(),
-				Error::<T>::InvalidExecutionHeaderProof
-			);
+			ensure!(update.execution_branch.len() > 0, Error::<T>::InvalidExecutionHeaderProof);
 			ensure!(
 				verify_merkle_branch(
 					execution_header_root,
-					&update.execution_branch.clone().unwrap(),
+					&update.execution_branch.clone(),
 					config::EXECUTION_HEADER_SUBTREE_INDEX,
 					config::EXECUTION_HEADER_DEPTH,
 					update.finalized_header.body_root
@@ -492,7 +490,7 @@ pub mod pallet {
 			}
 
 			T::GasPrice::store(
-				&update.execution_header.base_fee_per_gas(),
+				update.execution_header.base_fee_per_gas(),
 				update.finalized_header.slot,
 			);
 
