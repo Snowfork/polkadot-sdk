@@ -295,6 +295,7 @@ try-runtime = [
 	"parachain-info/try-runtime",
 	"polkadot-runtime-common/try-runtime",
 	"snowbridge-pallet-ethereum-client/try-runtime",
+	"snowbridge-pallet-gas-price/try-runtime",
 	"snowbridge-pallet-inbound-queue/try-runtime",
 	"snowbridge-pallet-outbound-queue/try-runtime",
 	"snowbridge-pallet-system/try-runtime",

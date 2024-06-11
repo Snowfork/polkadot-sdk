@@ -11,7 +11,7 @@ use frame_support::{
 use codec::Encode;
 use snowbridge_core::{
 	outbound::{Command, SendError, SendMessage},
-	ParaId, PricingParameters, Rewards,
+	GasPriceProvider, ParaId, PricingParameters, Rewards,
 };
 use sp_arithmetic::FixedU128;
 use sp_core::H256;

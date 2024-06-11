@@ -75,5 +75,4 @@ pub struct BaseFeePerGas {
 /// A trait for retrieving the base fee per gas.
 pub trait GasPriceProvider {
 	fn update(value: U256, slot: u64);
-	fn get() -> BaseFeePerGas;
 }

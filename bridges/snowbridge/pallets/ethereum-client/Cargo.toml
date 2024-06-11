@@ -91,5 +91,6 @@ try-runtime = [
 	"frame-support/try-runtime",
 	"frame-system/try-runtime",
 	"pallet-timestamp?/try-runtime",
+	"snowbridge-pallet-gas-price/try-runtime",
 	"sp-runtime/try-runtime",
 ]

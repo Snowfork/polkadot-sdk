@@ -112,7 +112,7 @@ use frame_support::{
 };
 use snowbridge_core::{
 	outbound::{Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
-	BasicOperatingMode, ChannelId, GasPriceProvider,
+	BasicOperatingMode, ChannelId, PricingParameters,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
@@ -132,7 +132,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use snowbridge_core::PricingParameters;
 	use sp_arithmetic::FixedU128;
 
 	#[pallet::pallet]
@@ -172,7 +171,7 @@ pub mod pallet {
 		type WeightToFee: WeightToFee<Balance = Self::Balance>;
 
 		/// Provider for the latest base fee per gas from Ethereum.
-		type GasPrice: GasPriceProvider;
+		type GasPrice: Get<U256>;
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
@@ -350,7 +349,7 @@ pub mod pallet {
 				command,
 				params,
 				max_dispatch_gas,
-				max_fee_per_gas: T::GasPrice::get().value.try_into().defensive_unwrap_or(u128::MAX),
+				max_fee_per_gas: T::GasPrice::get().try_into().defensive_unwrap_or(u128::MAX),
 				reward: reward.try_into().defensive_unwrap_or(u128::MAX),
 				id: queued_message.id,
 			};
@@ -380,7 +379,7 @@ pub mod pallet {
 			// Remote fee in ether
 			let fee = Self::calculate_remote_fee(
 				gas_used_at_most,
-				T::GasPrice::get().value,
+				T::GasPrice::get(),
 				params.rewards.remote,
 			);
 
