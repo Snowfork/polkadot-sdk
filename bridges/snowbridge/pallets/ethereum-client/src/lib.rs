@@ -40,7 +40,7 @@ use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
 	CompactBeaconState, ForkData, ForkVersion, ForkVersions, PublicKeyPrepared, SigningData,
 };
-use snowbridge_core::{BasicOperatingMode, RingBufferMap};
+use snowbridge_core::{BasicOperatingMode, GasPriceProvider, RingBufferMap};
 use sp_core::H256;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
@@ -49,7 +49,6 @@ use functions::{
 	compute_epoch, compute_period, decompress_sync_committee_bits, sync_committee_sum,
 };
 pub use pallet::*;
-use snowbridge_pallet_gas_price::impls::GasPriceProvider;
 use types::{CheckpointUpdate, FinalizedBeaconStateBuffer, SyncCommitteePrepared, Update};
 
 pub use config::SLOTS_PER_HISTORICAL_ROOT;
@@ -489,7 +488,7 @@ pub mod pallet {
 				Self::store_finalized_header(update.finalized_header, update.block_roots_root)?;
 			}
 
-			T::GasPrice::store(
+			T::GasPrice::update(
 				update.execution_header.base_fee_per_gas(),
 				update.finalized_header.slot,
 			);

@@ -112,11 +112,10 @@ use frame_support::{
 };
 use snowbridge_core::{
 	outbound::{Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
-	BasicOperatingMode, ChannelId,
+	BasicOperatingMode, ChannelId, GasPriceProvider,
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
-pub use snowbridge_pallet_gas_price::GasPriceProvider;
 use sp_core::{H256, U256};
 use sp_runtime::{
 	traits::{CheckedDiv, Hash},
@@ -351,10 +350,7 @@ pub mod pallet {
 				command,
 				params,
 				max_dispatch_gas,
-				max_fee_per_gas: T::GasPrice::get()
-					.value
-					.try_into()
-					.defensive_unwrap_or(u128::MAX),
+				max_fee_per_gas: T::GasPrice::get().value.try_into().defensive_unwrap_or(u128::MAX),
 				reward: reward.try_into().defensive_unwrap_or(u128::MAX),
 				id: queued_message.id,
 			};

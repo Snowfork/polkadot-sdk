@@ -12,7 +12,6 @@ use snowbridge_beacon_primitives::{
 	types::deneb, BeaconHeader, ExecutionProof, Fork, ForkVersions, VersionedExecutionPayloadHeader,
 };
 use snowbridge_core::{
-	gwei,
 	inbound::{Log, Proof, VerificationError},
 	meth, Channel, ChannelId, PricingParameters, Rewards, StaticLookup,
 };
@@ -37,6 +36,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		EthereumBeaconClient: snowbridge_pallet_ethereum_client::{Pallet, Call, Storage, Event<T>},
 		InboundQueue: inbound_queue::{Pallet, Call, Storage, Event<T>},
+		GasPrice: snowbridge_pallet_gas_price::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -107,10 +107,16 @@ parameter_types! {
 	};
 }
 
+impl snowbridge_pallet_gas_price::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+}
+
 impl snowbridge_pallet_ethereum_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
 	type WeightInfo = ();
+	type GasPrice = GasPrice;
 }
 
 // Mock verifier
@@ -171,7 +177,6 @@ parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
-		fee_per_gas: gwei(20),
 		rewards: Rewards { local: DOT, remote: meth(1) },
 		multiplier: FixedU128::from_rational(1, 1),
 	};

@@ -35,7 +35,7 @@ use xcm_builder::{DescribeAllTerminal, DescribeFamily, DescribeLocation, HashedD
 pub type AgentId = H256;
 pub use operating_mode::BasicOperatingMode;
 
-pub use pricing::{PricingParameters, Rewards};
+pub use pricing::{BaseFeePerGas, GasPriceProvider, PricingParameters, Rewards};
 
 pub fn sibling_sovereign_account<T>(para_id: ParaId) -> T::AccountId
 where

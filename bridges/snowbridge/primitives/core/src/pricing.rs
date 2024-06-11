@@ -65,3 +65,15 @@ impl UD60x18 {
 		self.0
 	}
 }
+
+#[derive(Clone, PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen, Default)]
+pub struct BaseFeePerGas {
+	pub value: U256,
+	pub slot: u64,
+}
+
+/// A trait for retrieving the base fee per gas.
+pub trait GasPriceProvider {
+	fn update(value: U256, slot: u64);
+	fn get() -> BaseFeePerGas;
+}
