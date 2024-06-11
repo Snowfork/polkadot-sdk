@@ -59,6 +59,7 @@ jobs:
       - name: clippy
         run: cargo clippy --all-features -- -D warnings
       - name: format
+        working-directory: bridges/snowbridge
         run: cargo +nightly fmt --all -- --check
       - name: install taplo
         run: |

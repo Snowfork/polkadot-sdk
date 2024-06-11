@@ -127,4 +127,3 @@ pub fn initialize_storage() -> DispatchResult {
 		inbound_fixture.block_roots_root,
 	)
 }
-
