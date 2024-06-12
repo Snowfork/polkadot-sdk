@@ -55,7 +55,8 @@ jobs:
           rustup component add rustfmt --toolchain nightly
           rustup show
       - name: format
-        run: cd bridges/snowbridge && cargo +nightly fmt -- --check
+        working-directory: bridges/snowbridge
+        run: cargo +nightly fmt -- --check
       - name: install taplo
         run: |
           cargo install taplo-cli --locked
