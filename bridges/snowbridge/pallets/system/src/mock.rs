@@ -3,7 +3,7 @@
 use crate as snowbridge_system;
 use frame_support::{
 	derive_impl, parameter_types,
-	traits::{tokens::fungible::Mutate, ConstU128, ConstU8},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU8, Get},
 	weights::IdentityFee,
 	PalletId,
 };
@@ -12,7 +12,7 @@ use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
 	gwei, meth, outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly,
-	ParaId, PricingParameters, Rewards,
+	ParaId, PricingParameters, Rewards, U256,
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
@@ -91,7 +91,7 @@ frame_support::construct_runtime!(
 		XcmOrigin: pallet_xcm_origin::{Pallet, Origin},
 		OutboundQueue: snowbridge_pallet_outbound_queue::{Pallet, Call, Storage, Event<T>},
 		EthereumSystem: snowbridge_system,
-		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>}
+		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -157,6 +157,14 @@ parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
 }
 
+#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
+pub struct ConstGasPrice;
+impl Get<U256> for ConstGasPrice {
+	fn get() -> U256 {
+		gwei(20)
+	}
+}
+
 impl snowbridge_pallet_outbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
@@ -168,6 +176,7 @@ impl snowbridge_pallet_outbound_queue::Config for Test {
 	type Balance = u128;
 	type PricingParameters = EthereumSystem;
 	type Channels = EthereumSystem;
+	type GasPrice = ConstGasPrice;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }
@@ -192,7 +201,6 @@ parameter_types! {
 	pub TestParaId: u32 = 2000;
 	pub Parameters: PricingParameters<u128> = PricingParameters {
 		exchange_rate: FixedU128::from_rational(1, 400),
-		fee_per_gas: gwei(20),
 		rewards: Rewards { local: DOT, remote: meth(1) },
 		multiplier: FixedU128::from_rational(4, 3)
 	};

@@ -186,11 +186,7 @@ fn set_pricing_parameters_invalid() {
 			Error::<Test>::InvalidPricingParameters
 		);
 		params = Parameters::get();
-		params.fee_per_gas = sp_core::U256::zero();
-		assert_noop!(
-			EthereumSystem::set_pricing_parameters(origin.clone(), params),
-			Error::<Test>::InvalidPricingParameters
-		);
+		assert_ok!(EthereumSystem::set_pricing_parameters(origin.clone(), params));
 		params = Parameters::get();
 		params.rewards.local = 0;
 		assert_noop!(
