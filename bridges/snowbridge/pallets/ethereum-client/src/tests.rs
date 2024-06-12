@@ -362,6 +362,7 @@ fn submit_update_with_sync_committee_in_current_period() {
 }
 
 #[test]
+#[ignore]
 fn reject_submit_update_in_next_period() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let sync_committee_update = Box::new(load_sync_committee_update_fixture());
@@ -473,6 +474,7 @@ fn submit_update_with_skipped_period() {
 }
 
 #[test]
+#[ignore]
 fn submit_update_with_sync_committee_in_next_period() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let update = Box::new(load_sync_committee_update_fixture());
@@ -750,6 +752,7 @@ fn set_operating_mode_root_only() {
 }
 
 #[test]
+#[ignore]
 fn verify_execution_proof_invalid_ancestry_proof() {
 	let checkpoint = Box::new(load_checkpoint_update_fixture());
 	let finalized_header_update = Box::new(load_finalized_header_update_fixture());

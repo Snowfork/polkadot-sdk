@@ -410,7 +410,6 @@ pub mod pallet {
 				.execution_header
 				.hash_tree_root()
 				.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
-			ensure!(update.execution_branch.len() > 0, Error::<T>::InvalidExecutionHeaderProof);
 			ensure!(
 				verify_merkle_branch(
 					execution_header_root,

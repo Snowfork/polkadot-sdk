@@ -98,7 +98,7 @@ pub fn make_sync_committee_update() -> Box<Update> {
             hex!("{{.}}").into(),
         {{/SyncCommitteeUpdate.BlockRootsBranch}}
         ],
-            execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
+        execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
             parent_hash: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.ParentHash}}").into(),
             fee_recipient: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.FeeRecipient}}").into(),
             state_root: hex!("{{SyncCommitteeUpdate.ExecutionHeader.Deneb.StateRoot}}").into(),
@@ -157,8 +157,8 @@ pub fn make_finalized_header_update() -> Box<Update> {
         {{#FinalizedHeaderUpdate.BlockRootsBranch}}
             hex!("{{.}}").into(),
         {{/FinalizedHeaderUpdate.BlockRootsBranch}}
-        ]
-            execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
+        ],
+        execution_header: VersionedExecutionPayloadHeader::Deneb(deneb::ExecutionPayloadHeader {
             parent_hash: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.ParentHash}}").into(),
             fee_recipient: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.FeeRecipient}}").into(),
             state_root: hex!("{{FinalizedHeaderUpdate.ExecutionHeader.Deneb.StateRoot}}").into(),
