@@ -501,7 +501,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			events.iter().any(|event| matches!(
 				event,
 				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *who == assethub_sovereign && *amount == 2680000000000,
+					if *who == assethub_sovereign && *amount == 400000000000,
 			)),
 			"AssetHub sovereign takes remote fee."
 		);

@@ -279,7 +279,7 @@ fn test_calculate_fees_with_unit_multiplier() {
 		};
 		let fee = OutboundQueue::calculate_fee(gas_used, price_params);
 		assert_eq!(fee.local, 698000000);
-		assert_eq!(fee.remote, 1000000);
+		assert_eq!(fee.remote, 200000);
 	});
 }
 
@@ -295,7 +295,7 @@ fn test_calculate_fees_with_multiplier() {
 		};
 		let fee = OutboundQueue::calculate_fee(gas_used, price_params);
 		assert_eq!(fee.local, 698000000);
-		assert_eq!(fee.remote, 1333333);
+		assert_eq!(fee.remote, 266666);
 	});
 }
 
