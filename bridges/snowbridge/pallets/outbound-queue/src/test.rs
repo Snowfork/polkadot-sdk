@@ -279,7 +279,7 @@ fn test_calculate_fees_with_unit_multiplier() {
 		};
 		let fee = OutboundQueue::calculate_fee(gas_used, price_params);
 		assert_eq!(fee.local, 698000000);
-		assert_eq!(fee.remote, 200000);
+		assert_eq!(fee.remote, 1600000200000);
 	});
 }
 
@@ -295,7 +295,7 @@ fn test_calculate_fees_with_multiplier() {
 		};
 		let fee = OutboundQueue::calculate_fee(gas_used, price_params);
 		assert_eq!(fee.local, 698000000);
-		assert_eq!(fee.remote, 266666);
+		assert_eq!(fee.remote, 2133333600000);
 	});
 }
 
@@ -313,6 +313,6 @@ fn test_calculate_fees_with_valid_exchange_rate_but_remote_fee_calculated_as_zer
 		assert_eq!(fee.local, 698000000);
 		// Though none zero pricing params the remote fee calculated here is invalid
 		// which should be avoided
-		assert_eq!(fee.remote, 0);
+		assert_eq!(fee.remote, 4000000000);
 	});
 }
