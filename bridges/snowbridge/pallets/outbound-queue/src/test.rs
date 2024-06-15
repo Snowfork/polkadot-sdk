@@ -85,7 +85,7 @@ fn process_message_yields_on_max_messages_per_block() {
 			command: Command::Upgrade {
 				impl_address: Default::default(),
 				impl_code_hash: Default::default(),
-				initializer: None,
+				initializer: Default::default(),
 			},
 		}
 		.encode();

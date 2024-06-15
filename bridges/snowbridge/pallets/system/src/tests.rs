@@ -87,12 +87,12 @@ fn upgrade_as_root() {
 		let address: H160 = [1_u8; 20].into();
 		let code_hash: H256 = [1_u8; 32].into();
 
-		assert_ok!(EthereumSystem::upgrade(origin, address, code_hash, None));
+		assert_ok!(EthereumSystem::upgrade(origin, address, code_hash, Default::default()));
 
 		System::assert_last_event(RuntimeEvent::EthereumSystem(crate::Event::Upgrade {
 			impl_address: address,
 			impl_code_hash: code_hash,
-			initializer_params_hash: None,
+			initializer_params_hash: hex!("0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8").into()
 		}));
 	});
 }
@@ -104,19 +104,7 @@ fn upgrade_as_signed_fails() {
 		let address: H160 = Default::default();
 		let code_hash: H256 = Default::default();
 
-		assert_noop!(EthereumSystem::upgrade(origin, address, code_hash, None), BadOrigin);
-	});
-}
-
-#[test]
-fn upgrade_with_params() {
-	new_test_ext(true).execute_with(|| {
-		let origin = RuntimeOrigin::root();
-		let address: H160 = [1_u8; 20].into();
-		let code_hash: H256 = [1_u8; 32].into();
-		let initializer: Option<Initializer> =
-			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
-		assert_ok!(EthereumSystem::upgrade(origin, address, code_hash, initializer));
+		assert_noop!(EthereumSystem::upgrade(origin, address, code_hash, Default::default()), BadOrigin);
 	});
 }
 
@@ -607,9 +595,7 @@ fn charge_fee_for_upgrade() {
 		let origin = RuntimeOrigin::root();
 		let address: H160 = [1_u8; 20].into();
 		let code_hash: H256 = [1_u8; 32].into();
-		let initializer: Option<Initializer> =
-			Some(Initializer { params: [0; 256].into(), maximum_required_gas: 10000 });
-		assert_ok!(EthereumSystem::upgrade(origin, address, code_hash, initializer.clone()));
+		assert_ok!(EthereumSystem::upgrade(origin, address, code_hash, Default::default()));
 
 		// assert sovereign_balance does not change as we do not charge for sudo operations
 		let sovereign_account = sibling_sovereign_account::<Test>(para_id.into());
