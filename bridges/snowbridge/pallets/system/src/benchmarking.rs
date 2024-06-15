@@ -36,7 +36,7 @@ mod benchmarks {
 			RawOrigin::Root,
 			impl_address,
 			impl_code_hash,
-			Some(Initializer { params, maximum_required_gas: 100000 }),
+			Initializer { params, maximum_required_gas: 100000 },
 		);
 
 		Ok(())
