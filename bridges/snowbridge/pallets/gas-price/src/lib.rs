@@ -11,6 +11,7 @@ use frame_support::pallet_prelude::ValueQuery;
 use frame_system::WeightInfo;
 pub use pallet::*;
 use snowbridge_core::{gwei, BaseFeePerGas, GasPriceProvider};
+use sp_arithmetic::traits::One;
 use sp_core::{Get, U256};
 use sp_runtime::{FixedU128, Saturating};
 
@@ -71,24 +72,32 @@ pub mod pallet {
 	impl<T: Config> GasPriceProvider for Pallet<T> {
 		fn update(value: U256, slot: u64) {
 			let mut accumulated_value: U256 = <AccumulatedGasPrice<T>>::get().value;
+			let last_updated_slot = <AccumulatedGasPrice<T>>::get().slot;
 			if accumulated_value.is_zero() {
 				accumulated_value = DefaultFeePerGas::get();
 			}
 
 			let fixed_value = FixedU128::from_inner(value.low_u128());
 			let mut accumulated_fixed_value = FixedU128::from_inner(accumulated_value.low_u128());
+			let scaling_factor = sp_std::cmp::max(
+				BLENDING_FACTOR,
+				sp_std::cmp::min(
+					FixedU128::one(),
+					FixedU128::from_rational((slot - last_updated_slot).into(), 8192),
+				),
+			);
 
 			if fixed_value > accumulated_fixed_value {
 				accumulated_fixed_value = accumulated_fixed_value.saturating_add(
 					fixed_value
 						.saturating_sub(accumulated_fixed_value)
-						.saturating_mul(BLENDING_FACTOR),
+						.saturating_mul(scaling_factor),
 				);
 			} else {
 				accumulated_fixed_value = accumulated_fixed_value.saturating_sub(
 					accumulated_fixed_value
 						.saturating_sub(fixed_value)
-						.saturating_mul(BLENDING_FACTOR),
+						.saturating_mul(scaling_factor),
 				);
 			}
 

@@ -4619,6 +4619,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "snowbridge-core",
+ "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",
