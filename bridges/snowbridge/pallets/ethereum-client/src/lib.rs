@@ -486,12 +486,11 @@ pub mod pallet {
 
 			if update.finalized_header.slot > latest_finalized_state.slot {
 				Self::store_finalized_header(update.finalized_header, update.block_roots_root)?;
+				T::GasPrice::update(
+					update.execution_header.base_fee_per_gas(),
+					update.finalized_header.slot,
+				);
 			}
-
-			T::GasPrice::update(
-				update.execution_header.base_fee_per_gas(),
-				update.finalized_header.slot,
-			);
 
 			Ok(())
 		}

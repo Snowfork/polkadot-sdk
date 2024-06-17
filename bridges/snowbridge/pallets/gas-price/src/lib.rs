@@ -76,7 +76,9 @@ pub mod pallet {
 			if accumulated_value.is_zero() {
 				accumulated_value = DefaultFeePerGas::get();
 			}
-
+			if slot <= last_updated_slot {
+				return
+			}
 			let fixed_value = FixedU128::from_inner(value.low_u128());
 			let mut accumulated_fixed_value = FixedU128::from_inner(accumulated_value.low_u128());
 			let scaling_factor = sp_std::cmp::max(
