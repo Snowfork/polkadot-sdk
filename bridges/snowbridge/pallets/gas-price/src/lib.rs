@@ -18,6 +18,7 @@ use sp_runtime::{FixedU128, Saturating};
 pub const LOG_TARGET: &str = "gas-price";
 
 const BLENDING_FACTOR: FixedU128 = FixedU128::from_rational(20, 100);
+const SLOTS_PER_SYNC_PERIOD: u128 = 8192;
 
 #[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
 pub struct DefaultFeePerGas;
@@ -70,40 +71,53 @@ pub mod pallet {
 	}
 
 	impl<T: Config> GasPriceProvider for Pallet<T> {
+		/// Update price with EMA https://en.wikipedia.org/wiki/Exponential_smoothing, algorithm detail:
+		/*
+		Window = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH
+		ScalingFactor = Max(0.2,(Min(1, (Update.Slot - LastUpdatedSlot) / Window))
+		EMA = EMA + ScalingFactor * (Update.GasPrice - EMA)
+		 */
 		fn update(value: U256, slot: u64) {
-			let mut accumulated_value: U256 = <AccumulatedGasPrice<T>>::get().value;
+			let accumulated_value: U256 = <AccumulatedGasPrice<T>>::get().value;
 			let last_updated_slot = <AccumulatedGasPrice<T>>::get().slot;
-			if accumulated_value.is_zero() {
-				accumulated_value = DefaultFeePerGas::get();
-			}
 			if slot <= last_updated_slot {
 				return
 			}
-			let fixed_value = FixedU128::from_inner(value.low_u128());
-			let mut accumulated_fixed_value = FixedU128::from_inner(accumulated_value.low_u128());
+			if accumulated_value.is_zero() {
+				<AccumulatedGasPrice<T>>::set(BaseFeePerGas { value, slot });
+				return
+			}
+
 			let scaling_factor = sp_std::cmp::max(
 				BLENDING_FACTOR,
 				sp_std::cmp::min(
 					FixedU128::one(),
-					FixedU128::from_rational((slot - last_updated_slot).into(), 8192),
+					FixedU128::from_rational(
+						(slot - last_updated_slot).into(),
+						SLOTS_PER_SYNC_PERIOD,
+					),
 				),
 			);
 
-			if fixed_value > accumulated_fixed_value {
-				accumulated_fixed_value = accumulated_fixed_value.saturating_add(
-					fixed_value
-						.saturating_sub(accumulated_fixed_value)
+			let low_u128_value = FixedU128::from_inner(value.low_u128());
+			let mut low_u128_accumulated_value =
+				FixedU128::from_inner(accumulated_value.low_u128());
+
+			if low_u128_value > low_u128_accumulated_value {
+				low_u128_accumulated_value = low_u128_accumulated_value.saturating_add(
+					low_u128_value
+						.saturating_sub(low_u128_accumulated_value)
 						.saturating_mul(scaling_factor),
 				);
 			} else {
-				accumulated_fixed_value = accumulated_fixed_value.saturating_sub(
-					accumulated_fixed_value
-						.saturating_sub(fixed_value)
+				low_u128_accumulated_value = low_u128_accumulated_value.saturating_sub(
+					low_u128_accumulated_value
+						.saturating_sub(low_u128_value)
 						.saturating_mul(scaling_factor),
 				);
 			}
 
-			let accumulated_value = U256::from(accumulated_fixed_value.into_inner());
+			let accumulated_value = U256::from(low_u128_accumulated_value.into_inner());
 			<AccumulatedGasPrice<T>>::set(BaseFeePerGas { value: accumulated_value, slot });
 
 			Self::deposit_event(Event::Updated { value, accumulated_value, slot });
