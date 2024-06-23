@@ -20,6 +20,7 @@ members = [
 	"primitives/ethereum",
 	"primitives/router",
 	"runtime/runtime-common",
+	"runtime/test-beefy",
 	"runtime/test-common",
 ]
 
