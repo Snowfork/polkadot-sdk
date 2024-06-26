@@ -176,27 +176,7 @@ parameter_types! {
 		multiplier: FixedU128::from_rational(1, 1),
 	};
 	pub DefaultFee: Asset = (Parent, 1_000_000_000).into();
-	pub MaxSendCostXcm: Xcm<()> =  vec![
-		ReceiveTeleportedAsset(DefaultFee::get().into()),
-		BuyExecution { fees: DefaultFee::get(), weight_limit: Unlimited },
-		DescendOrigin(PalletInstance(80).into()),
-		UniversalOrigin(GlobalConsensus(Ethereum { chain_id: 1 })),
-		ReserveAssetDeposited(DefaultFee::get().into()),
-		ClearOrigin,
-		DepositReserveAsset {
-			assets: Definite(DefaultFee::get().into()),
-			dest: Location::new(1, [Parachain(1000)]),
-			xcm: vec![
-				// Buy execution on target.
-				BuyExecution { fees: DefaultFee::get(), weight_limit: Unlimited },
-				// Deposit asset to beneficiary.
-				DepositAsset { assets: Definite(DefaultFee::get().into()), beneficiary: Location::default() },
-				// Forward message id to destination parachain.
-				SetTopic([0; 32]),
-			]
-			.into(),
-		},
-	].into();
+	pub MaxSendCost: u128 =  1;
 }
 
 pub const DOT: u128 = 10_000_000_000;
@@ -270,7 +250,7 @@ impl inbound_queue::Config for Test {
 	type LengthToFee = IdentityFee<u128>;
 	type MaxMessageSize = ConstU32<1024>;
 	type AssetTransactor = SuccessfulTransactor;
-	type MaxSendCostXcm = MaxSendCostXcm;
+	type MaxSendCost = MaxSendCost;
 }
 
 pub fn last_events(n: usize) -> Vec<RuntimeEvent> {

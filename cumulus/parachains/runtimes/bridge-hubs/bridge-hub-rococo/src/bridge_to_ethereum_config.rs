@@ -63,6 +63,7 @@ parameter_types! {
 		rewards: Rewards { local: 1 * UNITS, remote: meth(1) },
 		multiplier: FixedU128::from_rational(1, 1),
 	};
+	pub MaxSendCost: Balance =  UNITS / 10;
 }
 
 impl snowbridge_pallet_inbound_queue::Config for Runtime {
@@ -90,6 +91,7 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 	type WeightInfo = crate::weights::snowbridge_pallet_inbound_queue::WeightInfo<Runtime>;
 	type PricingParameters = EthereumSystem;
 	type AssetTransactor = <xcm_config::XcmConfig as xcm_executor::Config>::AssetTransactor;
+	type MaxSendCost = MaxSendCost;
 }
 
 impl snowbridge_pallet_outbound_queue::Config for Runtime {

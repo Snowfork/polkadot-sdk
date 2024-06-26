@@ -52,8 +52,8 @@ use sp_core::H160;
 use sp_runtime::traits::Zero;
 use sp_std::vec;
 use xcm::prelude::{
-	send_xcm, validate_send, Junction::*, Location, SendError as XcmpSendError, SendXcm, Xcm,
-	XcmContext, XcmHash, *,
+	send_xcm, Junction::*, Location, SendError as XcmpSendError, SendXcm, Xcm, XcmContext, XcmHash,
+	*,
 };
 use xcm_executor::traits::TransactAsset;
 
@@ -143,7 +143,7 @@ pub mod pallet {
 		type AssetTransactor: TransactAsset;
 
 		/// The most expensive xcm here only used to estimate send cost
-		type MaxSendCostXcm: Get<Xcm<()>>;
+		type MaxSendCost: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::hooks]
@@ -362,33 +362,13 @@ pub mod pallet {
 			})?;
 			Ok(())
 		}
-
-		pub fn calculate_send_cost(
-			para_id: ParaId,
-			xcm: Xcm<()>,
-		) -> Result<BalanceOf<T>, Error<T>> {
-			let dest = Location::new(1, [Parachain(para_id.into())]);
-			let (_, assets) = validate_send::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
-			ensure!(assets.len() == 1, Error::<T>::Send(SendError::Fees));
-			let fee = assets.get(0).unwrap();
-			let cost: u128 = match (*fee).fun {
-				Fungible(amount) => Some(amount),
-				_ => None,
-			}
-			.ok_or(Error::<T>::Send(SendError::Fees))?;
-			Ok(cost.saturated_into::<BalanceOf<T>>())
-		}
 	}
 
 	/// API for accessing the delivery cost of a message
 	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
 		fn get() -> BalanceOf<T> {
-			// Cost here based on MaxMessagePayloadSize(the worst case)
-			let delivery_cost = Self::calculate_delivery_cost(T::MaxMessageSize::get());
-			// Cost here based on MaxSendCostXcm(the worst case)
-			let send_cost = Self::calculate_send_cost(1000_u32.into(), T::MaxSendCostXcm::get())
-				.unwrap_or_default();
-			delivery_cost.saturating_add(send_cost)
+			Self::calculate_delivery_cost(T::MaxMessageSize::get())
+				.saturating_add(T::MaxSendCost::get())
 		}
 	}
 }

@@ -3073,6 +3073,7 @@ name = "pallet-migrations"
 version = "1.0.0"
 dependencies = [
  "docify",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
@@ -4748,6 +4749,7 @@ dependencies = [
  "snowbridge-core",
  "snowbridge-pallet-ethereum-client",
  "snowbridge-pallet-ethereum-client-fixtures",
+ "snowbridge-pallet-inbound-queue",
  "snowbridge-pallet-outbound-queue",
  "snowbridge-pallet-system",
  "sp-core",

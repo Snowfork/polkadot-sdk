@@ -595,11 +595,7 @@ where
 					<Runtime as snowbridge_pallet_inbound_queue::Config>::MaxMessageSize::get(),
 				);
 			let inbound_send_cost =
-				<snowbridge_pallet_inbound_queue::Pallet<Runtime>>::calculate_send_cost(
-					1000.into(),
-					<Runtime as snowbridge_pallet_inbound_queue::Config>::MaxSendCostXcm::get(),
-				)
-				.unwrap();
+				<Runtime as snowbridge_pallet_inbound_queue::Config>::MaxSendCost::get();
 			let outbound_delivery_cost =
 				<snowbridge_pallet_outbound_queue::Pallet<Runtime>>::calculate_local_fee();
 
