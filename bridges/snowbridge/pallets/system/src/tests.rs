@@ -92,7 +92,10 @@ fn upgrade_as_root() {
 		System::assert_last_event(RuntimeEvent::EthereumSystem(crate::Event::Upgrade {
 			impl_address: address,
 			impl_code_hash: code_hash,
-			initializer_params_hash: hex!("0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8").into()
+			initializer_params_hash: hex!(
+				"0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8"
+			)
+			.into(),
 		}));
 	});
 }
@@ -104,7 +107,10 @@ fn upgrade_as_signed_fails() {
 		let address: H160 = Default::default();
 		let code_hash: H256 = Default::default();
 
-		assert_noop!(EthereumSystem::upgrade(origin, address, code_hash, Default::default()), BadOrigin);
+		assert_noop!(
+			EthereumSystem::upgrade(origin, address, code_hash, Default::default()),
+			BadOrigin
+		);
 	});
 }
 
