@@ -30,10 +30,10 @@ mod benchmarks {
 			command: Command::Upgrade {
 				impl_address: H160::zero(),
 				impl_code_hash: H256::zero(),
-				initializer: Some(Initializer {
+				initializer: Initializer {
 					params: [7u8; 256].into_iter().collect(),
 					maximum_required_gas: 200_000,
-				}),
+				},
 			},
 		};
 		let origin = AggregateMessageOrigin::Snowbridge([1; 32].into());
