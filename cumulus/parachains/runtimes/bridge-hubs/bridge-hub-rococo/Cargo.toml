@@ -13,7 +13,7 @@ workspace = true
 substrate-wasm-builder = { path = "../../../../../substrate/utils/wasm-builder", optional = true }
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = [
 	"derive",
 ] }
 hex-literal = { version = "0.4.1" }
@@ -22,6 +22,7 @@ scale-info = { version = "2.11.1", default-features = false, features = [
 	"derive",
 ] }
 serde = { optional = true, features = ["derive"], workspace = true, default-features = true }
+tuplex = { version = "0.1", default-features = false }
 
 # Substrate
 frame-benchmarking = { path = "../../../../../substrate/frame/benchmarking", default-features = false, optional = true }
@@ -36,6 +37,7 @@ pallet-authorship = { path = "../../../../../substrate/frame/authorship", defaul
 pallet-balances = { path = "../../../../../substrate/frame/balances", default-features = false }
 pallet-session = { path = "../../../../../substrate/frame/session", default-features = false }
 pallet-message-queue = { path = "../../../../../substrate/frame/message-queue", default-features = false }
+pallet-migrations = { path = "../../../../../substrate/frame/migrations", default-features = false }
 pallet-multisig = { path = "../../../../../substrate/frame/multisig", default-features = false }
 pallet-timestamp = { path = "../../../../../substrate/frame/timestamp", default-features = false }
 pallet-transaction-payment = { path = "../../../../../substrate/frame/transaction-payment", default-features = false }
@@ -68,9 +70,7 @@ xcm-executor = { package = "staging-xcm-executor", path = "../../../../../polkad
 
 # Cumulus
 cumulus-pallet-aura-ext = { path = "../../../../pallets/aura-ext", default-features = false }
-cumulus-pallet-parachain-system = { path = "../../../../pallets/parachain-system", default-features = false, features = [
-	"parameterized-consensus-hook",
-] }
+cumulus-pallet-parachain-system = { path = "../../../../pallets/parachain-system", default-features = false }
 cumulus-pallet-session-benchmarking = { path = "../../../../pallets/session-benchmarking", default-features = false }
 cumulus-pallet-xcm = { path = "../../../../pallets/xcm", default-features = false }
 cumulus-pallet-xcmp-queue = { path = "../../../../pallets/xcmp-queue", default-features = false, features = [
@@ -176,6 +176,7 @@ std = [
 	"pallet-bridge-relayers/std",
 	"pallet-collator-selection/std",
 	"pallet-message-queue/std",
+	"pallet-migrations/std",
 	"pallet-multisig/std",
 	"pallet-session/std",
 	"pallet-timestamp/std",
@@ -218,6 +219,7 @@ std = [
 	"sp-version/std",
 	"substrate-wasm-builder",
 	"testnet-parachains-constants/std",
+	"tuplex/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
@@ -242,6 +244,7 @@ runtime-benchmarks = [
 	"pallet-bridge-relayers/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
 	"pallet-message-queue/runtime-benchmarks",
+	"pallet-migrations/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
@@ -282,6 +285,7 @@ try-runtime = [
 	"pallet-bridge-relayers/try-runtime",
 	"pallet-collator-selection/try-runtime",
 	"pallet-message-queue/try-runtime",
+	"pallet-migrations/try-runtime",
 	"pallet-multisig/try-runtime",
 	"pallet-session/try-runtime",
 	"pallet-timestamp/try-runtime",
