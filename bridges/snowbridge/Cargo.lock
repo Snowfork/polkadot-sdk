@@ -3069,6 +3069,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-migrations"
+version = "1.0.0"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 14.0.0",
+]
+
+[[package]]
 name = "pallet-session"
 version = "28.0.0"
 dependencies = [
@@ -4568,7 +4585,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "log",
- "pallet-timestamp",
+ "pallet-migrations",
  "parity-scale-codec",
  "rand",
  "scale-info",
