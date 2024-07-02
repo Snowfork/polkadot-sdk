@@ -337,6 +337,7 @@ pub mod pallet {
 			weight_fee
 				.saturating_add(len_fee)
 				.saturating_add(T::PricingParameters::get().rewards.local)
+				.saturating_add(T::MaxSendCost::get())
 		}
 
 		/// Burn the amount of the fee embedded into the XCM for teleports
@@ -368,7 +369,6 @@ pub mod pallet {
 	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
 		fn get() -> BalanceOf<T> {
 			Self::calculate_delivery_cost(T::MaxMessageSize::get())
-				.saturating_add(T::MaxSendCost::get())
 		}
 	}
 }
