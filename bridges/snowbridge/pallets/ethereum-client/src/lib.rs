@@ -41,7 +41,7 @@ use primitives::{
 	fast_aggregate_verify, verify_merkle_branch, verify_receipt_proof, BeaconHeader, BlsError,
 	CompactBeaconState, ForkData, ForkVersion, ForkVersions, PublicKeyPrepared, SigningData,
 };
-use snowbridge_core::{BasicOperatingMode, GasPriceProvider, RingBufferMap};
+use snowbridge_core::{BasicOperatingMode, GasPriceEstimator, RingBufferMap};
 use sp_core::H256;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
@@ -62,6 +62,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use sp_runtime::traits::UniqueSaturatedInto;
 
 	#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
 	#[codec(mel_bound(T: Config))]
@@ -82,7 +83,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
-		type GasPrice: GasPriceProvider;
+		type GasPrice: GasPriceEstimator;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -487,8 +488,7 @@ pub mod pallet {
 			if update.finalized_header.slot > latest_finalized_state.slot {
 				Self::store_finalized_header(update.finalized_header, update.block_roots_root)?;
 				T::GasPrice::update(
-					update.execution_header.base_fee_per_gas(),
-					update.finalized_header.slot,
+					update.execution_header.base_fee_per_gas().unique_saturated_into(),
 				);
 			}
 

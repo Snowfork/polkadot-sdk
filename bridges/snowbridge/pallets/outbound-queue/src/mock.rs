@@ -30,7 +30,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
 		OutboundQueue: crate::{Pallet, Storage, Event<T>},
-		GasPrice: snowbridge_pallet_gas_price::{Pallet, Call, Storage, Event<T>},
+		GasPrice: snowbridge_pallet_gas_price::{Pallet, Storage, Event<T>},
 	}
 );
 
@@ -96,9 +96,16 @@ impl crate::Config for Test {
 	type GasPrice = GasPrice;
 }
 
+parameter_types! {
+	pub const SS58Prefix: u8 = 42;
+	pub const WeightingFactor: FixedU128 = FixedU128::from_rational(2, 10);
+	pub const BaseFeeMultiplier: FixedU128 = FixedU128::from_rational(4, 3);
+}
+
 impl snowbridge_pallet_gas_price::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
+	type WeightingFactor = WeightingFactor;
+	type BaseFeeMultiplier = BaseFeeMultiplier;
 }
 
 fn setup() {

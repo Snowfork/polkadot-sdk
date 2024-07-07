@@ -65,7 +65,6 @@ frame_support::construct_runtime!(
 		System: frame_system,
 		EthereumBeaconClient: crate,
 		Migrator: pallet_migrations,
-		GasPrice: snowbridge_pallet_gas_price::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -73,11 +72,6 @@ frame_support::construct_runtime!(
 impl frame_system::Config for Test {
 	type Block = Block;
 	type MultiBlockMigrator = Migrator;
-}
-
-impl snowbridge_pallet_gas_price::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -108,8 +102,8 @@ parameter_types! {
 impl ethereum_beacon_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
+	type GasPrice = ();
 	type WeightInfo = ();
-	type GasPrice = GasPrice;
 }
 
 parameter_types! {
