@@ -49,7 +49,7 @@ pub mod pallet {
 
 	#[pallet::type_value]
 	pub fn InitialBaseFee() -> u128 {
-		60.saturating_mul(GWEI)
+		20.saturating_mul(GWEI)
 	}
 
 	#[pallet::storage]

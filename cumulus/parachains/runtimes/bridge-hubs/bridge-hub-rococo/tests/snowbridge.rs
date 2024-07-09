@@ -37,7 +37,7 @@ use sp_runtime::{
 };
 
 parameter_types! {
-		pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+		pub const DefaultBridgeHubEthereumBaseFee: Balance = 5_000_000_000_000;
 }
 
 fn collator_session_keys() -> bridge_hub_test_utils::CollatorSessionKeys<Runtime> {
