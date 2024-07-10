@@ -3,7 +3,7 @@
 use crate as snowbridge_system;
 use frame_support::{
 	derive_impl, parameter_types,
-	traits::{tokens::fungible::Mutate, ConstU128, ConstU8, Get},
+	traits::{tokens::fungible::Mutate, ConstU128, ConstU8},
 	weights::IdentityFee,
 	PalletId,
 };
@@ -11,8 +11,8 @@ use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
 use snowbridge_core::{
-	gwei, meth, outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly,
-	ParaId, PricingParameters, Rewards, U256,
+	meth, outbound::ConstantGasMeter, sibling_sovereign_account, AgentId, AllowSiblingsOnly,
+	ParaId, PricingParameters, Rewards,
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, Keccak256},
@@ -157,14 +157,6 @@ parameter_types! {
 	pub const OwnParaId: ParaId = ParaId::new(1013);
 }
 
-#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
-pub struct ConstGasPrice;
-impl Get<U256> for ConstGasPrice {
-	fn get() -> U256 {
-		gwei(20)
-	}
-}
-
 impl snowbridge_pallet_outbound_queue::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Hashing = Keccak256;
@@ -176,7 +168,7 @@ impl snowbridge_pallet_outbound_queue::Config for Test {
 	type Balance = u128;
 	type PricingParameters = EthereumSystem;
 	type Channels = EthereumSystem;
-	type GasPrice = ConstGasPrice;
+	type GasPrice = ();
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 }

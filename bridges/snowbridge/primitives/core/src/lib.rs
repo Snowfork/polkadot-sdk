@@ -35,7 +35,7 @@ use xcm_builder::{DescribeAllTerminal, DescribeFamily, DescribeLocation, HashedD
 pub type AgentId = H256;
 pub use operating_mode::BasicOperatingMode;
 
-pub use pricing::{BaseFeePerGas, GasPriceProvider, PricingParameters, Rewards};
+pub use pricing::{PricingParameters, Rewards};
 
 pub fn sibling_sovereign_account<T>(para_id: ParaId) -> T::AccountId
 where
@@ -51,8 +51,10 @@ impl Contains<Location> for AllowSiblingsOnly {
 	}
 }
 
+pub const GWEI: u128 = 1_000_000_000u128;
+
 pub fn gwei(x: u128) -> U256 {
-	U256::from(1_000_000_000u128).saturating_mul(x.into())
+	U256::from(GWEI).saturating_mul(x.into())
 }
 
 pub fn meth(x: u128) -> U256 {
@@ -164,3 +166,26 @@ impl DescribeLocation for DescribeHere {
 /// Creates an AgentId from a Location. An AgentId is a unique mapping to a Agent contract on
 /// Ethereum which acts as the sovereign account for the Location.
 pub type AgentIdOf = HashedDescription<H256, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
+
+/// A trait for retrieving the base fee per gas.
+pub trait GasPriceEstimator {
+	/// Estimate the EIP-1559 maximum fee
+	fn max_fee() -> u128;
+	/// Estimate the EIP-1559 base fee
+	fn base_fee() -> u128;
+	/// Improve the estimated fees by adding EIP-1559 `BaseFeePerGas` values.
+	fn update(base_fee_per_gas: u128);
+}
+
+#[cfg(feature = "std")]
+impl GasPriceEstimator for () {
+	fn max_fee() -> u128 {
+		0
+	}
+
+	fn base_fee() -> u128 {
+		0
+	}
+
+	fn update(_: u128) {}
+}

@@ -36,7 +36,6 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		EthereumBeaconClient: snowbridge_pallet_ethereum_client::{Pallet, Call, Storage, Event<T>},
 		InboundQueue: inbound_queue::{Pallet, Call, Storage, Event<T>},
-		GasPrice: snowbridge_pallet_gas_price::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -107,16 +106,11 @@ parameter_types! {
 	};
 }
 
-impl snowbridge_pallet_gas_price::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
-}
-
 impl snowbridge_pallet_ethereum_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
+	type GasPrice = ();
 	type WeightInfo = ();
-	type GasPrice = GasPrice;
 }
 
 // Mock verifier
@@ -133,7 +127,7 @@ const GATEWAY_ADDRESS: [u8; 20] = hex!["eda338e4dc46038493b885327842fd3e301cab39
 parameter_types! {
 	pub const EthereumNetwork: xcm::v3::NetworkId = xcm::v3::NetworkId::Ethereum { chain_id: 11155111 };
 	pub const GatewayAddress: H160 = H160(GATEWAY_ADDRESS);
-	pub const CreateAssetCall: [u8;2] = [53, 0];
+	pub const CreateAssetCall: [u8; 2] = [53, 0];
 	pub const CreateAssetExecutionFee: u128 = 2_000_000_000;
 	pub const CreateAssetDeposit: u128 = 100_000_000_000;
 	pub const SendTokenExecutionFee: u128 = 1_000_000_000;

@@ -180,9 +180,15 @@ impl snowbridge_pallet_system::Config for Runtime {
 	type InboundDeliveryCost = EthereumInboundQueue;
 }
 
+parameter_types! {
+	pub const WeightingFactor: FixedU128 = FixedU128::from_rational(2, 10);
+	pub const BaseFeeMultiplier: FixedU128 = FixedU128::from_rational(4, 3);
+}
+
 impl snowbridge_pallet_gas_price::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
+	type WeightingFactor = WeightingFactor;
+	type BaseFeeMultiplier = BaseFeeMultiplier;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

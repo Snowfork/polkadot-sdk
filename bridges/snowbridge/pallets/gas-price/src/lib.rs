@@ -2,37 +2,24 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod ema;
 #[cfg(test)]
 pub mod mock;
 #[cfg(test)]
 mod test;
 
-use frame_support::pallet_prelude::ValueQuery;
-use frame_system::WeightInfo;
 pub use pallet::*;
-use snowbridge_core::{gwei, BaseFeePerGas, GasPriceProvider};
+use snowbridge_core::{GasPriceEstimator, GWEI};
 use sp_arithmetic::traits::One;
-use sp_core::{Get, U256};
+use sp_core::Get;
 use sp_runtime::{FixedU128, Saturating};
-
-pub const LOG_TARGET: &str = "gas-price";
-
-const BLENDING_FACTOR: FixedU128 = FixedU128::from_rational(20, 100);
-const SLOTS_PER_SYNC_PERIOD: u128 = 8192;
-
-#[derive(scale_info::TypeInfo, codec::Encode, codec::Decode, codec::MaxEncodedLen)]
-pub struct DefaultFeePerGas;
-impl Get<U256> for DefaultFeePerGas {
-	fn get() -> U256 {
-		gwei(20)
-	}
-}
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 
 	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -40,87 +27,75 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		type WeightInfo: WeightInfo;
+
+		/// The weighting factor used to compute the EMA of the EIP-1559 `BaseFeePerGas` variable.
+		#[pallet::constant]
+		type WeightingFactor: Get<FixedU128>;
+
+		/// The multiplier used to compute an estimate of the EIP-1559 `MaxFeePerGas` variable
+		#[pallet::constant]
+		type BaseFeeMultiplier: Get<FixedU128>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Updated { value: U256, accumulated_value: U256, slot: u64 },
+		/// The average base fee has been updated
+		Updated { average_base_fee: u128 },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {}
 
-	/// Gas price
+	#[pallet::type_value]
+	pub fn InitialBaseFee() -> u128 {
+		20.saturating_mul(GWEI)
+	}
+
 	#[pallet::storage]
-	#[pallet::getter(fn gas_price)]
-	pub(super) type AccumulatedGasPrice<T: Config> = StorageValue<_, BaseFeePerGas, ValueQuery>;
+	pub(super) type AverageBaseFee<T: Config> = StorageValue<_, u128, ValueQuery, InitialBaseFee>;
 
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {}
-
-	impl<T: Config> Get<U256> for Pallet<T> {
-		fn get() -> U256 {
-			let mut accumulated_value: U256 = AccumulatedGasPrice::<T>::get().value;
-			if accumulated_value.is_zero() {
-				accumulated_value = DefaultFeePerGas::get();
-			}
-			accumulated_value
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn integrity_test() {
+			assert!(T::WeightingFactor::get() <= FixedU128::one());
+			assert!(T::BaseFeeMultiplier::get() >= FixedU128::one());
 		}
 	}
 
-	impl<T: Config> GasPriceProvider for Pallet<T> {
-		/// Update price with EMA https://en.wikipedia.org/wiki/Exponential_smoothing, algorithm detail:
-		/*
-		Window = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH
-		ScalingFactor = Max(0.2,(Min(1, (Update.Slot - LastUpdatedSlot) / Window))
-		EMA = EMA + ScalingFactor * (Update.GasPrice - EMA)
-		 */
-		fn update(value: U256, slot: u64) {
-			let accumulated_value: U256 = <AccumulatedGasPrice<T>>::get().value;
-			let last_updated_slot = <AccumulatedGasPrice<T>>::get().slot;
-			if slot <= last_updated_slot {
-				return
-			}
-			if accumulated_value.is_zero() {
-				<AccumulatedGasPrice<T>>::set(BaseFeePerGas { value, slot });
-				return
-			}
+	impl<T: Config> Pallet<T> {
+		/// Estimate the EIP-1559 `MaxFeePerGas` variable
+		fn estimate_max_fee() -> u128 {
+			let average_base_fee = FixedU128::from_inner(AverageBaseFee::<T>::get());
+			T::BaseFeeMultiplier::get().saturating_mul(average_base_fee).into_inner()
+		}
 
-			let scaling_factor = sp_std::cmp::max(
-				BLENDING_FACTOR,
-				sp_std::cmp::min(
-					FixedU128::one(),
-					FixedU128::from_rational(
-						(slot - last_updated_slot).into(),
-						SLOTS_PER_SYNC_PERIOD,
-					),
-				),
-			);
+		/// Update the EMA of the EIP-1559 `BaseFeePerGas` variable
+		fn do_update(base_fee: u128) {
+			let average_base_fee = ema::step(
+				T::WeightingFactor::get(),
+				FixedU128::from_inner(AverageBaseFee::<T>::get()),
+				FixedU128::from_inner(base_fee),
+			)
+			.into_inner();
 
-			let low_u128_value = FixedU128::from_inner(value.low_u128());
-			let mut low_u128_accumulated_value =
-				FixedU128::from_inner(accumulated_value.low_u128());
+			AverageBaseFee::<T>::put(average_base_fee);
 
-			if low_u128_value > low_u128_accumulated_value {
-				low_u128_accumulated_value = low_u128_accumulated_value.saturating_add(
-					low_u128_value
-						.saturating_sub(low_u128_accumulated_value)
-						.saturating_mul(scaling_factor),
-				);
-			} else {
-				low_u128_accumulated_value = low_u128_accumulated_value.saturating_sub(
-					low_u128_accumulated_value
-						.saturating_sub(low_u128_value)
-						.saturating_mul(scaling_factor),
-				);
-			}
+			Self::deposit_event(Event::Updated { average_base_fee });
+		}
+	}
 
-			let accumulated_value = U256::from(low_u128_accumulated_value.into_inner());
-			<AccumulatedGasPrice<T>>::set(BaseFeePerGas { value: accumulated_value, slot });
+	impl<T: Config> GasPriceEstimator for Pallet<T> {
+		fn update(base_fee_per_gas: u128) {
+			Self::do_update(base_fee_per_gas)
+		}
 
-			Self::deposit_event(Event::Updated { value, accumulated_value, slot });
+		fn max_fee() -> u128 {
+			Self::estimate_max_fee()
+		}
+
+		fn base_fee() -> u128 {
+			AverageBaseFee::<T>::get()
 		}
 	}
 }

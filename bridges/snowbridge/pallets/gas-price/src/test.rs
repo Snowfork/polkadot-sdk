@@ -2,35 +2,22 @@ use super::*;
 use crate::mock::*;
 
 #[test]
-fn update_value_works() {
+fn estimate_max_fee() {
 	new_test_ext().execute_with(|| {
-		GasPrice::update(gwei(25), 20);
-		let price = GasPrice::get();
-		assert_eq!(price, gwei(25));
-		GasPrice::update(gwei(25), 30);
-		let price = GasPrice::get();
-		assert_eq!(price, gwei(25));
+		AverageBaseFee::<Test>::put(60 * GWEI);
+		assert_eq!(GasPrice::max_fee(), 79999999999);
+	});
+}
 
-		// Update with price increased, the updated value should be more than the previous but less
-		// than the updating one
-		GasPrice::update(gwei(30), 40);
-		let price = GasPrice::get();
-		assert_eq!(price, gwei(26));
+#[test]
+fn update_base_fee() {
+	new_test_ext().execute_with(|| {
+		AverageBaseFee::<Test>::put(60 * GWEI);
 
-		// Update with price decreased, the updated value should be less than the previous but more
-		// than the updating one
-		GasPrice::update(gwei(20), 50);
-		let price = GasPrice::get();
-		assert_eq!(price, 24800000000_u128.into());
+		GasPrice::update(90 * GWEI);
+		assert_eq!(GasPrice::base_fee(), 66000000000);
 
-		// Update with a large interval, the new value should dominate the EMA
-		GasPrice::update(gwei(3), 50 + 8192);
-		let price = GasPrice::get();
-		assert_eq!(price, gwei(3).into());
-
-		// Update with an outdated price, the new value won't change
-		GasPrice::update(gwei(5), 50 + 8192 - 5);
-		let price = GasPrice::get();
-		assert_eq!(price, gwei(3).into());
+		GasPrice::update(90 * GWEI);
+		assert_eq!(GasPrice::base_fee(), 70800000000);
 	});
 }
