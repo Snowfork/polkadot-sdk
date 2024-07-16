@@ -94,6 +94,8 @@ bp-asset-hub-westend = { path = "../../../../../bridges/chains/chain-asset-hub-w
 bp-bridge-hub-rococo = { path = "../../../../../bridges/chains/chain-bridge-hub-rococo", default-features = false }
 bp-bridge-hub-westend = { path = "../../../../../bridges/chains/chain-bridge-hub-westend", default-features = false }
 snowbridge-router-primitives = { path = "../../../../../bridges/snowbridge/primitives/router", default-features = false }
+snowbridge-pallet-xcm-helper = { path = "../../../../../bridges/snowbridge/pallets/xcm-helper", default-features = false }
+
 
 [dev-dependencies]
 asset-test-utils = { path = "../test-utils" }
@@ -227,6 +229,7 @@ std = [
 	"primitive-types/std",
 	"rococo-runtime-constants/std",
 	"scale-info/std",
+	"snowbridge-pallet-xcm-helper/std",
 	"snowbridge-router-primitives/std",
 	"sp-api/std",
 	"sp-block-builder/std",

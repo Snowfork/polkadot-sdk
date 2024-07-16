@@ -507,6 +507,35 @@ impl pallet_assets::BenchmarkHelper<xcm::v3::Location> for XcmBenchmarkHelper {
 	}
 }
 
+parameter_types! {
+	pub EthereumLocation: Location = Location {
+				parents: 2,
+				interior: Junctions::from([GlobalConsensus(Ethereum { chain_id: 11155111 })]),
+	};
+}
+
+impl snowbridge_pallet_xcm_helper::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
+	type XcmRouter = WithUniqueTopic<
+		SovereignPaidRemoteExporter<
+			bridging::EthereumNetworkExportTable,
+			XcmpQueue,
+			UniversalLocation,
+		>,
+	>;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type Weigher = WeightInfoBounds<
+		crate::weights::xcm::AssetHubRococoXcmWeight<RuntimeCall>,
+		RuntimeCall,
+		MaxInstructions,
+	>;
+	type UniversalLocation = UniversalLocation;
+	type Destination = EthereumLocation;
+}
+
 /// All configuration related to bridging
 pub mod bridging {
 	use super::*;
