@@ -152,7 +152,6 @@ enum XcmConverterError {
 	ZeroAssetTransfer,
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
-	InvalidFeeAsset,
 	SetTopicExpected,
 }
 
