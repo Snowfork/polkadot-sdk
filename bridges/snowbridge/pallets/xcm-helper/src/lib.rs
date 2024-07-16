@@ -121,16 +121,11 @@ pub mod pallet {
 
 			// construct the inner xcm of ExportMessage
 			let transact = TransactInfo { target, call, gas_limit };
-			let mut message = Xcm(vec![Transact {
+			let message = Xcm(vec![Transact {
 				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: Weight::default(),
 				call: transact.encode().into(),
 			}]);
-			let message_clone = message.clone();
-			// Add SetTopic for tracing
-			let _ = &message
-				.inner_mut()
-				.push(SetTopic(message_clone.using_encoded(sp_io::hashing::blake2_256)));
 
 			Self::send_xcm(origin, dest, message, None)?;
 
