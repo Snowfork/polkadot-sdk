@@ -846,6 +846,7 @@ dependencies = [
  "primitive-types",
  "rococo-runtime-constants",
  "scale-info",
+ "snowbridge-pallet-xcm-helper",
  "snowbridge-router-primitives",
  "sp-api",
  "sp-block-builder",
@@ -19232,6 +19233,35 @@ dependencies = [
  "sp-runtime",
  "sp-std 14.0.0",
  "staging-xcm",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-pallet-xcm-helper"
+version = "0.2.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "log",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-message-queue",
+ "parity-scale-codec",
+ "polkadot-parachain-primitives",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "scale-info",
+ "snowbridge-core",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std 14.0.0",
+ "staging-xcm",
+ "staging-xcm-builder",
  "staging-xcm-executor",
 ]
 

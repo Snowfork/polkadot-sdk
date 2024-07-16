@@ -2878,6 +2878,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-assets"
+version = "29.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 14.0.0",
+]
+
+[[package]]
 name = "pallet-authority-discovery"
 version = "28.0.0"
 dependencies = [
@@ -3073,6 +3088,7 @@ name = "pallet-migrations"
 version = "1.0.0"
 dependencies = [
  "docify",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
@@ -4692,6 +4708,35 @@ dependencies = [
  "sp-runtime",
  "sp-std 14.0.0",
  "staging-xcm",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "snowbridge-pallet-xcm-helper"
+version = "0.2.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "hex-literal",
+ "log",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-message-queue",
+ "parity-scale-codec",
+ "polkadot-parachain-primitives",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "scale-info",
+ "snowbridge-core",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std 14.0.0",
+ "staging-xcm",
+ "staging-xcm-builder",
  "staging-xcm-executor",
 ]
 

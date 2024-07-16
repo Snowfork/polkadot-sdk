@@ -55,6 +55,7 @@ members = [
 	"bridges/snowbridge/pallets/outbound-queue/runtime-api",
 	"bridges/snowbridge/pallets/system",
 	"bridges/snowbridge/pallets/system/runtime-api",
+	"bridges/snowbridge/pallets/xcm-helper",
 	"bridges/snowbridge/primitives/beacon",
 	"bridges/snowbridge/primitives/core",
 	"bridges/snowbridge/primitives/ethereum",

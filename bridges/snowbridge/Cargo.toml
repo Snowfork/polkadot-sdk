@@ -15,6 +15,7 @@ members = [
 	"pallets/outbound-queue/runtime-api",
 	"pallets/system",
 	"pallets/system/runtime-api",
+	"pallets/xcm-helper",
 	"primitives/beacon",
 	"primitives/core",
 	"primitives/ethereum",
