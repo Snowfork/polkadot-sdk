@@ -42,6 +42,7 @@ const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const INSUFFICIENT_XCM_FEE: u128 = 1000;
 const XCM_FEE: u128 = 4_000_000_000;
+const ETHEREUM_EXECUTION_FEE: u128 = 2_750_872_500_000;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
 pub enum ControlCall {
@@ -433,7 +434,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
 			]
 		);
-		let assets = vec![Asset {
+		let asset = Asset {
 			id: AssetId(Location::new(
 				2,
 				[
@@ -442,30 +443,20 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 				],
 			)),
 			fun: Fungible(WETH_AMOUNT),
-		}];
-		let multi_assets = VersionedAssets::V4(Assets::from(assets));
-
-		let destination = VersionedLocation::V4(Location::new(
-			2,
-			[GlobalConsensus(Ethereum { chain_id: CHAIN_ID })],
-		));
-
-		let beneficiary = VersionedLocation::V4(Location::new(
-			0,
-			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
-		));
+		};
 
 		let free_balance_before = <AssetHubRococo as AssetHubRococoPallet>::Balances::free_balance(
 			AssetHubRococoReceiver::get(),
 		);
+
+		// Todo: Change fee asset to WETH and remove the exchange_rate config on BH
+		let fee_asset: Asset = (AssetId::from(Location::parent()), ETHEREUM_EXECUTION_FEE).into();
 		// Send the Weth back to Ethereum
-		<AssetHubRococo as AssetHubRococoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+		<AssetHubRococo as AssetHubRococoPallet>::SnowbridgeXcmHelper::transfer_to_ethereum(
 			RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
-			Box::new(destination),
-			Box::new(beneficiary),
-			Box::new(multi_assets),
-			0,
-			Unlimited,
+			ETHEREUM_DESTINATION_ADDRESS.into(),
+			Box::new(VersionedAsset::V4(asset)),
+			Box::new(VersionedAsset::V4(fee_asset)),
 		)
 		.unwrap();
 		let free_balance_after = <AssetHubRococo as AssetHubRococoPallet>::Balances::free_balance(
@@ -483,8 +474,8 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		assert_expected_events!(
 			BridgeHubRococo,
 			vec![
-				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
-			]
+				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued
+{..}) => {}, 			]
 		);
 		let events = BridgeHubRococo::events();
 		// Check that the local fee was credited to the Snowbridge sovereign account

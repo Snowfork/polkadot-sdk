@@ -48,6 +48,7 @@ decl_test_parachains! {
 			PoolAssets: asset_hub_rococo_runtime::PoolAssets,
 			AssetConversion: asset_hub_rococo_runtime::AssetConversion,
 			Balances: asset_hub_rococo_runtime::Balances,
+			SnowbridgeXcmHelper: asset_hub_rococo_runtime::SnowbridgeXcmHelper,
 		}
 	},
 }
