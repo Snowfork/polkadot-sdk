@@ -570,67 +570,6 @@ fn xcm_converter_convert_with_partial_message_yields_unexpected_end_of_xcm() {
 }
 
 #[test]
-fn xcm_converter_with_different_fee_asset_fails() {
-	let network = BridgedNetwork::get();
-
-	let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
-	let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
-
-	let asset_location = [AccountKey20 { network: None, key: token_address }].into();
-	let fee_asset =
-		Asset { id: AssetId(Location { parents: 0, interior: Here }), fun: Fungible(1000) };
-
-	let assets: Assets = vec![Asset { id: AssetId(asset_location), fun: Fungible(1000) }].into();
-
-	let filter: AssetFilter = assets.clone().into();
-
-	let message: Xcm<()> = vec![
-		WithdrawAsset(assets.clone()),
-		ClearOrigin,
-		BuyExecution { fees: fee_asset, weight_limit: Unlimited },
-		DepositAsset {
-			assets: filter,
-			beneficiary: AccountKey20 { network: None, key: beneficiary_address }.into(),
-		},
-		SetTopic([0; 32]),
-	]
-	.into();
-	let mut converter = XcmConverter::new(&message, &network);
-	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::InvalidFeeAsset));
-}
-
-#[test]
-fn xcm_converter_with_fees_greater_than_reserve_fails() {
-	let network = BridgedNetwork::get();
-
-	let token_address: [u8; 20] = hex!("1000000000000000000000000000000000000000");
-	let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
-
-	let asset_location: Location = [AccountKey20 { network: None, key: token_address }].into();
-	let fee_asset = Asset { id: AssetId(asset_location.clone()), fun: Fungible(1001) };
-
-	let assets: Assets = vec![Asset { id: AssetId(asset_location), fun: Fungible(1000) }].into();
-
-	let filter: AssetFilter = assets.clone().into();
-
-	let message: Xcm<()> = vec![
-		WithdrawAsset(assets.clone()),
-		ClearOrigin,
-		BuyExecution { fees: fee_asset, weight_limit: Unlimited },
-		DepositAsset {
-			assets: filter,
-			beneficiary: AccountKey20 { network: None, key: beneficiary_address }.into(),
-		},
-		SetTopic([0; 32]),
-	]
-	.into();
-	let mut converter = XcmConverter::new(&message, &network);
-	let result = converter.convert();
-	assert_eq!(result.err(), Some(XcmConverterError::InvalidFeeAsset));
-}
-
-#[test]
 fn xcm_converter_convert_with_empty_xcm_yields_unexpected_end_of_xcm() {
 	let network = BridgedNetwork::get();
 

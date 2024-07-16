@@ -434,14 +434,6 @@ impl xcm_executor::Config for XcmConfig {
 
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, AnyNetwork>;
 
-pub struct XcmTeleportFiltered;
-impl Contains<(Location, Vec<Asset>)> for XcmTeleportFiltered {
-	fn contains(t: &(Location, Vec<Asset>)) -> bool {
-		let filtered = FilteredTeleportAsset::get();
-		t.1.iter().any(|asset| asset == &filtered)
-	}
-}
-
 parameter_types! {
 	pub EthereumLocation: Location = Location {
 				parents: 2,
@@ -483,102 +475,12 @@ impl xcm_builder::EnsureDelivery for TestDeliveryHelper {
 	}
 }
 
-#[cfg(feature = "runtime-benchmarks")]
-impl super::benchmarking::Config for Test {
-	type DeliveryHelper = TestDeliveryHelper;
-
-	fn reachable_dest() -> Option<Location> {
-		Some(Parachain(1000).into())
-	}
-
-	fn teleportable_asset_and_dest() -> Option<(Asset, Location)> {
-		Some((NativeAsset::get(), SystemParachainLocation::get()))
-	}
-
-	fn reserve_transferable_asset_and_dest() -> Option<(Asset, Location)> {
-		Some((
-			Asset { fun: Fungible(10), id: AssetId(Here.into_location()) },
-			Parachain(OTHER_PARA_ID).into(),
-		))
-	}
-
-	fn set_up_complex_asset_transfer() -> Option<(Assets, u32, Location, Box<dyn FnOnce()>)> {
-		use crate::tests::assets_transfer::{into_assets_checked, set_up_foreign_asset};
-		// Transfer native asset (local reserve) to `USDT_PARA_ID`. Using teleport-trusted USDT for
-		// fees.
-
-		let asset_amount = 10u128;
-		let fee_amount = 2u128;
-
-		let existential_deposit = ExistentialDeposit::get();
-		let caller = frame_benchmarking::whitelisted_caller();
-
-		// Give some multiple of the existential deposit
-		let balance = asset_amount + existential_deposit * 1000;
-		let _ = <Balances as frame_support::traits::Currency<_>>::make_free_balance_be(
-			&caller, balance,
-		);
-		// create sufficient foreign asset USDT
-		let usdt_initial_local_amount = fee_amount * 10;
-		let (usdt_chain, _, usdt_id_location) = set_up_foreign_asset(
-			USDT_PARA_ID,
-			None,
-			caller.clone(),
-			usdt_initial_local_amount,
-			true,
-		);
-
-		// native assets transfer destination is USDT chain (teleport trust only for USDT)
-		let dest = usdt_chain;
-		let (assets, fee_index, _, _) = into_assets_checked(
-			// USDT for fees (is sufficient on local chain too) - teleported
-			(usdt_id_location.clone(), fee_amount).into(),
-			// native asset to transfer (not used for fees) - local reserve
-			(Location::here(), asset_amount).into(),
-		);
-		// verify initial balances
-		assert_eq!(Balances::free_balance(&caller), balance);
-		assert_eq!(
-			AssetsPallet::balance(usdt_id_location.clone(), &caller),
-			usdt_initial_local_amount
-		);
-
-		// verify transferred successfully
-		let verify = Box::new(move || {
-			// verify balances after transfer, decreased by transferred amounts
-			assert_eq!(Balances::free_balance(&caller), balance - asset_amount);
-			assert_eq!(
-				AssetsPallet::balance(usdt_id_location, &caller),
-				usdt_initial_local_amount - fee_amount
-			);
-		});
-		Some((assets, fee_index as u32, dest, verify))
-	}
-
-	fn get_asset() -> Asset {
-		Asset { id: AssetId(Location::here()), fun: Fungible(ExistentialDeposit::get()) }
-	}
-}
-
 pub(crate) fn last_event() -> RuntimeEvent {
 	System::events().pop().expect("RuntimeEvent expected").event
 }
 
 pub(crate) fn last_events(n: usize) -> Vec<RuntimeEvent> {
 	System::events().into_iter().map(|e| e.event).rev().take(n).rev().collect()
-}
-
-pub(crate) fn buy_execution<C>(fees: impl Into<Asset>) -> Instruction<C> {
-	use xcm::latest::prelude::*;
-	BuyExecution { fees: fees.into(), weight_limit: Unlimited }
-}
-
-pub(crate) fn buy_limited_execution<C>(
-	fees: impl Into<Asset>,
-	weight_limit: WeightLimit,
-) -> Instruction<C> {
-	use xcm::latest::prelude::*;
-	BuyExecution { fees: fees.into(), weight_limit }
 }
 
 pub(crate) fn new_test_ext_with_balances(

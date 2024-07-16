@@ -25,7 +25,7 @@ use bridge_hub_rococo_runtime::{
 	SignedExtra, UncheckedExtrinsic,
 };
 use codec::{Decode, Encode};
-use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
+use cumulus_primitives_core::XcmError::{FailedToTransactAsset, TooExpensive};
 use frame_support::parameter_types;
 use parachains_common::{AccountId, AuraId, Balance};
 use snowbridge_pallet_ethereum_client::WeightInfo;
@@ -90,8 +90,8 @@ pub fn transfer_token_to_ethereum_fee_not_enough() {
 		H160::random(),
 		H160::random(),
 		// fee not enough
-		1_000_000_000,
-		NotHoldingFees,
+		4_000_000,
+		TooExpensive,
 	)
 }
 
