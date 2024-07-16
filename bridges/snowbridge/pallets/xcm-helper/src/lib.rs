@@ -48,10 +48,13 @@ pub mod pallet {
 				PostInfo = PostDispatchInfo,
 			>;
 
+		/// Means of measuring the weight consumed by an XCM message locally.
 		type Weigher: WeightBounds<<Self as Config>::RuntimeCall>;
 
+		/// Universal location of this runtime.
 		type UniversalLocation: Get<InteriorLocation>;
 
+		/// Ethereum's location of this runtime.
 		type Destination: Get<Location>;
 	}
 
@@ -193,18 +196,19 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Send xcm to bridge hub with designated fee charged
 		fn send_xcm(
 			origin: Location,
 			dest: Location,
 			remote_xcm: Xcm<()>,
-			fee: Option<Asset>,
+			remote_fee: Option<Asset>,
 		) -> DispatchResult {
 			let (ticket, delivery_fee) =
 				validate_send::<T::XcmRouter>(dest.clone(), remote_xcm.clone())
 					.map_err(|_| Error::<T>::InvalidXcm)?;
 			Self::charge_fees(origin.clone(), delivery_fee).map_err(|_| Error::<T>::FeesNotMet)?;
 
-			if let Some(execution_fee) = fee {
+			if let Some(execution_fee) = remote_fee {
 				Self::charge_fees(origin.clone(), execution_fee.into())
 					.map_err(|_| Error::<T>::FeesNotMet)?;
 			}
@@ -219,6 +223,8 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Execute the transfer including the local xcm
+		/// and send the remote xcm to bridge hub
 		fn execute_xcm_transfer(
 			origin: Location,
 			dest: Location,
@@ -250,6 +256,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Build the Xcm, a local one and the remote one which will be sent to bridge hub
 		fn build_xcm_transfer(
 			origin: Location,
 			dest: Location,
@@ -285,6 +292,7 @@ pub mod pallet {
 			Ok((local, remote))
 		}
 
+		/// Construct Xcm for Polkadot native asset
 		fn local_reserve_transfer_programs(
 			_origin: Location,
 			dest: Location,
@@ -323,6 +331,7 @@ pub mod pallet {
 			Ok((local_execute_xcm, xcm_on_dest))
 		}
 
+		/// Construct Xcm for Ethereum native asset
 		fn destination_reserve_transfer_programs(
 			_origin: Location,
 			dest: Location,
