@@ -395,6 +395,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
 
 	const WETH_AMOUNT: u128 = 1_000_000_000;
+	const WETH_FEE_AMOUNT: u128 = 1_000_000_000;
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
@@ -440,7 +441,10 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 				AccountKey20 { network: None, key: WETH },
 			],
 		));
-		let assets = vec![Asset { id: weth_asset_id.clone(), fun: Fungible(WETH_AMOUNT) }];
+		let assets = vec![
+			Asset { id: weth_asset_id.clone(), fun: Fungible(WETH_FEE_AMOUNT) },
+			Asset { id: weth_asset_id.clone(), fun: Fungible(WETH_AMOUNT) },
+		];
 		let multi_assets = VersionedAssets::V4(Assets::from(assets));
 
 		let destination = VersionedLocation::V4(Location::new(
