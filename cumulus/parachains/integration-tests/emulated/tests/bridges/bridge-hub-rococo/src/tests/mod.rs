@@ -18,6 +18,7 @@ use crate::imports::*;
 mod asset_transfers;
 mod send_xcm;
 mod snowbridge;
+mod snowbridge_transfer_v2;
 mod teleport;
 
 pub(crate) fn asset_hub_westend_location() -> Location {
