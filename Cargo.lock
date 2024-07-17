@@ -1888,7 +1888,7 @@ dependencies = [
  "sp-state-machine",
  "sp-std 14.0.0",
  "sp-trie",
- "trie-db",
+ "trie-db 0.29.0",
 ]
 
 [[package]]
@@ -3941,7 +3941,7 @@ dependencies = [
  "sp-version",
  "staging-xcm",
  "staging-xcm-builder",
- "trie-db",
+ "trie-db 0.29.0",
  "trie-standardmap",
 ]
 
@@ -16019,6 +16019,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlp-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e33d7b2abe0c340d8797fe2907d3f20d3b5ea5908683618bfe80df7f621f672a"
+dependencies = [
+ "proc-macro2 1.0.82",
+ "quote 1.0.35",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "rocksdb"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -19051,11 +19062,14 @@ dependencies = [
  "ethabi-decode",
  "ethbloom",
  "ethereum-types",
+ "hash-db",
  "hex-literal",
+ "memory-db",
  "parity-bytes",
  "parity-scale-codec",
  "rand 0.8.5",
  "rlp",
+ "rlp-derive",
  "scale-info",
  "serde",
  "serde-big-array",
@@ -19063,6 +19077,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std 14.0.0",
+ "trie-db 0.28.0",
  "wasm-bindgen-test",
 ]
 
@@ -20241,7 +20256,7 @@ dependencies = [
  "sp-trie",
  "thiserror",
  "tracing",
- "trie-db",
+ "trie-db 0.29.0",
 ]
 
 [[package]]
@@ -20388,7 +20403,7 @@ dependencies = [
  "thiserror",
  "tracing",
  "trie-bench",
- "trie-db",
+ "trie-db 0.29.0",
  "trie-root",
  "trie-standardmap",
 ]
@@ -21023,7 +21038,7 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-trie",
- "trie-db",
+ "trie-db 0.29.0",
 ]
 
 [[package]]
@@ -21101,7 +21116,7 @@ dependencies = [
  "sp-version",
  "substrate-test-runtime-client",
  "substrate-wasm-builder",
- "trie-db",
+ "trie-db 0.29.0",
 ]
 
 [[package]]
@@ -22133,9 +22148,22 @@ dependencies = [
  "keccak-hasher",
  "memory-db",
  "parity-scale-codec",
- "trie-db",
+ "trie-db 0.29.0",
  "trie-root",
  "trie-standardmap",
+]
+
+[[package]]
+name = "trie-db"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff28e0f815c2fea41ebddf148e008b077d2faddb026c9555b29696114d602642"
+dependencies = [
+ "hash-db",
+ "hashbrown 0.13.2",
+ "log",
+ "rustc-hex",
+ "smallvec",
 ]
 
 [[package]]

@@ -27,11 +27,16 @@ sp-std = { path = "../../../../substrate/primitives/std", default-features = fal
 sp-runtime = { path = "../../../../substrate/primitives/runtime", default-features = false }
 
 ethabi = { package = "ethabi-decode", version = "1.0.0", default-features = false }
+trie-db = { version = "0.28.0", default-features = false }
+hash-db = { version = "0.16.0", default-features = false }
+memory-db = { version = "0.32.0", default-features = false }
+rlp-derive = "0.1.0"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.19"
 rand = "0.8.5"
 serde_json = { workspace = true, default-features = true }
+
 
 [features]
 default = ["std"]
@@ -41,6 +46,8 @@ std = [
 	"ethabi/std",
 	"ethbloom/std",
 	"ethereum-types/std",
+	"hash-db/std",
+	"memory-db/std",
 	"parity-bytes/std",
 	"rlp/std",
 	"scale-info/std",
@@ -49,4 +56,5 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"trie-db/std",
 ]

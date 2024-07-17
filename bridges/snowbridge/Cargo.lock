@@ -1197,7 +1197,7 @@ dependencies = [
  "sp-version",
  "staging-xcm",
  "staging-xcm-builder",
- "trie-db",
+ "trie-db 0.29.1",
 ]
 
 [[package]]
@@ -3073,6 +3073,7 @@ name = "pallet-migrations"
 version = "1.0.0"
 dependencies = [
  "docify",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
@@ -3985,6 +3986,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlp-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e33d7b2abe0c340d8797fe2907d3f20d3b5ea5908683618bfe80df7f621f672a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "ruint"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4511,11 +4523,15 @@ dependencies = [
  "ethabi-decode",
  "ethbloom",
  "ethereum-types",
+ "hash-db",
+ "hash256-std-hasher",
  "hex-literal",
+ "memory-db",
  "parity-bytes",
  "parity-scale-codec",
  "rand",
  "rlp",
+ "rlp-derive",
  "scale-info",
  "serde",
  "serde-big-array",
@@ -4523,6 +4539,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std 14.0.0",
+ "trie-db 0.28.0",
  "wasm-bindgen-test",
 ]
 
@@ -5260,7 +5277,7 @@ dependencies = [
  "sp-trie",
  "thiserror",
  "tracing",
- "trie-db",
+ "trie-db 0.29.1",
 ]
 
 [[package]]
@@ -5347,7 +5364,7 @@ dependencies = [
  "sp-externalities 0.25.0",
  "thiserror",
  "tracing",
- "trie-db",
+ "trie-db 0.29.1",
  "trie-root",
 ]
 
@@ -5887,6 +5904,19 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log 0.2.0",
+]
+
+[[package]]
+name = "trie-db"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff28e0f815c2fea41ebddf148e008b077d2faddb026c9555b29696114d602642"
+dependencies = [
+ "hash-db",
+ "hashbrown 0.13.2",
+ "log",
+ "rustc-hex",
+ "smallvec",
 ]
 
 [[package]]
