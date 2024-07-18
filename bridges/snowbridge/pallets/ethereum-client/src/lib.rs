@@ -441,6 +441,7 @@ pub mod pallet {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
+			let mut sync_committee_updated = false;
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
 				let store_period = compute_period(latest_finalized_state.slot);
 				let update_finalized_period = compute_period(update.finalized_header.slot);
@@ -467,11 +468,13 @@ pub mod pallet {
 				Self::deposit_event(Event::SyncCommitteeUpdated {
 					period: update_finalized_period,
 				});
+				sync_committee_updated = true;
 			};
 
 			let pays_fee = Self::may_refund_call_fee(
 				latest_finalized_state.slot,
 				update.finalized_header.slot,
+				sync_committee_updated,
 			);
 			let actual_weight = match update.next_sync_committee_update {
 				None => T::WeightInfo::submit(),
@@ -654,7 +657,16 @@ pub mod pallet {
 			Ok(signing_root)
 		}
 
-		pub(super) fn may_refund_call_fee(latest_slot: u64, improved_by_slot: u64) -> Pays {
+		pub(super) fn may_refund_call_fee(
+			latest_slot: u64,
+			improved_by_slot: u64,
+			sync_committee_updated: bool,
+		) -> Pays {
+			// If the sync committee was successfully updated, the update may be free.
+			if sync_committee_updated {
+				return Pays::No;
+			}
+
 			// If free headers are allowed and the latest finalized header is larger than the
 			// minimum slot interval, the header import transaction is free.
 			if let Some(free_headers_interval) = T::FreeHeadersInterval::get() {
