@@ -662,15 +662,16 @@ pub mod pallet {
 
 		pub(super) fn may_refund_call_fee(improved_by_slot: u64) -> bool {
 			// Get the latest stored finalized state.
-			let latest_finalized_state = match FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get()) {
-				Some(state) => state,
-				None => return false, // Unexpected, would have been checked before.
-			};
+			let latest_finalized_state =
+				match FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get()) {
+					Some(state) => state,
+					None => return false, // Unexpected, would have been checked before.
+				};
 
 			// If free headers are allowed and the latest finalized header is larger than the
 			// minimum slot interval, the header import transaction is free.
 			if let Some(free_headers_interval) = T::FreeHeadersInterval::get() {
-				if latest_finalized_state.slot + free_headers_interval as u64 >= improved_by_slot {
+				if improved_by_slot >= latest_finalized_state.slot + free_headers_interval as u64 {
 					return true;
 				}
 			}

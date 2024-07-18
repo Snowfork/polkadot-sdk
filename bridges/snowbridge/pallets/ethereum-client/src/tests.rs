@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 use crate::{
-	functions::compute_period, sync_committee_sum, verify_merkle_branch, BeaconHeader,
-	CompactBeaconState, Error, FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee,
-	SyncCommitteePrepared,
-};
-
-use crate::mock::{
-	get_message_verification_payload, load_checkpoint_update_fixture,
-	load_finalized_header_update_fixture, load_next_finalized_header_update_fixture,
-	load_next_sync_committee_update_fixture, load_sync_committee_update_fixture,
+	functions::compute_period,
+	mock::{
+		get_message_verification_payload, load_checkpoint_update_fixture,
+		load_finalized_header_update_fixture, load_next_finalized_header_update_fixture,
+		load_next_sync_committee_update_fixture, load_sync_committee_update_fixture,
+	},
+	sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState, Error,
+	FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared,
 };
 
 pub use crate::mock::*;
@@ -126,6 +125,25 @@ pub fn compute_domain_bls() {
 			domain.unwrap(),
 			hex!("07000000afcaaba0efab1ca832a15152469bb09bb84641c405171dfa2d3fb45f").into()
 		);
+	});
+}
+
+#[test]
+pub fn may_refund_call_fee() {
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let update = Box::new(load_sync_committee_update_fixture());
+
+	new_tester().execute_with(|| {
+		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_ok!(EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone()));
+
+		let last_finalized_state =
+			FinalizedBeaconState::<Test>::get(LatestFinalizedBlockRoot::<Test>::get()).unwrap();
+
+		// Not free, smaller than the allowed free header interval
+		assert!(!EthereumBeaconClient::may_refund_call_fee(last_finalized_state.slot + 30));
+		// Is free, larger than the minimum interval
+		assert!(EthereumBeaconClient::may_refund_call_fee(last_finalized_state.slot + 200));
 	});
 }
 

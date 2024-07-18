@@ -13,10 +13,9 @@ use std::{fs::File, path::PathBuf};
 type Block = frame_system::mocking::MockBlock<Test>;
 use frame_support::{
 	migrations::MultiStepMigrator,
-	traits::{OnFinalize, OnInitialize},
+	traits::{ConstU32, OnFinalize, OnInitialize},
 };
 use sp_runtime::BuildStorage;
-use frame_support::traits::ConstU32;
 
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
 where
@@ -103,7 +102,7 @@ parameter_types! {
 impl ethereum_beacon_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
-	type FreeHeadersInterval = ConstU32<5>;
+	type FreeHeadersInterval = ConstU32<96>;
 	type WeightInfo = ();
 }
 
