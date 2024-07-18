@@ -34,7 +34,7 @@ mod tests;
 mod benchmarking;
 
 use frame_support::{
-	dispatch::DispatchResult, pallet_prelude::OptionQuery, traits::Get, transactional,
+	dispatch::{DispatchResult, PostDispatchInfo}, pallet_prelude::OptionQuery, traits::Get, transactional,
 };
 use frame_system::ensure_signed;
 use primitives::{
@@ -84,6 +84,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
 		type WeightInfo: WeightInfo;
+		#[pallet::constant]
+		type FreeHeadersInterval: Get<Option<u32>>;
 	}
 
 	#[pallet::event]
@@ -205,11 +207,10 @@ pub mod pallet {
 		#[transactional]
 		/// Submits a new finalized beacon header update. The update may contain the next
 		/// sync committee.
-		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResult {
+		pub fn submit(origin: OriginFor<T>, update: Box<Update>) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 			ensure!(!Self::operating_mode().is_halted(), Error::<T>::Halted);
-			Self::process_update(&update)?;
-			Ok(())
+			Self::process_update(&update)
 		}
 
 		/// Halt or resume all pallet operations. May only be called by root.
@@ -281,10 +282,20 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub(crate) fn process_update(update: &Update) -> DispatchResult {
+		pub(crate) fn process_update(update: &Update) -> DispatchResultWithPostInfo {
 			Self::verify_update(update)?;
 			Self::apply_update(update)?;
-			Ok(())
+
+			let pays_fee = if Self::may_refund_call_fee(update.finalized_header.slot) { Pays::No } else { Pays::Yes };
+
+			log::info!(target: LOG_TARGET, "Finalized header import, pays?: {:?}",pays_fee,);
+
+			let actual_weight = match update.next_sync_committee_update {
+				None => T::WeightInfo::submit(),
+				Some(_) => T::WeightInfo::submit_with_sync_committee(),
+			};
+
+			Ok(PostDispatchInfo { actual_weight: Some(actual_weight), pays_fee })
 		}
 
 		/// References and strictly follows <https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update>
@@ -640,6 +651,20 @@ pub mod pallet {
 			// Hash tree root of SigningData - object root + domain
 			let signing_root = Self::compute_signing_root(header, domain)?;
 			Ok(signing_root)
+		}
+
+		fn may_refund_call_fee(
+			improved_by_slot: u64,
+		) -> bool {
+			// if configuration allows free non-mandatory headers and the header
+			// matches criteria => refund
+			if let Some(free_headers_interval) = T::FreeHeadersInterval::get() {
+				if improved_by_slot >= free_headers_interval.into() {
+					return true;
+				}
+			}
+
+			false
 		}
 	}
 }
