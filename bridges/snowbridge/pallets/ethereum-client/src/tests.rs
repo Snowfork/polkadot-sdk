@@ -14,8 +14,7 @@ use crate::{
 pub use crate::mock::*;
 
 use crate::config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT};
-use frame_support::{assert_err, assert_noop, assert_ok};
-use frame_support::pallet_prelude::Pays;
+use frame_support::{assert_err, assert_noop, assert_ok, pallet_prelude::Pays};
 use hex_literal::hex;
 use primitives::{
 	types::deneb, Fork, ForkVersions, NextSyncCommitteeUpdate, VersionedExecutionPayloadHeader,
@@ -386,10 +385,8 @@ fn reject_submit_update_in_next_period() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		let update_result = EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			sync_committee_update.clone()
-		);
+		let update_result =
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), sync_committee_update.clone());
 		assert_ok!(update_result);
 		let post_info = update_result.unwrap();
 		assert_eq!(post_info.pays_fee, Pays::Yes);
@@ -399,10 +396,8 @@ fn reject_submit_update_in_next_period() {
 			Error::<Test>::SyncCommitteeUpdateRequired
 		);
 		// submit update with next sync committee
-		let second_update_result = EthereumBeaconClient::submit(
-			RuntimeOrigin::signed(1),
-			next_sync_committee_update
-		);
+		let second_update_result =
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), next_sync_committee_update);
 		assert_ok!(second_update_result);
 		let second_post_info = second_update_result.unwrap();
 		assert_eq!(second_post_info.pays_fee, Pays::No);

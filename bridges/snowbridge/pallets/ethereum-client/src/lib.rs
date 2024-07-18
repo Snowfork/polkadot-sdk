@@ -469,7 +469,10 @@ pub mod pallet {
 				});
 			};
 
-			let pays_fee = Self::may_refund_call_fee(latest_finalized_state.slot, update.finalized_header.slot);
+			let pays_fee = Self::may_refund_call_fee(
+				latest_finalized_state.slot,
+				update.finalized_header.slot,
+			);
 			let actual_weight = match update.next_sync_committee_update {
 				None => T::WeightInfo::submit(),
 				Some(_) => T::WeightInfo::submit_with_sync_committee(),
