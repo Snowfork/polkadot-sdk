@@ -86,9 +86,9 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
-		type WeightInfo: WeightInfo;
 		#[pallet::constant]
 		type FreeHeadersInterval: Get<Option<u32>>;
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -660,16 +660,17 @@ pub mod pallet {
 			Ok(signing_root)
 		}
 
-		fn may_refund_call_fee(improved_by_slot: u64) -> bool {
+		pub(super) fn may_refund_call_fee(improved_by_slot: u64) -> bool {
 			// Get the latest stored finalized state.
-			let latest_finalized_state =
-				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
-					.ok_or(Error::<T>::NotBootstrapped)?;
+			let latest_finalized_state = match FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get()) {
+				Some(state) => state,
+				None => return false, // Unexpected, would have been checked before.
+			};
 
 			// If free headers are allowed and the latest finalized header is larger than the
 			// minimum slot interval, the header import transaction is free.
 			if let Some(free_headers_interval) = T::FreeHeadersInterval::get() {
-				if latest_finalized_state.slot + free_headers_interval.into() >= improved_by_slot {
+				if latest_finalized_state.slot + free_headers_interval as u64 >= improved_by_slot {
 					return true;
 				}
 			}

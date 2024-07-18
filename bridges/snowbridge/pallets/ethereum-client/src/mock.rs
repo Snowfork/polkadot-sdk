@@ -16,6 +16,7 @@ use frame_support::{
 	traits::{OnFinalize, OnInitialize},
 };
 use sp_runtime::BuildStorage;
+use frame_support::traits::ConstU32;
 
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
 where
@@ -102,6 +103,7 @@ parameter_types! {
 impl ethereum_beacon_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
+	type FreeHeadersInterval = ConstU32<5>;
 	type WeightInfo = ();
 }
 
