@@ -287,22 +287,7 @@ pub mod pallet {
 
 		pub(crate) fn process_update(update: &Update) -> DispatchResultWithPostInfo {
 			Self::verify_update(update)?;
-			Self::apply_update(update)?;
-
-			let pays_fee = if Self::may_refund_call_fee(update.finalized_header.slot) {
-				Pays::No
-			} else {
-				Pays::Yes
-			};
-
-			log::info!(target: LOG_TARGET, "Finalized header import, pays?: {:?}",pays_fee,);
-
-			let actual_weight = match update.next_sync_committee_update {
-				None => T::WeightInfo::submit(),
-				Some(_) => T::WeightInfo::submit_with_sync_committee(),
-			};
-
-			Ok(PostDispatchInfo { actual_weight: Some(actual_weight), pays_fee })
+			Self::apply_update(update)
 		}
 
 		/// References and strictly follows <https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#validate_light_client_update>
@@ -452,7 +437,7 @@ pub mod pallet {
 		/// Applies a finalized beacon header update to the beacon client. If a next sync committee
 		/// is present in the update, verify the sync committee by converting it to a
 		/// SyncCommitteePrepared type. Stores the provided finalized header.
-		fn apply_update(update: &Update) -> DispatchResult {
+		fn apply_update(update: &Update) -> DispatchResultWithPostInfo {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
@@ -484,11 +469,17 @@ pub mod pallet {
 				});
 			};
 
+			let pays_fee = Self::may_refund_call_fee(latest_finalized_state.slot, update.finalized_header.slot);
+			let actual_weight = match update.next_sync_committee_update {
+				None => T::WeightInfo::submit(),
+				Some(_) => T::WeightInfo::submit_with_sync_committee(),
+			};
+
 			if update.finalized_header.slot > latest_finalized_state.slot {
 				Self::store_finalized_header(update.finalized_header, update.block_roots_root)?;
 			}
 
-			Ok(())
+			Ok(PostDispatchInfo { actual_weight: Some(actual_weight), pays_fee })
 		}
 
 		/// Computes the signing root for a given beacon header and domain. The hash tree root
@@ -660,23 +651,16 @@ pub mod pallet {
 			Ok(signing_root)
 		}
 
-		pub(super) fn may_refund_call_fee(improved_by_slot: u64) -> bool {
-			// Get the latest stored finalized state.
-			let latest_finalized_state =
-				match FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get()) {
-					Some(state) => state,
-					None => return false, // Unexpected, would have been checked before.
-				};
-
+		pub(super) fn may_refund_call_fee(latest_slot: u64, improved_by_slot: u64) -> Pays {
 			// If free headers are allowed and the latest finalized header is larger than the
 			// minimum slot interval, the header import transaction is free.
 			if let Some(free_headers_interval) = T::FreeHeadersInterval::get() {
-				if improved_by_slot >= latest_finalized_state.slot + free_headers_interval as u64 {
-					return true;
+				if improved_by_slot >= latest_slot + free_headers_interval as u64 {
+					return Pays::No;
 				}
 			}
 
-			false
+			Pays::Yes
 		}
 	}
 }
