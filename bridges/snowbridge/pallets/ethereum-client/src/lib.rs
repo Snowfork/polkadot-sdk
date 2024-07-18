@@ -34,7 +34,10 @@ mod tests;
 mod benchmarking;
 
 use frame_support::{
-	dispatch::{DispatchResult, PostDispatchInfo}, pallet_prelude::OptionQuery, traits::Get, transactional,
+	dispatch::{DispatchResult, PostDispatchInfo},
+	pallet_prelude::OptionQuery,
+	traits::Get,
+	transactional,
 };
 use frame_system::ensure_signed;
 use primitives::{
@@ -286,7 +289,11 @@ pub mod pallet {
 			Self::verify_update(update)?;
 			Self::apply_update(update)?;
 
-			let pays_fee = if Self::may_refund_call_fee(update.finalized_header.slot) { Pays::No } else { Pays::Yes };
+			let pays_fee = if Self::may_refund_call_fee(update.finalized_header.slot) {
+				Pays::No
+			} else {
+				Pays::Yes
+			};
 
 			log::info!(target: LOG_TARGET, "Finalized header import, pays?: {:?}",pays_fee,);
 
@@ -653,13 +660,16 @@ pub mod pallet {
 			Ok(signing_root)
 		}
 
-		fn may_refund_call_fee(
-			improved_by_slot: u64,
-		) -> bool {
+		fn may_refund_call_fee(improved_by_slot: u64) -> bool {
+			// Get the latest stored finalized state.
+			let latest_finalized_state =
+				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
+					.ok_or(Error::<T>::NotBootstrapped)?;
+
 			// If free headers are allowed and the latest finalized header is larger than the
 			// minimum slot interval, the header import transaction is free.
 			if let Some(free_headers_interval) = T::FreeHeadersInterval::get() {
-				if improved_by_slot >= free_headers_interval.into() {
+				if latest_finalized_state.slot + free_headers_interval.into() >= improved_by_slot {
 					return true;
 				}
 			}
