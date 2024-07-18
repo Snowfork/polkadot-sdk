@@ -436,7 +436,8 @@ pub mod pallet {
 		/// Reference and strictly follows <https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/sync-protocol.md#apply_light_client_update
 		/// Applies a finalized beacon header update to the beacon client. If a next sync committee
 		/// is present in the update, verify the sync committee by converting it to a
-		/// SyncCommitteePrepared type. Stores the provided finalized header.
+		/// SyncCommitteePrepared type. Stores the provided finalized header. Updates are free
+		/// if the certain conditions are met, least of which being a successful update.
 		fn apply_update(update: &Update) -> DispatchResultWithPostInfo {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -657,6 +658,9 @@ pub mod pallet {
 			Ok(signing_root)
 		}
 
+		/// Updates are free if the update is successful and the interval between the latest
+		/// finalized header in storage and the newly imported header is large enough. All
+		/// successful sync committee updates are free.
 		pub(super) fn may_refund_call_fee(
 			latest_slot: u64,
 			improved_by_slot: u64,
