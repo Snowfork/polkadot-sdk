@@ -237,6 +237,8 @@ mod v1 {
 			recipient: H160,
 			/// The amount of tokens to transfer
 			amount: u128,
+			/// The fee amount(in DOT) for the transfer
+			fee_amount: u128,
 		},
 	}
 
@@ -250,7 +252,7 @@ mod v1 {
 		/// ABI-encode the sub-command
 		pub fn abi_encode(&self) -> Vec<u8> {
 			match self {
-				AgentExecuteCommand::TransferToken { token, recipient, amount } =>
+				AgentExecuteCommand::TransferToken { token, recipient, amount, .. } =>
 					ethabi::encode(&[
 						Token::Uint(self.index().into()),
 						Token::Bytes(ethabi::encode(&[
@@ -343,6 +345,8 @@ pub enum SendError {
 	Halted,
 	/// Invalid Channel
 	InvalidChannel,
+	/// Lock fee failed
+	LockFeeFailed,
 }
 
 pub trait GasMeter {

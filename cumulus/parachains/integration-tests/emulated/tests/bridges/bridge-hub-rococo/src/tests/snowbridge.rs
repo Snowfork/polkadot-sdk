@@ -454,15 +454,8 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
 		);
 
-		let mut reanchored_fee = fee_asset.clone();
-
-		let universal_location: InteriorLocation =
-			Junctions::from([GlobalConsensus(NetworkId::Rococo), Parachain(1000)]);
-
-		reanchored_fee = reanchored_fee.reanchored(&destination, &universal_location).unwrap();
-
 		let xcm_on_bh = Xcm(vec![
-			BuyExecution { fees: reanchored_fee.clone(), weight_limit: Unlimited },
+			BuyExecution { fees: fee_asset.clone(), weight_limit: Unlimited },
 			DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
 		]);
 

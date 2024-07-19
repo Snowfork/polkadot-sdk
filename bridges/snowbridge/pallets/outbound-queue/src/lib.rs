@@ -243,6 +243,10 @@ pub mod pallet {
 	#[pallet::getter(fn operating_mode)]
 	pub type OperatingMode<T: Config> = StorageValue<_, BasicOperatingMode, ValueQuery>;
 
+	/// Fee locked by message hash
+	#[pallet::storage]
+	pub type LockedFee<T: Config> = StorageMap<_, Twox64Concat, H256, u128, ValueQuery>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
@@ -423,6 +427,14 @@ pub mod pallet {
 			let decimals = ETHER_DECIMALS.saturating_sub(T::Decimals::get()) as u32;
 			let denom = 10u128.saturating_pow(decimals);
 			value.checked_div(denom).expect("divisor is non-zero; qed").into()
+		}
+
+		pub(crate) fn lock_fee(message_id: H256, fee_amount: u128) -> DispatchResult {
+			<LockedFee<T>>::try_mutate(message_id, |amount| -> DispatchResult {
+				*amount = amount.saturating_add(fee_amount);
+				Ok(())
+			})?;
+			Ok(())
 		}
 	}
 }

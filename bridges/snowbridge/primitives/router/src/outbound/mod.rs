@@ -152,6 +152,8 @@ enum XcmConverterError {
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
 	SetTopicExpected,
+	FeeAssetExpected,
+	FeeAssetInvalid,
 }
 
 macro_rules! match_expression {
@@ -200,10 +202,13 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		}
 
 		// Get the fee asset item from BuyExecution or continue parsing.
-		let fee_asset = match_expression!(self.peek(), Ok(BuyExecution { fees, .. }), fees);
-		if fee_asset.is_some() {
-			let _ = self.next();
-		}
+		let fee_asset = match_expression!(self.next()?, BuyExecution { fees, .. }, fees)
+			.ok_or(FeeAssetExpected)?;
+		ensure!(fee_asset.clone().id == AssetId::from(Location::parent()), FeeAssetInvalid);
+		let fee_amount = match fee_asset.clone().fun {
+			Fungible(fee_amount) => Ok(fee_amount),
+			_ => Err(FeeAssetInvalid),
+		}?;
 
 		let (deposit_assets, beneficiary) = match_expression!(
 			self.next()?,
@@ -250,7 +255,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		// Check if there is a SetTopic and skip over it if found.
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
-		Ok((AgentExecuteCommand::TransferToken { token, recipient, amount }, *topic_id))
+		Ok((AgentExecuteCommand::TransferToken { token, recipient, amount, fee_amount }, *topic_id))
 	}
 
 	fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {

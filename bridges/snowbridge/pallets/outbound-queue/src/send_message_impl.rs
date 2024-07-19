@@ -7,13 +7,13 @@ use codec::Encode;
 use frame_support::{
 	ensure,
 	traits::{EnqueueMessage, Get},
-	CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
+	CloneNoBound, RuntimeDebugNoBound,
 };
 use frame_system::unique;
 use snowbridge_core::{
 	outbound::{
-		Fee, Message, QueuedMessage, SendError, SendMessage, SendMessageFeeProvider,
-		VersionedQueuedMessage,
+		AgentExecuteCommand, Command, Fee, Message, QueuedMessage, SendError, SendMessage,
+		SendMessageFeeProvider, VersionedQueuedMessage,
 	},
 	ChannelId, PRIMARY_GOVERNANCE_CHANNEL,
 };
@@ -24,21 +24,19 @@ use sp_runtime::BoundedVec;
 pub type MaxEnqueuedMessageSizeOf<T> =
 	<<T as Config>::MessageQueue as EnqueueMessage<AggregateMessageOrigin>>::MaxMessageLen;
 
-#[derive(Encode, Decode, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound)]
-pub struct Ticket<T>
-where
-	T: Config,
-{
+#[derive(Encode, Decode, CloneNoBound, RuntimeDebugNoBound)]
+#[cfg_attr(feature = "std", derive(PartialEq))]
+pub struct Ticket {
 	pub message_id: H256,
 	pub channel_id: ChannelId,
-	pub message: BoundedVec<u8, MaxEnqueuedMessageSizeOf<T>>,
+	pub message: QueuedMessage,
 }
 
 impl<T> SendMessage for Pallet<T>
 where
 	T: Config,
 {
-	type Ticket = Ticket<T>;
+	type Ticket = Ticket;
 
 	fn validate(
 		message: &Message,
@@ -61,16 +59,17 @@ where
 		let gas_used_at_most = T::GasMeter::maximum_gas_used_at_most(&message.command);
 		let fee = Self::calculate_fee(gas_used_at_most, T::PricingParameters::get());
 
-		let queued_message: VersionedQueuedMessage = QueuedMessage {
-			id: message_id,
-			channel_id: message.channel_id,
-			command: message.command.clone(),
-		}
-		.into();
-		// The whole message should not be too large
-		let encoded = queued_message.encode().try_into().map_err(|_| SendError::MessageTooLarge)?;
+		// Todo: check TransferToken.fee_amount > fee.remote
 
-		let ticket = Ticket { message_id, channel_id: message.channel_id, message: encoded };
+		let ticket = Ticket {
+			message_id,
+			channel_id: message.channel_id,
+			message: QueuedMessage {
+				id: message_id,
+				channel_id: message.channel_id,
+				command: message.command.clone(),
+			},
+		};
 
 		Ok((ticket, fee))
 	}
@@ -82,7 +81,24 @@ where
 			ensure!(!Self::operating_mode().is_halted(), SendError::Halted);
 		}
 
-		let message = ticket.message.as_bounded_slice();
+		let _ = match ticket.clone().message.command {
+			Command::AgentExecute { command, .. } => match command {
+				AgentExecuteCommand::TransferToken { fee_amount, .. } =>
+					Self::lock_fee(ticket.message_id, fee_amount)
+						.map_err(|_| SendError::LockFeeFailed),
+			},
+			_ => Ok(()),
+		}?;
+
+		let queued_message: VersionedQueuedMessage = ticket.message.into();
+
+		// The whole message should not be too large
+		let bounded =
+			BoundedVec::<u8, MaxEnqueuedMessageSizeOf<T>>::try_from(queued_message.encode())
+				.map_err(|_| SendError::MessageTooLarge)?;
+		let message = bounded.as_bounded_slice();
+		// let message = BoundedSlice::try_from(queued_message.encode()).as_bounded_slice();
+		// let message = encoded.as_bounded_slice();
 
 		T::MessageQueue::enqueue_message(message, origin);
 		Self::deposit_event(Event::MessageQueued {
