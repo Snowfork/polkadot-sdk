@@ -395,7 +395,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
 
 	const WETH_AMOUNT: u128 = 1_000_000_000;
-	const WETH_FEE_AMOUNT: u128 = 1_000;
+	const FEE_AMOUNT: u128 = 1_000;
 
 	BridgeHubRococo::execute_with(|| {
 		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
@@ -434,16 +434,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
 			]
 		);
-		let weth_fee_asset = Asset {
-			id: AssetId(Location::new(
-				2,
-				[
-					GlobalConsensus(Ethereum { chain_id: CHAIN_ID }),
-					AccountKey20 { network: None, key: WETH },
-				],
-			)),
-			fun: Fungible(WETH_FEE_AMOUNT),
-		};
+		let fee_asset = Asset { id: AssetId(Location::parent()), fun: Fungible(FEE_AMOUNT) };
 		let weth_asset = Asset {
 			id: AssetId(Location::new(
 				2,
@@ -454,7 +445,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			)),
 			fun: Fungible(WETH_AMOUNT),
 		};
-		let assets = vec![weth_fee_asset.clone(), weth_asset.clone()];
+		let assets = vec![fee_asset.clone(), weth_asset.clone()];
 
 		let destination = Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]);
 
@@ -463,7 +454,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
 		);
 
-		let mut reanchored_fee = weth_fee_asset.clone();
+		let mut reanchored_fee = fee_asset.clone();
 
 		let universal_location: InteriorLocation =
 			Junctions::from([GlobalConsensus(NetworkId::Rococo), Parachain(1000)]);
@@ -478,6 +469,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		let xcms = VersionedXcm::from(Xcm(vec![
 			WithdrawAsset(assets.clone().into()),
 			SetFeesMode { jit_withdraw: true },
+			LockAsset { asset: fee_asset, unlocker: Location::new(1, [Parachain(1013)]) },
 			InitiateReserveWithdraw {
 				assets: Wild(AllCounted(2)),
 				reserve: destination,

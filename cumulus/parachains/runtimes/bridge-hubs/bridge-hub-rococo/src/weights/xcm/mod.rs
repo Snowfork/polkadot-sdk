@@ -204,16 +204,16 @@ impl<Call> XcmWeightInfo<Call> for BridgeHubRococoXcmWeight<Call> {
 		XcmGeneric::<Runtime>::export_message(inner_encoded_len)
 	}
 	fn lock_asset(_: &Asset, _: &Location) -> Weight {
-		Weight::MAX
+		Weight::from_parts(2_216_000, 0)
 	}
 	fn unlock_asset(_: &Asset, _: &Location) -> Weight {
-		Weight::MAX
+		Weight::from_parts(2_216_000, 0)
 	}
 	fn note_unlockable(_: &Asset, _: &Location) -> Weight {
-		Weight::MAX
+		Weight::from_parts(2_216_000, 0)
 	}
 	fn request_unlock(_: &Asset, _: &Location) -> Weight {
-		Weight::MAX
+		Weight::from_parts(2_216_000, 0)
 	}
 	fn set_fees_mode(_: &bool) -> Weight {
 		XcmGeneric::<Runtime>::set_fees_mode()

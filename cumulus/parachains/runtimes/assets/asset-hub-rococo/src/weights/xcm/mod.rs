@@ -202,16 +202,16 @@ impl<Call> XcmWeightInfo<Call> for AssetHubRococoXcmWeight<Call> {
 		Weight::MAX
 	}
 	fn lock_asset(_: &Asset, _: &Location) -> Weight {
-		Weight::MAX
+		Weight::from_parts(2_216_000, 0)
 	}
 	fn unlock_asset(_: &Asset, _: &Location) -> Weight {
-		Weight::MAX
+		Weight::from_parts(2_216_000, 0)
 	}
 	fn note_unlockable(_: &Asset, _: &Location) -> Weight {
-		Weight::MAX
+		Weight::from_parts(2_216_000, 0)
 	}
 	fn request_unlock(_: &Asset, _: &Location) -> Weight {
-		Weight::MAX
+		Weight::from_parts(2_216_000, 0)
 	}
 	fn set_fees_mode(_: &bool) -> Weight {
 		XcmGeneric::<Runtime>::set_fees_mode()
