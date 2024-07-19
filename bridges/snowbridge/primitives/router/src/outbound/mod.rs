@@ -117,7 +117,7 @@ where
 		})?;
 
 		// convert fee to Asset
-		let fee = Asset::from((Location::parent(), fee.total())).into();
+		let fee = Asset::from((Location::parent(), fee.local)).into();
 
 		Ok(((ticket.encode(), message_id), fee))
 	}
