@@ -59,7 +59,10 @@ where
 		let gas_used_at_most = T::GasMeter::maximum_gas_used_at_most(&message.command);
 		let fee = Self::calculate_fee(gas_used_at_most, T::PricingParameters::get());
 
-		// Todo: check TransferToken.fee_amount > fee.remote
+		// Todo: Do we need to check command{TransferToken}.fee_amount > fee.remote to avoid
+		// spamming, then this PR does not require unordered messaging as prerequisite
+		// Or just leave that to relayer to check if delivering the message is profitable and
+		// bound this PR with unordered messaging, more changes required
 
 		let ticket = Ticket {
 			message_id,
@@ -97,8 +100,6 @@ where
 			BoundedVec::<u8, MaxEnqueuedMessageSizeOf<T>>::try_from(queued_message.encode())
 				.map_err(|_| SendError::MessageTooLarge)?;
 		let message = bounded.as_bounded_slice();
-		// let message = BoundedSlice::try_from(queued_message.encode()).as_bounded_slice();
-		// let message = encoded.as_bounded_slice();
 
 		T::MessageQueue::enqueue_message(message, origin);
 		Self::deposit_event(Event::MessageQueued {
