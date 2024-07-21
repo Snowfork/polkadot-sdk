@@ -56,6 +56,13 @@ pub enum Command {
 		/// XCM execution fee on AssetHub
 		fee: u128,
 	},
+	/// Reward relay
+	RewardRelay {
+		/// The hash of the message
+		message_id: H256,
+		/// The address of the relay
+		relay_address: H160,
+	},
 }
 
 /// Destination for bridged tokens
@@ -153,6 +160,7 @@ where
 				Ok(Self::convert_register_token(message_id, chain_id, token, fee)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
 				Ok(Self::convert_send_token(message_id, chain_id, token, destination, amount, fee)),
+			_ => Err(ConvertMessageError::UnsupportedVersion),
 		}
 	}
 }

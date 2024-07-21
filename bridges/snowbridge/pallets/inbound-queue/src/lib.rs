@@ -63,7 +63,7 @@ use snowbridge_core::{
 };
 use snowbridge_router_primitives::{
 	inbound,
-	inbound::{ConvertMessage, ConvertMessageError},
+	inbound::{Command, ConvertMessage, ConvertMessageError, MessageV1, VersionedMessage},
 };
 use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
@@ -87,6 +87,7 @@ pub mod pallet {
 
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use snowbridge_core::{PayMaster, PayRewardError};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -141,6 +142,9 @@ pub mod pallet {
 
 		/// To withdraw and deposit an asset.
 		type AssetTransactor: TransactAsset;
+
+		/// To pay reward to relay
+		type Payer: PayMaster;
 	}
 
 	#[pallet::hooks]
@@ -188,6 +192,8 @@ pub mod pallet {
 		Send(SendError),
 		/// Message conversion error
 		ConvertMessage(ConvertMessageError),
+		/// Pay reward error
+		PayReward(PayRewardError),
 	}
 
 	#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, PalletError)]
@@ -278,12 +284,20 @@ pub mod pallet {
 			}
 
 			// Decode message into XCM
-			let (xcm, fee) =
-				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(message) => T::MessageConverter::convert(envelope.message_id, message)
-						.map_err(|e| Error::<T>::ConvertMessage(e))?,
-					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-				};
+			let message = inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref())
+				.map_err(|_| Error::<T>::InvalidPayload)?;
+
+			let _ = match message {
+				VersionedMessage::V1(MessageV1 {
+					command: Command::RewardRelay { message_id, relay_address },
+					..
+				}) => T::Payer::reward_relay(message_id, relay_address)
+					.map_err(|e| Error::<T>::PayReward(e)),
+				_ => Ok(()),
+			}?;
+
+			let (xcm, fee) = T::MessageConverter::convert(envelope.message_id, message)
+				.map_err(|e| Error::<T>::ConvertMessage(e))?;
 
 			log::info!(
 				target: LOG_TARGET,

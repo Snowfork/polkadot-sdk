@@ -116,7 +116,7 @@ use snowbridge_core::{
 };
 use snowbridge_outbound_queue_merkle_tree::merkle_root;
 pub use snowbridge_outbound_queue_merkle_tree::MerkleProof;
-use sp_core::{H256, U256};
+use sp_core::{H160, H256, U256};
 use sp_runtime::{
 	traits::{CheckedDiv, Hash},
 	DigestItem, Saturating,
@@ -434,6 +434,15 @@ pub mod pallet {
 				*amount = amount.saturating_add(fee_amount);
 				Ok(())
 			})?;
+			Ok(())
+		}
+
+		pub(crate) fn unlock_fee(message_id: H256, _relay: H160) -> DispatchResult {
+			let _fee = <LockedFee<T>>::get(message_id);
+			// Todo: mint fee to the sovereign of the beneficiary
+			// let sovereign: AccountId = sovereign_of(_relay);
+			// T::Token::mint_into(sovereign,_fee);
+			<LockedFee<T>>::remove(message_id);
 			Ok(())
 		}
 	}

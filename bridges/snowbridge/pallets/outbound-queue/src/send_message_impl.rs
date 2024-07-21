@@ -15,9 +15,9 @@ use snowbridge_core::{
 		AgentExecuteCommand, Command, Fee, Message, QueuedMessage, SendError, SendMessage,
 		SendMessageFeeProvider, VersionedQueuedMessage,
 	},
-	ChannelId, PRIMARY_GOVERNANCE_CHANNEL,
+	ChannelId, PayMaster, PayRewardError, PRIMARY_GOVERNANCE_CHANNEL,
 };
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_runtime::BoundedVec;
 
 /// The maximal length of an enqueued message, as determined by the MessageQueue pallet
@@ -116,5 +116,12 @@ impl<T: Config> SendMessageFeeProvider for Pallet<T> {
 	/// The local component of the message processing fees in native currency
 	fn local_fee() -> Self::Balance {
 		Self::calculate_local_fee()
+	}
+}
+
+impl<T: Config> PayMaster for Pallet<T> {
+	/// The local component of the message processing fees in native currency
+	fn reward_relay(message_id: H256, relay: H160) -> Result<(), PayRewardError> {
+		Self::unlock_fee(message_id, relay).map_err(|_| PayRewardError::Other)
 	}
 }

@@ -21,10 +21,10 @@ pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 pub use sp_core::U256;
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::traits::Contains;
+use frame_support::{traits::Contains, PalletError};
 use hex_literal::hex;
 use scale_info::TypeInfo;
-use sp_core::H256;
+use sp_core::{H160, H256};
 use sp_io::hashing::keccak_256;
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use sp_std::prelude::*;
@@ -164,3 +164,20 @@ impl DescribeLocation for DescribeHere {
 /// Creates an AgentId from a Location. An AgentId is a unique mapping to a Agent contract on
 /// Ethereum which acts as the sovereign account for the Location.
 pub type AgentIdOf = HashedDescription<H256, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
+
+#[derive(Clone, Encode, Decode, RuntimeDebug, PalletError, TypeInfo)]
+#[cfg_attr(feature = "std", derive(PartialEq))]
+pub enum PayRewardError {
+	CantMint,
+	Other,
+}
+
+pub trait PayMaster {
+	fn reward_relay(message_id: H256, relay: H160) -> Result<(), PayRewardError>;
+}
+
+impl PayMaster for () {
+	fn reward_relay(_: H256, _: H160) -> Result<(), PayRewardError> {
+		Ok(())
+	}
+}
