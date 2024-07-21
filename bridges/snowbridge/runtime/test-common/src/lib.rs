@@ -67,10 +67,12 @@ where
 	};
 	let assets = vec![asset.clone()];
 
+	let fee_asset = Asset { id: AssetId::from(Location::parent()), fun: Fungible(1000) };
+
 	let inner_xcm = Xcm(vec![
 		WithdrawAsset(Assets::from(assets.clone())),
 		ClearOrigin,
-		BuyExecution { fees: asset, weight_limit: Unlimited },
+		BuyExecution { fees: fee_asset, weight_limit: Unlimited },
 		DepositAsset {
 			assets: Wild(All),
 			beneficiary: Location::new(
