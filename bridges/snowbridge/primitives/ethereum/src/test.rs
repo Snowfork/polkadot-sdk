@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
 
 use crate::{EIP1186Layout, StorageProof};
-use ethereum_types::{H256, U256};
+use ethereum_types::{H160, H256, U256};
 use hex_literal::hex;
+use parity_bytes::ToPretty;
 use rlp::{Decodable, Rlp};
 use rlp_derive::RlpDecodable;
 use sp_io::hashing::keccak_256;
@@ -12,11 +13,25 @@ use trie_db::{Trie, TrieDBBuilder};
 
 /// The ethereum account stored in the global state trie.
 #[derive(RlpDecodable, Debug)]
-struct Account {
+pub struct Account {
 	nonce: u64,
 	balance: U256,
 	storage_root: H256,
 	code_hash: H256,
+}
+
+#[derive(Debug)]
+pub enum OperatingMode {
+	Normal,
+	RejectingOutboundMessages,
+}
+
+#[derive(RlpDecodable, Debug)]
+struct Channel {
+	// mode: u8,
+	inboundNonce: u64,
+	outboundNonce: u64,
+	agent: H160,
 }
 
 #[test]
@@ -68,23 +83,9 @@ fn test_can_verify_eip_1186_proofs() {
 	curl https://eth-mainnet.alchemyapi.io/v2/cBKwkAM5EIpQr_fFSA6NuFEsVMI--fIZ \
 	   -X POST \
 	   -H "Content-Type: application/json" \
-	   -d '{"jsonrpc":"2.0","method":"eth_getProof","params":["
-		 0x27ca963c279c93801941e1eb8799c23f407d68e7",["
-		 0x91839d9989408fbab863f2059ae80fee5216f58ec04fa3bffb021275bf7d4f23"],"0x1363D2F"],"id":1}' | jq .
-	/// @dev A messaging channel for a Polkadot parachain
-	struct Channel {
-		/// @dev The operating mode for this channel. Can be used to
-		/// disable messaging on a per-channel basis.
-		OperatingMode mode;
-		/// @dev The current nonce for the inbound lane
-		uint64 inboundNonce;
-		/// @dev The current node for the outbound lane
-		uint64 outboundNonce;
-		/// @dev The address of the agent of the parachain owning this channel
-		address agent;
-	}
+	   -d '{"jsonrpc":"2.0","method":"eth_getProof","params":["0x27ca963c279c93801941e1eb8799c23f407d68e7",["0x91839d9989408fbab863f2059ae80fee5216f58ec04fa3bffb021275bf7d4f23"],"0x1363D2F"],"id":1}' | jq .
 	*/
-	let key = hex!("91839d9989408fbab863f2059ae80fee5216f58ec04fa3bffb021275bf7d4f23");
+	let key = keccak_256(&hex!("91839d9989408fbab863f2059ae80fee5216f58ec04fa3bffb021275bf7d4f23"));
 	let storage_proof = vec![
 		hex!("f90191a0b8e9c10d7c4c95f0eedfd523680165eed24fa084bd3ac0c8659fc6d3f958116aa03aa5e2b212e3475262966022f3ffb5852ce7b366665b8a5987f79fbdb883f2afa0397a78b0cfa2d4b0092720e3619d9be0dd5ef3866bd2d180eb1757027aa3266da0f4d837dd20bb4f08979738df3c691aa62c16d7d1ae9515db1e6a8da4da409a5ea0c3c0f253a13a381796b8bc4fba463531f8e8d0ee8ddcd0b075c424dd4348f4908080a082877502399ec86295eba12860af86472063ad63d55a5935d8be8a3d309277a580a0012fff2a739f64fab984cb658df77a3ab76c6b7efda95b5b9a7d5069ec7faa94a0e0c4897bfecca6b1c87cfe856a914ec2ab043525368eabbf7b85216d9d0b5640a0d280b708d936d5fd907604e063b54581348e8a17631a5ae7c1c3d369a7edeb61a0e8e7a3641c070b352f900864923c204a9c22b20a8123eb948a34037039bb03ada0dbe8d231dd5126e78b689422047f3b667466e9a0584a095468cf3a2ee907990380a0e085b6c5b2b4cf22c1ccb0cc32eeb19fd278c7324149296a58643e67226cfc9780").to_vec(),
         hex!("eda03dd682974e695f0b903d02ea04e5835154d6810113c23898412593f6b30379a58b8a5e000000000000000800").to_vec(),
@@ -92,6 +93,7 @@ fn test_can_verify_eip_1186_proofs() {
 	let proof_db = StorageProof::new(storage_proof).into_memory_db::<KeccakHasher>();
 	let trie =
 		TrieDBBuilder::<EIP1186Layout<KeccakHasher>>::new(&proof_db, &account.storage_root).build();
-	let _result = trie.get(&key);
-	println!("hello");
+	let result = trie.get(&key).unwrap().unwrap();
+	// let channel = Channel::decode(&Rlp::new(&result)).unwrap();
+	println!("bytes: {:?}", result.as_slice().to_hex()); //8a5e000000000000000800
 }
