@@ -170,6 +170,7 @@ impl snowbridge_pallet_outbound_queue::Config for Test {
 	type Channels = EthereumSystem;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
+	type Token = Balances;
 }
 
 parameter_types! {

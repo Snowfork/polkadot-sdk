@@ -4656,6 +4656,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "pallet-balances",
  "pallet-message-queue",
  "parity-scale-codec",
  "scale-info",
@@ -4668,6 +4669,8 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std 14.0.0",
+ "staging-xcm",
+ "staging-xcm-executor",
 ]
 
 [[package]]
