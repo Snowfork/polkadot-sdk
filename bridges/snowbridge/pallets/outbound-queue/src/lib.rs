@@ -107,9 +107,13 @@ use bridge_hub_common::{AggregateMessageOrigin, CustomDigestItem};
 use codec::Decode;
 use frame_support::{
 	storage::StorageStreamIter,
-	traits::{tokens::Balance, Contains, Defensive, EnqueueMessage, Get, ProcessMessageError},
+	traits::{
+		fungible::Inspect, tokens::Balance, Contains, Defensive, EnqueueMessage, Get,
+		ProcessMessageError,
+	},
 	weights::{Weight, WeightToFee},
 };
+pub use pallet::*;
 use snowbridge_core::{
 	outbound::{Fee, GasMeter, QueuedMessage, VersionedQueuedMessage, ETHER_DECIMALS},
 	BasicOperatingMode, ChannelId,
@@ -124,16 +128,22 @@ use sp_runtime::{
 use sp_std::prelude::*;
 pub use types::{CommittedMessage, ProcessMessageOriginOf};
 pub use weights::WeightInfo;
+use xcm::prelude::{Junction::*, Location, NetworkId};
+use xcm_executor::traits::ConvertLocation;
 
-pub use pallet::*;
+type BalanceOf<T> =
+	<<T as pallet::Config>::Token as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{
+		pallet_prelude::*,
+		traits::fungible::{Inspect, Mutate},
+	};
 	use frame_system::pallet_prelude::*;
-	use snowbridge_core::PricingParameters;
-	use sp_arithmetic::FixedU128;
+	use snowbridge_core::{PayRewardError, PricingParameters};
+	use sp_arithmetic::{traits::SaturatedConversion, FixedU128};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -173,6 +183,9 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet
 		type WeightInfo: WeightInfo;
+
+		/// Message relayers are rewarded with this asset
+		type Token: Mutate<Self::AccountId> + Inspect<Self::AccountId>;
 	}
 
 	#[pallet::event]
@@ -437,11 +450,27 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub(crate) fn unlock_fee(message_id: H256, _relay: H160) -> DispatchResult {
-			let _fee = <LockedFee<T>>::get(message_id);
-			// Todo: mint fee to the sovereign of the beneficiary
-			// let sovereign: AccountId = sovereign_of(_relay);
-			// T::Token::mint_into(sovereign,_fee);
+		pub(crate) fn unlock_fee(
+			chain_id: u64,
+			message_id: H256,
+			relay: H160,
+		) -> Result<(), PayRewardError>
+		where
+			<T as frame_system::Config>::AccountId: From<[u8; 32]>,
+		{
+			let fee: BalanceOf<T> = <LockedFee<T>>::get(message_id).saturated_into();
+
+			let account = snowbridge_core::SovereignIdOf::convert_location(&Location::new(
+				2,
+				[
+					GlobalConsensus(NetworkId::Ethereum { chain_id }),
+					AccountKey20 { network: None, key: relay.into() },
+				],
+			))
+			.ok_or(PayRewardError::AccountIdConversionFailed)?;
+			let sovereign_account: T::AccountId = account.into();
+
+			T::Token::mint_into(&sovereign_account, fee).map_err(|_| PayRewardError::CantMint)?;
 			<LockedFee<T>>::remove(message_id);
 			Ok(())
 		}

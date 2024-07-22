@@ -119,9 +119,12 @@ impl<T: Config> SendMessageFeeProvider for Pallet<T> {
 	}
 }
 
-impl<T: Config> PayMaster for Pallet<T> {
+impl<T: Config> PayMaster for Pallet<T>
+where
+	<T as frame_system::Config>::AccountId: From<[u8; 32]>,
+{
 	/// The local component of the message processing fees in native currency
-	fn reward_relay(message_id: H256, relay: H160) -> Result<(), PayRewardError> {
-		Self::unlock_fee(message_id, relay).map_err(|_| PayRewardError::Other)
+	fn reward_relay(chain_id: u64, message_id: H256, relay: H160) -> Result<(), PayRewardError> {
+		Self::unlock_fee(chain_id, message_id, relay)
 	}
 }

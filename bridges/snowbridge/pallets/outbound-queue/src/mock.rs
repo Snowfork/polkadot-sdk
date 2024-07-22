@@ -16,22 +16,25 @@ use snowbridge_core::{
 };
 use sp_core::{ConstU32, ConstU8, H160, H256};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup, Keccak256},
-	AccountId32, BuildStorage, FixedU128,
+	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Keccak256, Verify},
+	BuildStorage, FixedU128, MultiSignature,
 };
 use sp_std::marker::PhantomData;
 
 type Block = frame_system::mocking::MockBlock<Test>;
-type AccountId = AccountId32;
 
 frame_support::construct_runtime!(
 	pub enum Test
 	{
 		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>},
 		OutboundQueue: crate::{Pallet, Storage, Event<T>},
 	}
 );
+
+pub type Signature = MultiSignature;
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
@@ -45,8 +48,28 @@ impl frame_system::Config for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type RuntimeEvent = RuntimeEvent;
 	type PalletInfo = PalletInfo;
+	type AccountData = pallet_balances::AccountData<u128>;
 	type Nonce = u64;
 	type Block = Block;
+}
+
+parameter_types! {
+	pub const ExistentialDeposit: u128 = 1;
+}
+impl pallet_balances::Config for Test {
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+	type Balance = u128;
+	type RuntimeEvent = RuntimeEvent;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 }
 
 parameter_types! {
@@ -93,6 +116,7 @@ impl crate::Config for Test {
 	type Channels = Everything;
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
+	type Token = Balances;
 }
 
 fn setup() {
