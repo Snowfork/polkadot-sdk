@@ -635,8 +635,7 @@ pub mod bridging {
 		use super::*;
 
 		parameter_types! {
-			/// User fee for delivery cost on bridge hub. calculated by OutboundQueue::calculate_local_fee
-			/// The message will be delivered to bridge hub and cached into outbound queue
+			/// User fee for delivery cost on bridge hub. Leave some buffer here for avoid spamming
 			pub const DefaultBridgeHubEthereumBaseFee: Balance = 4_000_000_000;
 			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
