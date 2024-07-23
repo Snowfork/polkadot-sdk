@@ -17,7 +17,8 @@ use snowbridge_core::{
 	},
 	ChannelId, PayMaster, PayRewardError, PRIMARY_GOVERNANCE_CHANNEL,
 };
-use sp_core::{H160, H256};
+use sp_arithmetic::traits::SaturatedConversion;
+use sp_core::H256;
 use sp_runtime::BoundedVec;
 
 /// The maximal length of an enqueued message, as determined by the MessageQueue pallet
@@ -82,7 +83,7 @@ where
 		let _ = match ticket.clone().message.command {
 			Command::AgentExecute { command, .. } => match command {
 				AgentExecuteCommand::TransferToken { fee_amount, .. } =>
-					Self::lock_fee(ticket.message_id, fee_amount)
+					Self::lock_fee(ticket.message_id, fee_amount.saturated_into::<BalanceOf<T>>())
 						.map_err(|_| SendError::LockFeeFailed),
 			},
 			_ => Ok(()),
@@ -119,7 +120,7 @@ where
 	<T as frame_system::Config>::AccountId: From<[u8; 32]>,
 {
 	/// The local component of the message processing fees in native currency
-	fn reward_relay(chain_id: u64, message_id: H256, relay: H160) -> Result<(), PayRewardError> {
-		Self::unlock_fee(chain_id, message_id, relay)
+	fn reward_relay(message_id: H256, beneficiary: [u8; 32]) -> Result<(), PayRewardError> {
+		Self::unlock_fee(message_id, beneficiary)
 	}
 }

@@ -33,8 +33,6 @@ bridge-hub-common = { path = "../../../../cumulus/parachains/runtimes/bridge-hub
 snowbridge-core = { path = "../../primitives/core", default-features = false, features = ["serde"] }
 snowbridge-outbound-queue-merkle-tree = { path = "merkle-tree", default-features = false }
 ethabi = { package = "ethabi-decode", version = "1.0.0", default-features = false }
-xcm = { package = "staging-xcm", path = "../../../../polkadot/xcm", default-features = false }
-xcm-executor = { package = "staging-xcm-executor", path = "../../../../polkadot/xcm/xcm-executor", default-features = false }
 
 [dev-dependencies]
 pallet-message-queue = { path = "../../../../substrate/frame/message-queue", default-features = false }
@@ -60,8 +58,6 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"sp-std/std",
-	"xcm-executor/std",
-	"xcm/std",
 ]
 runtime-benchmarks = [
 	"bridge-hub-common/runtime-benchmarks",
@@ -73,7 +69,6 @@ runtime-benchmarks = [
 	"pallet-message-queue/runtime-benchmarks",
 	"snowbridge-core/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
-	"xcm-executor/runtime-benchmarks",
 ]
 try-runtime = [
 	"frame-support/try-runtime",

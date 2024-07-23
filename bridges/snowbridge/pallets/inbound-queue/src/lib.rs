@@ -289,9 +289,9 @@ pub mod pallet {
 
 			let _ = match message {
 				VersionedMessage::V1(MessageV1 {
-					command: Command::RewardRelay { message_id, relay_address },
-					chain_id,
-				}) => T::Payer::reward_relay(chain_id, message_id, relay_address)
+					command: Command::RewardRelay { message_id, beneficiary },
+					..
+				}) => T::Payer::reward_relay(message_id, beneficiary)
 					.map_err(|e| Error::<T>::PayReward(e)),
 				_ => Ok(()),
 			}?;

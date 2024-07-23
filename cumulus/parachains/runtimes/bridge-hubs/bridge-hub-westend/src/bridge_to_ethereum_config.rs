@@ -35,7 +35,7 @@ use testnet_parachains_constants::westend::{
 
 #[cfg(feature = "runtime-benchmarks")]
 use benchmark_helpers::DoNothingRouter;
-use frame_support::{parameter_types, weights::ConstantMultiplier};
+use frame_support::{parameter_types, weights::ConstantMultiplier, PalletId};
 use pallet_xcm::EnsureXcm;
 use sp_runtime::{
 	traits::{ConstU32, ConstU8, Keccak256},
@@ -64,6 +64,7 @@ parameter_types! {
 		rewards: Rewards { local: 1 * UNITS, remote: meth(1) },
 		multiplier: FixedU128::from_rational(1, 1),
 	};
+	pub const PotId: PalletId = PalletId(*b"SwOutQue");
 }
 
 impl snowbridge_pallet_inbound_queue::Config for Runtime {
@@ -109,6 +110,7 @@ impl snowbridge_pallet_outbound_queue::Config for Runtime {
 	type PricingParameters = EthereumSystem;
 	type Channels = EthereumSystem;
 	type Token = Balances;
+	type PotId = PotId;
 }
 
 #[cfg(any(feature = "std", feature = "fast-runtime", feature = "runtime-benchmarks", test))]

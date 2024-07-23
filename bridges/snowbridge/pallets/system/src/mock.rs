@@ -155,6 +155,7 @@ parameter_types! {
 	pub const MaxMessagePayloadSize: u32 = 1024;
 	pub const MaxMessagesPerBlock: u32 = 20;
 	pub const OwnParaId: ParaId = ParaId::new(1013);
+	pub const PotId: PalletId = PalletId(*b"SwOutQue");
 }
 
 impl snowbridge_pallet_outbound_queue::Config for Test {
@@ -171,6 +172,7 @@ impl snowbridge_pallet_outbound_queue::Config for Test {
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 	type Token = Balances;
+	type PotId = PotId;
 }
 
 parameter_types! {

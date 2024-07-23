@@ -6,6 +6,7 @@ use frame_support::{
 	derive_impl, parameter_types,
 	traits::{Everything, Hooks},
 	weights::IdentityFee,
+	PalletId,
 };
 
 use snowbridge_core::{
@@ -99,6 +100,7 @@ parameter_types! {
 		rewards: Rewards { local: DOT, remote: meth(1) },
 		multiplier: FixedU128::from_rational(4, 3),
 	};
+	pub const PotId: PalletId = PalletId(*b"SwOutQue");
 }
 
 pub const DOT: u128 = 10_000_000_000;
@@ -117,6 +119,7 @@ impl crate::Config for Test {
 	type WeightToFee = IdentityFee<u128>;
 	type WeightInfo = ();
 	type Token = Balances;
+	type PotId = PotId;
 }
 
 fn setup() {
@@ -194,7 +197,7 @@ pub fn mock_message(sibling_para_id: u32) -> Message {
 				token: Default::default(),
 				recipient: Default::default(),
 				amount: 0,
-				fee_amount: 0,
+				fee_amount: 1,
 			},
 		},
 	}

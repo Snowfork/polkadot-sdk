@@ -19232,8 +19232,6 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std 14.0.0",
- "staging-xcm",
- "staging-xcm-executor",
 ]
 
 [[package]]

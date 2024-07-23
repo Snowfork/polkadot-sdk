@@ -60,8 +60,8 @@ pub enum Command {
 	RewardRelay {
 		/// The hash of the message
 		message_id: H256,
-		/// The address of the relay
-		relay_address: H160,
+		/// The address of the beneficiary
+		beneficiary: [u8; 32],
 	},
 }
 
