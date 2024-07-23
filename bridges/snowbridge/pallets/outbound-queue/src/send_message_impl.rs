@@ -59,11 +59,6 @@ where
 		let gas_used_at_most = T::GasMeter::maximum_gas_used_at_most(&message.command);
 		let fee = Self::calculate_fee(gas_used_at_most, T::PricingParameters::get());
 
-		// Todo: Do we need to check command{TransferToken}.fee_amount > fee.remote to avoid
-		// spamming, then this PR does not require unordered messaging as prerequisite
-		// Or just leave that to relayer to check if delivering the message is profitable and
-		// bound this PR with unordered messaging, more changes required
-
 		let ticket = Ticket {
 			message_id,
 			channel_id: message.channel_id,
