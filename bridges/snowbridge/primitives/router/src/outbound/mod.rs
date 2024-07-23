@@ -117,7 +117,7 @@ where
 		})?;
 
 		// convert fee to Asset
-		let fee = Asset::from((Location::parent(), fee.total())).into();
+		let fee = Asset::from((Location::parent(), fee.local)).into();
 
 		Ok(((ticket.encode(), message_id), fee))
 	}
@@ -148,12 +148,12 @@ enum XcmConverterError {
 	DepositAssetExpected,
 	NoReserveAssets,
 	FilterDoesNotConsumeAllAssets,
-	TooManyAssets,
 	ZeroAssetTransfer,
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
-	InvalidFeeAsset,
 	SetTopicExpected,
+	FeeAssetExpected,
+	FeeAssetInvalid,
 }
 
 macro_rules! match_expression {
@@ -202,10 +202,13 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		}
 
 		// Get the fee asset item from BuyExecution or continue parsing.
-		let fee_asset = match_expression!(self.peek(), Ok(BuyExecution { fees, .. }), fees);
-		if fee_asset.is_some() {
-			let _ = self.next();
-		}
+		let fee_asset = match_expression!(self.next()?, BuyExecution { fees, .. }, fees)
+			.ok_or(FeeAssetExpected)?;
+		ensure!(fee_asset.clone().id == AssetId::from(Location::parent()), FeeAssetInvalid);
+		let _fee_amount = match fee_asset.clone().fun {
+			Fungible(fee_amount) => Ok(fee_amount),
+			_ => Err(FeeAssetInvalid),
+		}?;
 
 		let (deposit_assets, beneficiary) = match_expression!(
 			self.next()?,
@@ -233,17 +236,7 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			return Err(FilterDoesNotConsumeAllAssets)
 		}
 
-		// We only support a single asset at a time.
-		ensure!(reserve_assets.len() == 1, TooManyAssets);
 		let reserve_asset = reserve_assets.get(0).ok_or(AssetResolutionFailed)?;
-
-		// If there was a fee specified verify it.
-		if let Some(fee_asset) = fee_asset {
-			// The fee asset must be the same as the reserve asset.
-			if fee_asset.id != reserve_asset.id || fee_asset.fun > reserve_asset.fun {
-				return Err(InvalidFeeAsset)
-			}
-		}
 
 		let (token, amount) = match reserve_asset {
 			Asset { id: AssetId(inner_location), fun: Fungible(amount) } =>

@@ -383,6 +383,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 	use asset_hub_rococo_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubEthereumBaseFee;
 	let assethub_location = BridgeHubRococo::sibling_location_of(AssetHubRococo::para_id());
 	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(assethub_location);
+	let bridgehub_location = AssetHubRococo::sibling_location_of(BridgeHubRococo::para_id());
 
 	AssetHubRococo::force_default_xcm_version(Some(XCM_VERSION));
 	BridgeHubRococo::force_default_xcm_version(Some(XCM_VERSION));
@@ -392,80 +393,103 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 	);
 
 	BridgeHubRococo::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
-	AssetHubRococo::fund_accounts(vec![(AssetHubRococoReceiver::get(), INITIAL_FUND)]);
 
 	const WETH_AMOUNT: u128 = 1_000_000_000;
+	const FEE_AMOUNT: u128 = 2_750_872_500_000;
+	const LOCAL_FEE_AMOUNT: u128 = 16903333;
+	const REMOTE_FEE_AMOUNT: u128 = FEE_AMOUNT - LOCAL_FEE_AMOUNT;
 
-	BridgeHubRococo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
+	let weth_asset_location: Location = Location::new(
+		2,
+		[EthereumNetwork::get().into(), AccountKey20 { network: None, key: WETH }],
+	);
 
-		// Construct RegisterToken message and sent to inbound queue
-		send_inbound_message(make_register_token_message()).unwrap();
+	// Register WETH and Mint some to AssetHubRococoReceiver
+	AssetHubRococo::execute_with(|| {
+		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
 
-		// Check that the register token message was sent using xcm
-		assert_expected_events!(
-			BridgeHubRococo,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
-		);
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::force_create(
+			RuntimeOrigin::root(),
+			weth_asset_location.clone().try_into().unwrap(),
+			AssetHubRococoReceiver::get().into(),
+			false,
+			1,
+		));
 
-		// Construct SendToken message and sent to inbound queue
-		send_inbound_message(make_send_token_message()).unwrap();
+		assert!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::asset_exists(
+			weth_asset_location.clone().try_into().unwrap(),
+		));
 
-		// Check that the send token message was sent using xcm
-		assert_expected_events!(
-			BridgeHubRococo,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
-		);
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::mint(
+			RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
+			weth_asset_location.clone().try_into().unwrap(),
+			AssetHubRococoReceiver::get().into(),
+			WETH_AMOUNT,
+		));
 	});
 
 	AssetHubRococo::execute_with(|| {
-		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
 		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
 
-		// Check that AssetHub has issued the foreign asset
-		assert_expected_events!(
-			AssetHubRococo,
-			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-			]
-		);
-		let assets = vec![Asset {
-			id: AssetId(Location::new(
-				2,
-				[
-					GlobalConsensus(Ethereum { chain_id: CHAIN_ID }),
-					AccountKey20 { network: None, key: WETH },
-				],
-			)),
-			fun: Fungible(WETH_AMOUNT),
-		}];
-		let multi_assets = VersionedAssets::V4(Assets::from(assets));
+		// DOT as fee asset
+		let fee_asset = Asset { id: AssetId(Location::parent()), fun: Fungible(FEE_AMOUNT) };
 
-		let destination = VersionedLocation::V4(Location::new(
-			2,
-			[GlobalConsensus(Ethereum { chain_id: CHAIN_ID })],
-		));
+		let remote_fee_asset =
+			Asset { id: AssetId(Location::parent()), fun: Fungible(REMOTE_FEE_AMOUNT) };
 
-		let beneficiary = VersionedLocation::V4(Location::new(
+		let local_fee_asset =
+			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT) };
+
+		let weth_asset = Asset { id: weth_asset_location.into(), fun: Fungible(WETH_AMOUNT) };
+
+		// Send both assets to BH
+		let assets = vec![fee_asset.clone(), weth_asset.clone()];
+
+		let destination = Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]);
+
+		let beneficiary = Location::new(
 			0,
 			[AccountKey20 { network: None, key: ETHEREUM_DESTINATION_ADDRESS.into() }],
-		));
+		);
 
+		// Internal xcm of InitiateReserveWithdraw, WithdrawAssets + ClearOrigin instructions will
+		// be appended to the front of the list by the xcm executor
+		let withdraw_xcm_on_bh = Xcm(vec![
+			BuyExecution { fees: remote_fee_asset.clone(), weight_limit: Unlimited },
+			DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+		]);
+
+		let teleport_xcm_on_bh = Xcm(vec![
+			BuyExecution { fees: local_fee_asset.clone(), weight_limit: Unlimited },
+			DepositAsset {
+				assets: Wild(AllCounted(1)),
+				beneficiary: (AccountId32 { id: assethub_sovereign.into(), network: None },).into(),
+			},
+		]);
+
+		let xcms = VersionedXcm::from(Xcm(vec![
+			WithdrawAsset(assets.clone().into()),
+			SetFeesMode { jit_withdraw: true },
+			InitiateReserveWithdraw {
+				assets: Definite(vec![remote_fee_asset.clone(), weth_asset.clone()].into()),
+				// with reserve set to Ethereum destination, the ExportMessage will
+				// be appended to the front of the list by the SovereignPaidRemoteExporter
+				reserve: destination,
+				xcm: withdraw_xcm_on_bh,
+			},
+			InitiateTeleport {
+				assets: Definite(vec![local_fee_asset.clone()].into()),
+				xcm: teleport_xcm_on_bh,
+				dest: bridgehub_location,
+			},
+		]));
 		let free_balance_before = <AssetHubRococo as AssetHubRococoPallet>::Balances::free_balance(
 			AssetHubRococoReceiver::get(),
 		);
-		// Send the Weth back to Ethereum
-		<AssetHubRococo as AssetHubRococoPallet>::PolkadotXcm::limited_reserve_transfer_assets(
+		<AssetHubRococo as AssetHubRococoPallet>::PolkadotXcm::execute(
 			RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
-			Box::new(destination),
-			Box::new(beneficiary),
-			Box::new(multi_assets),
-			0,
-			Unlimited,
+			bx!(xcms),
+			Weight::from(8_000_000_000),
 		)
 		.unwrap();
 		let free_balance_after = <AssetHubRococo as AssetHubRococoPallet>::Balances::free_balance(
@@ -485,25 +509,6 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			vec![
 				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
 			]
-		);
-		let events = BridgeHubRococo::events();
-		// Check that the local fee was credited to the Snowbridge sovereign account
-		assert!(
-			events.iter().any(|event| matches!(
-				event,
-				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *who == TREASURY_ACCOUNT.into() && *amount == 16903333
-			)),
-			"Snowbridge sovereign takes local fee."
-		);
-		// Check that the remote fee was credited to the AssetHub sovereign account
-		assert!(
-			events.iter().any(|event| matches!(
-				event,
-				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *who == assethub_sovereign && *amount == 2680000000000,
-			)),
-			"AssetHub sovereign takes remote fee."
 		);
 	});
 }
