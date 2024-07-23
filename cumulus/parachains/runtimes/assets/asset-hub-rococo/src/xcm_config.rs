@@ -636,7 +636,7 @@ pub mod bridging {
 
 		parameter_types! {
 			/// User fee for delivery cost on bridge hub. Leave some buffer here for avoid spamming
-			pub const DefaultBridgeHubEthereumBaseFee: Balance = 4_000_000_000;
+			pub const DefaultBridgeHubEthereumBaseFee: Balance = 1_000_000_000;
 			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
 				1,
