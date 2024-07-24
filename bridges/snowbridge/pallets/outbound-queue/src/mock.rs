@@ -134,7 +134,7 @@ where
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
 			impl_code_hash: H256::zero(),
-			initializer: None,
+			initializer: Default::default(),
 		},
 	}
 }
@@ -152,10 +152,10 @@ where
 		command: Command::Upgrade {
 			impl_address: H160::zero(),
 			impl_code_hash: H256::zero(),
-			initializer: Some(Initializer {
+			initializer: Initializer {
 				params: (0..1000).map(|_| 1u8).collect::<Vec<u8>>(),
 				maximum_required_gas: 0,
-			}),
+			},
 		},
 	}
 }

@@ -175,7 +175,7 @@ pub mod pallet {
 		Upgrade {
 			impl_address: H160,
 			impl_code_hash: H256,
-			initializer_params_hash: Option<H256>,
+			initializer_params_hash: H256,
 		},
 		/// An CreateAgent message was sent to the Gateway
 		CreateAgent {
@@ -278,7 +278,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			impl_address: H160,
 			impl_code_hash: H256,
-			initializer: Option<Initializer>,
+			initializer: Initializer,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -287,8 +287,7 @@ pub mod pallet {
 				Error::<T>::InvalidUpgradeParameters
 			);
 
-			let initializer_params_hash: Option<H256> =
-				initializer.as_ref().map(|i| H256::from(blake2_256(i.params.as_ref())));
+			let initializer_params_hash: H256 = blake2_256(initializer.params.as_ref()).into();
 			let command = Command::Upgrade { impl_address, impl_code_hash, initializer };
 			Self::send(PRIMARY_GOVERNANCE_CHANNEL, command, PaysFee::<T>::No)?;
 

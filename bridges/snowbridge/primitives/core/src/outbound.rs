@@ -82,8 +82,8 @@ mod v1 {
 			impl_address: H160,
 			/// Codehash of the implementation contract
 			impl_code_hash: H256,
-			/// Optionally invoke an initializer in the implementation contract
-			initializer: Option<Initializer>,
+			/// Invoke initializer delegated to the implementation contract
+			initializer: Initializer,
 		},
 		/// Create an agent representing a consensus system on Polkadot
 		CreateAgent {
@@ -169,9 +169,7 @@ mod v1 {
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::Address(*impl_address),
 						Token::FixedBytes(impl_code_hash.as_bytes().to_owned()),
-						initializer
-							.clone()
-							.map_or(Token::Bytes(vec![]), |i| Token::Bytes(i.params)),
+						Token::Bytes(initializer.params.clone()),
 					])]),
 				Command::CreateAgent { agent_id } =>
 					ethabi::encode(&[Token::Tuple(vec![Token::FixedBytes(
@@ -218,6 +216,7 @@ mod v1 {
 	/// Representation of a call to the initializer of an implementation contract.
 	/// The initializer has the following ABI signature: `initialize(bytes)`.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	#[cfg_attr(feature = "std", derive(Default))]
 	pub struct Initializer {
 		/// ABI-encoded params of type `bytes` to pass to the initializer
 		pub params: Vec<u8>,
@@ -393,13 +392,9 @@ impl GasMeter for ConstantGasMeter {
 				AgentExecuteCommand::TransferToken { .. } => 100_000,
 			},
 			Command::Upgrade { initializer, .. } => {
-				let initializer_max_gas = match *initializer {
-					Some(Initializer { maximum_required_gas, .. }) => maximum_required_gas,
-					None => 0,
-				};
 				// total maximum gas must also include the gas used for updating the proxy before
 				// the the initializer is called.
-				50_000 + initializer_max_gas
+				50_000 + initializer.maximum_required_gas
 			},
 			Command::SetTokenTransferFees { .. } => 60_000,
 			Command::SetPricingParameters { .. } => 60_000,
