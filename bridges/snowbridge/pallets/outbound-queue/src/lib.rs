@@ -309,8 +309,8 @@ pub mod pallet {
 			message_id: H256,
 			fee_amount: BalanceOf<T>,
 		) -> DispatchResult {
-			ensure_signed(origin)?;
-			Self::lock_fee(message_id, fee_amount)?;
+			let who = ensure_signed(origin)?;
+			Self::lock_fee(message_id, fee_amount, Some(who))?;
 			Ok(())
 		}
 	}
@@ -424,8 +424,22 @@ pub mod pallet {
 			T::PotId::get().into_account_truncating()
 		}
 
-		pub(crate) fn lock_fee(message_id: H256, fee_amount: BalanceOf<T>) -> DispatchResult {
-			T::Token::mint_into(&Self::account_id(), fee_amount)?;
+		pub(crate) fn lock_fee(
+			message_id: H256,
+			fee_amount: BalanceOf<T>,
+			who: Option<T::AccountId>,
+		) -> DispatchResult {
+			if let Some(payer) = who {
+				T::Token::transfer(
+					&payer,
+					&Self::account_id(),
+					fee_amount,
+					Preservation::Preserve,
+				)?;
+			} else {
+				T::Token::mint_into(&Self::account_id(), fee_amount)?;
+			}
+
 			<LockedFee<T>>::try_mutate(message_id, |amount| -> DispatchResult {
 				*amount = amount.saturating_add(fee_amount.saturated_into::<u128>());
 				Ok(())

@@ -82,9 +82,12 @@ where
 
 		let _ = match ticket.clone().message.command {
 			Command::AgentExecute { command, .. } => match command {
-				AgentExecuteCommand::TransferToken { fee_amount, .. } =>
-					Self::lock_fee(ticket.message_id, fee_amount.saturated_into::<BalanceOf<T>>())
-						.map_err(|_| SendError::LockFeeFailed),
+				AgentExecuteCommand::TransferToken { fee_amount, .. } => Self::lock_fee(
+					ticket.message_id,
+					fee_amount.saturated_into::<BalanceOf<T>>(),
+					None,
+				)
+				.map_err(|_| SendError::LockFeeFailed),
 			},
 			_ => Ok(()),
 		}?;
