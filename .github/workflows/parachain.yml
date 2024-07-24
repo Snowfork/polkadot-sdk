@@ -54,7 +54,7 @@ jobs:
           rustup component add rustfmt --toolchain nightly
           rustup show
       - name: format
-        run: |
+        run: >
           cargo +nightly fmt 
           -p snowbridge-pallet-ethereum-client
           -p snowbridge-pallet-inbound-queue
