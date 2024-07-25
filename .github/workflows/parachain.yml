@@ -69,6 +69,9 @@ jobs:
           -p bridge-hub-rococo-runtime 
           -p bridge-hub-rococo-integration-tests
           -p asset-hub-rococo-integration-tests
+          -p bridge-hub-westend-runtime 
+          -p bridge-hub-westend-integration-tests
+          -p asset-hub-westend-integration-tests
           --
           --check
       - name: install taplo
