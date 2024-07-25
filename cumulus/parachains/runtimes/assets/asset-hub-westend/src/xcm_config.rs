@@ -669,7 +669,7 @@ pub mod bridging {
 
 			/// Set up exporters configuration.
 			/// `Option<Asset>` represents static "base fee" which is used for total delivery fee calculation.
-			pub BridgeTable: alloc::vec::Vec<NetworkExportTableItem> = alloc::vec::vec![
+			pub BridgeTable: alloc::vec::Vec<NetworkExportTableItem> = alloc::vec![
 				NetworkExportTableItem::new(
 					EthereumNetwork::get(),
 					Some(alloc::vec![Junctions::Here]),
@@ -688,7 +688,7 @@ pub mod bridging {
 				]
 			);
 
-			pub EthereumBridgeTable: alloc::vec::vec::Vec<NetworkExportTableItem> = alloc::vec::Vec::new().into_iter()
+			pub EthereumBridgeTable: alloc::vec::Vec<NetworkExportTableItem> = alloc::vec::Vec::new().into_iter()
 				.chain(BridgeTable::get())
 				.collect();
 		}
