@@ -669,10 +669,10 @@ pub mod bridging {
 
 			/// Set up exporters configuration.
 			/// `Option<Asset>` represents static "base fee" which is used for total delivery fee calculation.
-			pub BridgeTable: alloc::vec::vec::Vec<NetworkExportTableItem> = alloc::vec::vec![
+			pub BridgeTable: alloc::vec::Vec<NetworkExportTableItem> = alloc::vec::vec![
 				NetworkExportTableItem::new(
 					EthereumNetwork::get(),
-					Some(alloc::vec::vec![Junctions::Here]),
+					Some(alloc::vec![Junctions::Here]),
 					SiblingBridgeHub::get(),
 					Some((
 						XcmBridgeHubRouterFeeAssetId::get(),

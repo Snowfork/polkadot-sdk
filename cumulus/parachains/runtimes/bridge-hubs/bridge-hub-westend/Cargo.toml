@@ -188,6 +188,7 @@ std = [
 	"snowbridge-pallet-system/std",
 	"snowbridge-router-primitives/std",
 	"snowbridge-runtime-common/std",
+	"snowbridge-runtime-test-common/std",
 	"snowbridge-system-runtime-api/std",
 	"sp-api/std",
 	"sp-block-builder/std",
@@ -210,7 +211,6 @@ std = [
 	"xcm-executor/std",
 	"xcm-runtime-apis/std",
 	"xcm/std",
-	"snowbridge-runtime-test-common/std"
 ]
 
 runtime-benchmarks = [
