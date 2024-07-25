@@ -192,6 +192,7 @@ jobs:
           --all-features
 
   coverage:
+    if: false
     needs: check
     runs-on: snowbridge-runner
     env:

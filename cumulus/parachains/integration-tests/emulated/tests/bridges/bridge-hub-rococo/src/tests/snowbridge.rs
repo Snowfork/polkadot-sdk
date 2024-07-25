@@ -25,7 +25,8 @@ use snowbridge_pallet_inbound_queue_fixtures::{
 };
 use snowbridge_pallet_system;
 use snowbridge_router_primitives::inbound::{
-	Command, Destination, GlobalConsensusEthereumConvertsFor, MessageV1, VersionedMessage,
+	Command, ConvertMessage, Destination, GlobalConsensusEthereumConvertsFor, MessageV1,
+	VersionedMessage,
 };
 use sp_core::H256;
 use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
