@@ -210,6 +210,7 @@ std = [
 	"xcm-executor/std",
 	"xcm-runtime-apis/std",
 	"xcm/std",
+	"snowbridge-runtime-test-common/std"
 ]
 
 runtime-benchmarks = [
