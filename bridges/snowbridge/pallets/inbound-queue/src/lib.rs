@@ -41,7 +41,7 @@ use envelope::Envelope;
 use frame_support::{
 	traits::{
 		fungible::{Inspect, Mutate},
-		tokens::{Fortitude, Preservation},
+		tokens::{Fortitude, Precision, Preservation},
 	},
 	weights::WeightToFee,
 	PalletError,
@@ -49,7 +49,6 @@ use frame_support::{
 use frame_system::ensure_signed;
 use scale_info::TypeInfo;
 use sp_core::H160;
-use sp_runtime::traits::Zero;
 use sp_std::vec;
 use xcm::prelude::{
 	send_xcm, Junction::*, Location, SendError as XcmpSendError, SendXcm, Xcm, XcmContext, XcmHash,
@@ -58,8 +57,7 @@ use xcm_executor::traits::TransactAsset;
 
 use snowbridge_core::{
 	inbound::{Message, VerificationError, Verifier},
-	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, PricingParameters,
-	StaticLookup,
+	BasicOperatingMode, Channel, ChannelId, ParaId, PricingParameters, StaticLookup,
 };
 use snowbridge_router_primitives::{
 	inbound,
@@ -263,25 +261,12 @@ pub mod pallet {
 				}
 			})?;
 
-			// Reward relayer from the sovereign account of the destination parachain, only if funds
-			// are available
-			let sovereign_account = sibling_sovereign_account::<T>(channel.para_id);
-			let delivery_cost = Self::calculate_delivery_cost(message.encode().len() as u32);
-			let amount = T::Token::reducible_balance(
-				&sovereign_account,
-				Preservation::Preserve,
-				Fortitude::Polite,
-			)
-			.min(delivery_cost);
-			if !amount.is_zero() {
-				T::Token::transfer(&sovereign_account, &who, amount, Preservation::Preserve)?;
-			}
-
 			// Decode message into XCM
 			let (xcm, fee) =
 				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(message) => T::MessageConverter::convert(envelope.message_id, message)
-						.map_err(|e| Error::<T>::ConvertMessage(e))?,
+					Ok(message) =>
+						T::MessageConverter::convert(envelope.message_id, message, who.clone())
+							.map_err(|e| Error::<T>::ConvertMessage(e))?,
 					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
 				};
 
@@ -292,8 +277,14 @@ pub mod pallet {
 				fee
 			);
 
-			// Burning fees for teleport
-			Self::burn_fees(channel.para_id, fee)?;
+			// Burning fees from the relay for teleport
+			T::Token::burn_from(
+				&who,
+				fee,
+				Preservation::Preserve,
+				Precision::BestEffort,
+				Fortitude::Polite,
+			)?;
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;

@@ -118,6 +118,7 @@ pub trait ConvertMessage {
 	fn convert(
 		message_id: H256,
 		message: VersionedMessage,
+		relayer: Self::AccountId,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError>;
 }
 
@@ -145,6 +146,7 @@ where
 	fn convert(
 		message_id: H256,
 		message: VersionedMessage,
+		relayer: AccountId,
 	) -> Result<(Xcm<()>, Self::Balance), ConvertMessageError> {
 		use Command::*;
 		use VersionedMessage::*;
@@ -152,7 +154,15 @@ where
 			V1(MessageV1 { chain_id, command: RegisterToken { token, fee } }) =>
 				Ok(Self::convert_register_token(message_id, chain_id, token, fee)),
 			V1(MessageV1 { chain_id, command: SendToken { token, destination, amount, fee } }) =>
-				Ok(Self::convert_send_token(message_id, chain_id, token, destination, amount, fee)),
+				Ok(Self::convert_send_token(
+					message_id,
+					relayer,
+					chain_id,
+					token,
+					destination,
+					amount,
+					fee,
+				)),
 		}
 	}
 }
@@ -224,6 +234,7 @@ where
 
 	fn convert_send_token(
 		message_id: H256,
+		relayer: AccountId,
 		chain_id: u64,
 		token: H160,
 		destination: Destination,
@@ -263,6 +274,12 @@ where
 			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
+			// No matter what error it is just try to Deposit the asset to beneficiary without
+			// trapped.
+			SetErrorHandler(Xcm(vec![DepositAsset {
+				assets: Definite(asset.clone().into()),
+				beneficiary: beneficiary.clone(),
+			}])),
 			ReserveAssetDeposited(asset.clone().into()),
 			ClearOrigin,
 		];
@@ -289,11 +306,16 @@ where
 				]);
 			},
 			None => {
+				// Deposit asset to beneficiary and all fees left to relayer
 				instructions.extend(vec![
-					// Deposit both asset and fees to beneficiary so the fees will not get
-					// trapped. Another benefit is when fees left more than ED on AssetHub could be
-					// used to create the beneficiary account in case it does not exist.
-					DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+					DepositAsset {
+						assets: Definite(asset.clone().into()),
+						beneficiary: beneficiary.clone(),
+					},
+					DepositAsset {
+						assets: Wild(AllCounted(2)),
+						beneficiary: Location::from(relayer.into()),
+					},
 				]);
 			},
 		}
