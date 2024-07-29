@@ -47,10 +47,10 @@ use xcm_builder::{
 	AllowHrmpNotificationsFromRelayChain, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin,
 	FrameTransactionalProcessor, FungibleAdapter, HandleFee, IsConcrete, ParentAsSuperuser,
-	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-	TrailingSetTopicAsId, UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
-	XcmFeeManagerFromComponents, XcmFeeToAccount,
+	ParentIsPreset, RelayChainAsNative, SendXcmFeeToAccount, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
+	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
 };
 use xcm_executor::{
 	traits::{FeeReason, TransactAsset},
@@ -213,7 +213,7 @@ impl xcm_executor::Config for XcmConfig {
 				crate::bridge_to_westend_config::BridgeHubWestendChainId,
 				crate::bridge_to_westend_config::AssetHubRococoToAssetHubWestendMessagesLane,
 			>,
-			XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
+			SendXcmFeeToAccount<Self::AssetTransactor, TreasuryAccount>,
 		),
 	>;
 	type MessageExporter = (
@@ -344,24 +344,27 @@ impl<
 				match asset.fun {
 					Fungible(total_fee) => {
 						let source_fee = total_fee / 2;
-						deposit_or_burn_fee::<AssetTransactor, _>(
+						deposit_or_burn_fee::<AssetTransactor>(
 							Asset { id: asset.id.clone(), fun: Fungible(source_fee) }.into(),
 							maybe_context,
-							source_para_account.clone(),
+							AccountId32 { network: None, id: source_para_account.clone().into() }
+								.into(),
 						);
 
 						let dest_fee = total_fee - source_fee;
-						deposit_or_burn_fee::<AssetTransactor, _>(
+						deposit_or_burn_fee::<AssetTransactor>(
 							Asset { id: asset.id, fun: Fungible(dest_fee) }.into(),
 							maybe_context,
-							dest_para_account.clone(),
+							AccountId32 { network: None, id: dest_para_account.clone().into() }
+								.into(),
 						);
 					},
 					NonFungible(_) => {
-						deposit_or_burn_fee::<AssetTransactor, _>(
+						deposit_or_burn_fee::<AssetTransactor>(
 							asset.into(),
 							maybe_context,
-							source_para_account.clone(),
+							AccountId32 { network: None, id: source_para_account.clone().into() }
+								.into(),
 						);
 					},
 				}
