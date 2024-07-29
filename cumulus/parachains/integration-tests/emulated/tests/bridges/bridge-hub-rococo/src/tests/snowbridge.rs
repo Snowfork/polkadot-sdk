@@ -381,19 +381,15 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 	let assethub_sovereign = BridgeHubRococo::sovereign_account_id_of(assethub_location);
 	let bridgehub_location = AssetHubRococo::sibling_location_of(BridgeHubRococo::para_id());
 
-	AssetHubRococo::force_default_xcm_version(Some(XCM_VERSION));
-	BridgeHubRococo::force_default_xcm_version(Some(XCM_VERSION));
 	AssetHubRococo::force_xcm_version(
 		Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]),
 		XCM_VERSION,
 	);
 
-	BridgeHubRococo::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
-
 	const WETH_AMOUNT: u128 = 1_000_000_000;
 	const FEE_AMOUNT: u128 = 2_750_872_500_000;
 	// To cover the delivery cost on BH
-	const LOCAL_FEE_AMOUNT: u128 = 1_000_000_000;
+	const LOCAL_FEE_AMOUNT: u128 = DefaultBridgeHubEthereumBaseFee::get() + 12_000_000;
 	// To cover the delivery cost on Ethereum
 	const REMOTE_FEE_AMOUNT: u128 = FEE_AMOUNT - LOCAL_FEE_AMOUNT;
 
@@ -457,13 +453,19 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			BuyExecution { fees: local_fee_asset.clone(), weight_limit: Unlimited },
 			DepositAsset {
 				assets: Wild(AllCounted(1)),
-				beneficiary: (AccountId32 { id: assethub_sovereign.into(), network: None },).into(),
+				beneficiary:
+					(AccountId32 { id: assethub_sovereign.clone().into(), network: None },).into(),
 			},
 		]);
 
 		let xcms = VersionedXcm::from(Xcm(vec![
 			WithdrawAsset(assets.clone().into()),
 			SetFeesMode { jit_withdraw: true },
+			InitiateTeleport {
+				assets: Definite(vec![local_fee_asset.clone()].into()),
+				xcm: teleport_xcm_on_bh,
+				dest: bridgehub_location,
+			},
 			InitiateReserveWithdraw {
 				assets: Definite(vec![remote_fee_asset.clone(), weth_asset.clone()].into()),
 				// with reserve set to Ethereum destination, the ExportMessage will
@@ -471,15 +473,16 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 				reserve: destination,
 				xcm: withdraw_xcm_on_bh,
 			},
-			InitiateTeleport {
-				assets: Definite(vec![local_fee_asset.clone()].into()),
-				xcm: teleport_xcm_on_bh,
-				dest: bridgehub_location,
-			},
 		]));
 		let free_balance_before = <AssetHubRococo as AssetHubRococoPallet>::Balances::free_balance(
 			AssetHubRococoReceiver::get(),
 		);
+		// Assert there is no balance left in the assethub_sovereign on BH
+		let free_balance_of_sovereign_on_bh_before =
+			<BridgeHubRococo as BridgeHubRococoPallet>::Balances::free_balance(
+				assethub_sovereign.clone(),
+			);
+		assert_eq!(free_balance_of_sovereign_on_bh_before, 0);
 		<AssetHubRococo as AssetHubRococoPallet>::PolkadotXcm::execute(
 			RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
 			bx!(xcms),
@@ -504,6 +507,9 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
 			]
 		);
+		let free_balance_of_sovereign_on_bh_after =
+			<BridgeHubRococo as BridgeHubRococoPallet>::Balances::free_balance(assethub_sovereign);
+		assert_eq!(free_balance_of_sovereign_on_bh_after, 955613334);
 	});
 }
 
