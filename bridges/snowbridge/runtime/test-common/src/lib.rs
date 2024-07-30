@@ -551,10 +551,7 @@ pub fn ethereum_extrinsic<Runtime>(
 			let gap =
 				<Runtime as snowbridge_pallet_ethereum_client::Config>::FreeHeadersInterval::get();
 			// Large enough header gap is free
-			if gap.is_some() &&
-				update.finalized_header.slot >=
-					initial_checkpoint.header.slot + gap.unwrap() as u64
-			{
+			if update.finalized_header.slot >= initial_checkpoint.header.slot + gap as u64 {
 				assert!(balance_after_checkpoint == balance_after_update);
 			} else {
 				// Otherwise paid
