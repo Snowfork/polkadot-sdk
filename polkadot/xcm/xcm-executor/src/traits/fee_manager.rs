@@ -49,6 +49,9 @@ pub enum FeeReason {
 	LockAsset,
 	/// When the `RequestUnlock` instruction is called.
 	RequestUnlock,
+	InitiateReserveWithdrawThroughBridge {
+		destination: Location,
+	},
 }
 
 impl FeeManager for () {

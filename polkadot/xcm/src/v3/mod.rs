@@ -1167,6 +1167,12 @@ pub enum Instruction<Call> {
 	///
 	/// Errors: If the given origin is `Some` and not equal to the current Origin register.
 	UnpaidExecution { weight_limit: WeightLimit, check_origin: Option<MultiLocation> },
+
+	InitiateReserveWithdrawThroughBridge {
+		assets: MultiAssetFilter,
+		reserve: MultiLocation,
+		xcm: Xcm<()>,
+	},
 }
 
 impl<Call> Xcm<Call> {
@@ -1244,6 +1250,8 @@ impl<Call> Instruction<Call> {
 			AliasOrigin(location) => AliasOrigin(location),
 			UnpaidExecution { weight_limit, check_origin } =>
 				UnpaidExecution { weight_limit, check_origin },
+			InitiateReserveWithdrawThroughBridge { assets, reserve, xcm } =>
+				InitiateReserveWithdrawThroughBridge { assets, reserve, xcm },
 		}
 	}
 }
@@ -1313,6 +1321,8 @@ impl<Call, W: XcmWeightInfo<Call>> GetWeight<W> for Instruction<Call> {
 			AliasOrigin(location) => W::alias_origin(location),
 			UnpaidExecution { weight_limit, check_origin } =>
 				W::unpaid_execution(weight_limit, check_origin),
+			InitiateReserveWithdrawThroughBridge { assets, reserve, xcm } =>
+				W::initiate_reserve_withdraw_through_bridge(assets, reserve, xcm),
 		}
 	}
 }
@@ -1496,6 +1506,13 @@ impl<Call> TryFrom<NewInstruction<Call>> for Instruction<Call> {
 			UnpaidExecution { weight_limit, check_origin } => Self::UnpaidExecution {
 				weight_limit,
 				check_origin: check_origin.map(|origin| origin.try_into()).transpose()?,
+			},
+			InitiateReserveWithdrawThroughBridge { assets, reserve, xcm } => {
+				// No `max_assets` here, so if there's a connt, then we cannot translate.
+				let assets = assets.try_into()?;
+				let reserve = reserve.try_into()?;
+				let xcm = xcm.try_into()?;
+				Self::InitiateReserveWithdrawThroughBridge { assets, reserve, xcm }
 			},
 		})
 	}

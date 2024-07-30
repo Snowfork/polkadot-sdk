@@ -229,4 +229,11 @@ impl<Call> XcmWeightInfo<Call> for CoretimeWestendXcmWeight<Call> {
 	fn unpaid_execution(_: &WeightLimit, _: &Option<Location>) -> Weight {
 		XcmGeneric::<Runtime>::unpaid_execution()
 	}
+	fn initiate_reserve_withdraw_through_bridge(
+		assets: &AssetFilter,
+		_reserve: &Location,
+		_xcm: &Xcm<()>,
+	) -> Weight {
+		assets.weigh_assets(XcmFungibleWeight::<Runtime>::initiate_reserve_withdraw())
+	}
 }

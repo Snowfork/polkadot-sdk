@@ -452,7 +452,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			WithdrawAsset(assets.clone().into()),
 			BurnAsset(local_fee_asset.clone().into()),
 			SetFeesMode { jit_withdraw: true },
-			InitiateReserveWithdraw {
+			InitiateReserveWithdrawThroughBridge {
 				assets: Definite(vec![remote_fee_asset.clone(), weth_asset.clone()].into()),
 				// with reserve set to Ethereum destination, the ExportMessage will
 				// be appended to the front of the list by the SovereignPaidRemoteExporter

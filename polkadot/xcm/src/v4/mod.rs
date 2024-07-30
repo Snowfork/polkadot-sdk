@@ -1038,6 +1038,11 @@ pub enum Instruction<Call> {
 	///
 	/// Errors: If the given origin is `Some` and not equal to the current Origin register.
 	UnpaidExecution { weight_limit: WeightLimit, check_origin: Option<Location> },
+	InitiateReserveWithdrawThroughBridge {
+		assets: AssetFilter,
+		reserve: Location,
+		xcm: Xcm<()>,
+	},
 }
 
 impl<Call> Xcm<Call> {
@@ -1115,6 +1120,8 @@ impl<Call> Instruction<Call> {
 			AliasOrigin(location) => AliasOrigin(location),
 			UnpaidExecution { weight_limit, check_origin } =>
 				UnpaidExecution { weight_limit, check_origin },
+			InitiateReserveWithdrawThroughBridge { assets, reserve, xcm } =>
+				InitiateReserveWithdrawThroughBridge { assets, reserve, xcm },
 		}
 	}
 }
@@ -1184,6 +1191,8 @@ impl<Call, W: XcmWeightInfo<Call>> GetWeight<W> for Instruction<Call> {
 			AliasOrigin(location) => W::alias_origin(location),
 			UnpaidExecution { weight_limit, check_origin } =>
 				W::unpaid_execution(weight_limit, check_origin),
+			InitiateReserveWithdrawThroughBridge { assets, reserve, xcm } =>
+				W::initiate_reserve_withdraw_through_bridge(assets, reserve, xcm),
 		}
 	}
 }
@@ -1357,6 +1366,12 @@ impl<Call> TryFrom<OldInstruction<Call>> for Instruction<Call> {
 					.map(|location| location.try_into())
 					.transpose()
 					.map_err(|_| ())?,
+			},
+			InitiateReserveWithdrawThroughBridge { assets, reserve, xcm } => {
+				let assets = assets.try_into()?;
+				let reserve = reserve.try_into()?;
+				let xcm = xcm.try_into()?;
+				Self::InitiateReserveWithdrawThroughBridge { assets, reserve, xcm }
 			},
 		})
 	}
