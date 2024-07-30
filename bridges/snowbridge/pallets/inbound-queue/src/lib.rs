@@ -331,6 +331,13 @@ pub mod pallet {
 			Ok(xcm_hash)
 		}
 
+		pub fn calculate_send_cost(xcm: Xcm<()>, dest: ParaId) -> Result<Assets, Error<T>> {
+			let dest = Location::new(1, [Parachain(dest.into())]);
+			let (_, fee) = T::XcmSender::validate(&mut Some(dest), &mut Some(xcm))
+				.map_err(Error::<T>::from)?;
+			Ok(fee)
+		}
+
 		pub fn calculate_delivery_cost(length: u32) -> BalanceOf<T> {
 			let weight_fee = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
 			let len_fee = T::LengthToFee::weight_to_fee(&Weight::from_parts(length as u64, 0));

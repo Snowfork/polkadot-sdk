@@ -602,5 +602,60 @@ where
 			println!("inbound_delivery_cost:{:?}", inbound_delivery_cost);
 			println!("inbound_send_cost:{:?}", inbound_send_cost);
 			println!("outbound_delivery_cost:{:?}", outbound_delivery_cost);
+
+			const CHAIN_ID: u64 = 11155111;
+			const WETH: [u8; 20] = [1; 20];
+
+			let total_fee_amount: u32 = 2_000_000_000;
+			let asset_hub_fee_amount: u32 = 1_000_000_000;
+			let dest_fee_amount: u32 = total_fee_amount - asset_hub_fee_amount;
+
+			let total_fee_asset: Asset = (Location::parent(), total_fee_amount).into();
+			let asset_hub_fee_asset: Asset = (Location::parent(), asset_hub_fee_amount).into();
+			let dest_para_fee_asset: Asset = (Location::parent(), dest_fee_amount).into();
+
+			let weth_asset_id = Location::new(
+				2,
+				[
+					GlobalConsensus(Ethereum { chain_id: CHAIN_ID }),
+					AccountKey20 { network: None, key: WETH.into() },
+				],
+			);
+			let weth_asset = Asset::from((weth_asset_id.clone(), 1_000_000));
+
+			let xcm_worst_case = Xcm(vec![
+				ReceiveTeleportedAsset(total_fee_asset.into()),
+				BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
+				DescendOrigin(PalletInstance(80).into()),
+				UniversalOrigin(GlobalConsensus(Ethereum { chain_id: CHAIN_ID })),
+				ReserveAssetDeposited(weth_asset.clone().into()),
+				ClearOrigin,
+				DepositReserveAsset {
+					assets: Definite(vec![dest_para_fee_asset.clone(), weth_asset.clone()].into()),
+					dest: Location::new(1, [Parachain(2000)]),
+					xcm: vec![
+						BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
+						DepositAsset {
+							assets: Definite(weth_asset.into()),
+							beneficiary: [1; 32].into(),
+						},
+						SetTopic([1; 32]),
+					]
+					.into(),
+				},
+			]);
+
+			let delivery_cost_worst_case =
+				<snowbridge_pallet_inbound_queue::Pallet<Runtime>>::calculate_send_cost(
+					xcm_worst_case,
+					ParaId::from(1000),
+				)
+				.unwrap()
+				.into_inner();
+			// println!("{:?}", delivery_cost_worst_case[0]);
+
+			let send_cost_max: Asset =
+				(Location::parent(), inbound_send_cost.saturated_into::<u128>()).into();
+			assert!(send_cost_max.gt(&delivery_cost_worst_case[0]))
 		})
 }
