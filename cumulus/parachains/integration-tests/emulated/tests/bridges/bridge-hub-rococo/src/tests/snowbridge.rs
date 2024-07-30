@@ -388,8 +388,9 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 
 	const WETH_AMOUNT: u128 = 1_000_000_000;
 	const FEE_AMOUNT: u128 = 2_750_872_500_000;
-	// To cover the delivery cost on BH
-	const LOCAL_FEE_AMOUNT: u128 = DefaultBridgeHubEthereumBaseFee::get() + 12_000_000;
+	const TELEPORT_FEE_AMOUNT: u128 = 12_000_000;
+	// To cover the delivery cost on BH and
+	const LOCAL_FEE_AMOUNT: u128 = DefaultBridgeHubEthereumBaseFee::get() + TELEPORT_FEE_AMOUNT;
 	// To cover the delivery cost on Ethereum
 	const REMOTE_FEE_AMOUNT: u128 = FEE_AMOUNT - LOCAL_FEE_AMOUNT;
 
@@ -507,9 +508,10 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued {..}) => {},
 			]
 		);
+		// Assert there is still some fee left in sov account after the transfer
 		let free_balance_of_sovereign_on_bh_after =
 			<BridgeHubRococo as BridgeHubRococoPallet>::Balances::free_balance(assethub_sovereign);
-		assert_eq!(free_balance_of_sovereign_on_bh_after, 955613334);
+		assert_eq!(free_balance_of_sovereign_on_bh_after, 3613334);
 	});
 }
 
