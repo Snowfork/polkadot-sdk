@@ -86,8 +86,9 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ForkVersions: Get<ForkVersions>;
+		/// Minimum gap between finalized headers for an update to be free.
 		#[pallet::constant]
-		type FreeHeadersInterval: Get<Option<u32>>;
+		type FreeHeadersInterval: Get<u32>;
 		type WeightInfo: WeightInfo;
 	}
 
@@ -442,7 +443,6 @@ pub mod pallet {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
-			let mut sync_committee_updated = false;
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
 				let store_period = compute_period(latest_finalized_state.slot);
 				let update_finalized_period = compute_period(update.finalized_header.slot);
@@ -469,14 +469,9 @@ pub mod pallet {
 				Self::deposit_event(Event::SyncCommitteeUpdated {
 					period: update_finalized_period,
 				});
-				sync_committee_updated = true;
 			};
 
-			let pays_fee = Self::may_refund_call_fee(
-				latest_finalized_state.slot,
-				update.finalized_header.slot,
-				sync_committee_updated,
-			);
+			let pays_fee = Self::check_refundable(update, latest_finalized_state.slot);
 			let actual_weight = match update.next_sync_committee_update {
 				None => T::WeightInfo::submit(),
 				Some(_) => T::WeightInfo::submit_with_sync_committee(),
@@ -651,7 +646,7 @@ pub mod pallet {
 				config::SLOTS_PER_EPOCH as u64,
 			));
 			let domain_type = config::DOMAIN_SYNC_COMMITTEE.to_vec();
-			// Domains are used for for seeds, for signatures, and for selecting aggregators.
+			// Domains are used for seeds, for signatures, and for selecting aggregators.
 			let domain = Self::compute_domain(domain_type, fork_version, validators_root)?;
 			// Hash tree root of SigningData - object root + domain
 			let signing_root = Self::compute_signing_root(header, domain)?;
@@ -661,22 +656,16 @@ pub mod pallet {
 		/// Updates are free if the update is successful and the interval between the latest
 		/// finalized header in storage and the newly imported header is large enough. All
 		/// successful sync committee updates are free.
-		pub(super) fn may_refund_call_fee(
-			latest_slot: u64,
-			improved_by_slot: u64,
-			sync_committee_updated: bool,
-		) -> Pays {
+		pub(super) fn check_refundable(update: &Update, latest_slot: u64) -> Pays {
 			// If the sync committee was successfully updated, the update may be free.
-			if sync_committee_updated {
+			if update.next_sync_committee_update.is_some() {
 				return Pays::No;
 			}
 
 			// If free headers are allowed and the latest finalized header is larger than the
 			// minimum slot interval, the header import transaction is free.
-			if let Some(free_headers_interval) = T::FreeHeadersInterval::get() {
-				if improved_by_slot >= latest_slot + free_headers_interval as u64 {
-					return Pays::No;
-				}
+			if update.finalized_header.slot >= latest_slot + T::FreeHeadersInterval::get() as u64 {
+				return Pays::No;
 			}
 
 			Pays::Yes

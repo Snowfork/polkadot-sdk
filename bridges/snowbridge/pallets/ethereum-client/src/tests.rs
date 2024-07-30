@@ -130,13 +130,18 @@ pub fn compute_domain_bls() {
 
 #[test]
 pub fn may_refund_call_fee() {
+	let finalized_update = Box::new(load_next_finalized_header_update_fixture());
+	let sync_committee_update = Box::new(load_sync_committee_update_fixture());
 	new_tester().execute_with(|| {
 		// Not free, smaller than the allowed free header interval
-		assert_eq!(EthereumBeaconClient::may_refund_call_fee(96, 100, false), Pays::Yes);
+		assert_eq!(
+			EthereumBeaconClient::check_refundable(&finalized_update.clone(), 8190),
+			Pays::Yes
+		);
 		// Is free, larger than the minimum interval
-		assert_eq!(EthereumBeaconClient::may_refund_call_fee(96, 300, false), Pays::No);
+		assert_eq!(EthereumBeaconClient::check_refundable(&finalized_update, 8000), Pays::No);
 		// Is free, valid sync committee update
-		assert_eq!(EthereumBeaconClient::may_refund_call_fee(96, 100, true), Pays::No);
+		assert_eq!(EthereumBeaconClient::check_refundable(&sync_committee_update, 8190), Pays::No);
 	});
 }
 
