@@ -20,15 +20,17 @@ use super::{
 	ToWestendXcmRouter, TransactionByteFee, TrustBackedAssetsInstance, Uniques, WeightToFee,
 	XcmpQueue,
 };
+use crate::{vec, Vec};
 use assets_common::{
 	matching::{FromNetwork, FromSiblingParachain, IsForeignConcreteAsset},
 	TrustBackedAssetsAsLocation,
 };
+use codec::Encode;
 use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::imbalance::{ResolveAssetTo, ResolveTo},
-		ConstU32, Contains, Equals, Everything, Nothing, PalletInfoAccess,
+		ConstU32, Contains, Equals, Everything, Get, Nothing, PalletInfoAccess,
 	},
 };
 use frame_system::EnsureRoot;
@@ -44,22 +46,27 @@ use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
 use sp_runtime::traits::{AccountIdConversion, ConvertInto};
+use sp_std::marker::PhantomData;
 use testnet_parachains_constants::rococo::snowbridge::{
 	EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX,
 };
-use xcm::latest::prelude::*;
+use xcm::{
+	latest::prelude::*,
+	prelude::SendError::{MissingArgument, NotApplicable, Unroutable},
+	VersionedLocation, VersionedXcm,
+};
 use xcm_builder::{
-	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowHrmpNotificationsFromRelayChain,
-	AllowKnownQueryResponses, AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom,
-	DenyReserveTransferToRelayChain, DenyThenTry, DescribeAllTerminal, DescribeFamily,
-	EnsureXcmOrigin, FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter,
-	GlobalConsensusParachainConvertsFor, HashedDescription, IsConcrete, LocalMint,
-	NetworkExportTableItem, NoChecking, NonFungiblesAdapter, ParentAsSuperuser, ParentIsPreset,
-	RelayChainAsNative, SendXcmFeeToAccount, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignPaidRemoteExporter,
-	SovereignSignedViaLocation, StartsWith, StartsWithExplicitGlobalConsensus, TakeWeightCredit,
-	TrailingSetTopicAsId, UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
-	XcmFeeManagerFromComponents,
+	ensure_is_remote, AccountId32Aliases, AllowExplicitUnpaidExecutionFrom,
+	AllowHrmpNotificationsFromRelayChain, AllowKnownQueryResponses, AllowSubscriptionsFrom,
+	AllowTopLevelPaidExecutionFrom, DenyReserveTransferToRelayChain, DenyThenTry,
+	DescribeAllTerminal, DescribeFamily, EnsureXcmOrigin, ExporterFor, FrameTransactionalProcessor,
+	FungibleAdapter, FungiblesAdapter, GlobalConsensusParachainConvertsFor, HashedDescription,
+	InspectMessageQueues, IsConcrete, LocalMint, NetworkExportTableItem, NoChecking,
+	NonFungiblesAdapter, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	SendXcmFeeToAccount, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, StartsWith,
+	StartsWithExplicitGlobalConsensus, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
+	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
 };
 use xcm_executor::XcmExecutor;
 
@@ -443,6 +450,92 @@ type LocalXcmRouter = (
 	XcmpQueue,
 );
 
+pub struct SovereignReceiveTeleportRemoteExporter<Bridges, Router, UniversalLocation>(
+	PhantomData<(Bridges, Router, UniversalLocation)>,
+);
+impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocation>> SendXcm
+	for SovereignReceiveTeleportRemoteExporter<Bridges, Router, UniversalLocation>
+{
+	type Ticket = Router::Ticket;
+
+	fn validate(
+		dest: &mut Option<Location>,
+		msg: &mut Option<Xcm<()>>,
+	) -> SendResult<Router::Ticket> {
+		let d = dest.as_ref().ok_or(MissingArgument)?;
+		let devolved =
+			ensure_is_remote(UniversalLocation::get(), d.clone()).map_err(|_| NotApplicable)?;
+		let (remote_network, remote_location) = devolved;
+		let xcm = msg.take().ok_or(MissingArgument)?;
+
+		// find exporter
+		let Some((bridge, maybe_payment)) =
+			Bridges::exporter_for(&remote_network, &remote_location, &xcm)
+		else {
+			// We need to make sure that msg is not consumed in case of `NotApplicable`.
+			*msg = Some(xcm);
+			return Err(NotApplicable)
+		};
+
+		// `xcm` should already end with `SetTopic` - if it does, then extract and derive into
+		// an onward topic ID.
+		let maybe_forward_id = match xcm.last() {
+			Some(SetTopic(t)) =>
+				Some((b"forward_id_for", t).using_encoded(sp_io::hashing::blake2_256)),
+			_ => None,
+		};
+
+		let local_from_bridge =
+			UniversalLocation::get().invert_target(&bridge).map_err(|_| Unroutable)?;
+		let export_instruction =
+			ExportMessage { network: remote_network, destination: remote_location, xcm };
+
+		let mut message = Xcm(if let Some(ref payment) = maybe_payment {
+			let fees = payment
+				.clone()
+				.reanchored(&bridge, &UniversalLocation::get())
+				.map_err(|_| Unroutable)?;
+			vec![
+				ReceiveTeleportedAsset(fees.clone().into()),
+				BuyExecution { fees, weight_limit: Unlimited },
+				// `SetAppendix` ensures that `fees` are not trapped in any case, for example, when
+				// `ExportXcm::validate` encounters an error during the processing of
+				// `ExportMessage`.
+				SetAppendix(Xcm(vec![DepositAsset {
+					assets: AllCounted(1).into(),
+					beneficiary: local_from_bridge,
+				}])),
+				export_instruction,
+			]
+		} else {
+			vec![export_instruction]
+		});
+		if let Some(forward_id) = maybe_forward_id {
+			message.0.push(SetTopic(forward_id));
+		}
+
+		// We then send a normal message to the bridge asking it to export the prepended
+		// message to the remote chain.
+		let (v, mut cost) = validate_send::<Router>(bridge, message)?;
+		if let Some(bridge_payment) = maybe_payment {
+			cost.push(bridge_payment);
+		}
+		Ok((v, cost))
+	}
+
+	fn deliver(ticket: Router::Ticket) -> Result<XcmHash, SendError> {
+		Router::deliver(ticket)
+	}
+}
+
+impl<Bridges, Router: InspectMessageQueues, UniversalLocation> InspectMessageQueues
+	for SovereignReceiveTeleportRemoteExporter<Bridges, Router, UniversalLocation>
+{
+	fn get_messages() -> Vec<(VersionedLocation, Vec<VersionedXcm<()>>)> {
+		Router::get_messages()
+	}
+}
+
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
 pub type XcmRouter = WithUniqueTopic<(
@@ -452,7 +545,11 @@ pub type XcmRouter = WithUniqueTopic<(
 	ToWestendXcmRouter,
 	// Router which wraps and sends xcm to BridgeHub to be delivered to the Ethereum
 	// GlobalConsensus
-	SovereignPaidRemoteExporter<bridging::EthereumNetworkExportTable, XcmpQueue, UniversalLocation>,
+	SovereignReceiveTeleportRemoteExporter<
+		bridging::EthereumNetworkExportTable,
+		XcmpQueue,
+		UniversalLocation,
+	>,
 )>;
 
 impl pallet_xcm::Config for Runtime {
