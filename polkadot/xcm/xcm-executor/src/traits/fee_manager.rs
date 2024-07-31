@@ -34,9 +34,9 @@ pub enum FeeReason {
 	/// When the `TransferReserveAsset` instruction is called.
 	TransferReserveAsset,
 	/// When the `DepositReserveAsset` instruction is called.
-	DepositReserveAsset,
+	DepositReserveAsset { destination: Location },
 	/// When the `InitiateReserveWithdraw` instruction is called.
-	InitiateReserveWithdraw,
+	InitiateReserveWithdraw { destination: Location },
 	/// When the `InitiateTeleport` instruction is called.
 	InitiateTeleport,
 	/// When the `QueryPallet` instruction is called.

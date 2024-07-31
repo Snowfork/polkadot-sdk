@@ -45,7 +45,10 @@ use parachains_common::{
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
-use sp_runtime::traits::{AccountIdConversion, ConvertInto};
+use sp_runtime::{
+	traits::{AccountIdConversion, ConvertInto},
+	SaturatedConversion,
+};
 use sp_std::marker::PhantomData;
 use testnet_parachains_constants::rococo::snowbridge::{
 	EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX,
@@ -60,15 +63,15 @@ use xcm_builder::{
 	AllowHrmpNotificationsFromRelayChain, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, DenyReserveTransferToRelayChain, DenyThenTry,
 	DescribeAllTerminal, DescribeFamily, EnsureXcmOrigin, ExporterFor, FrameTransactionalProcessor,
-	FungibleAdapter, FungiblesAdapter, GlobalConsensusParachainConvertsFor, HashedDescription,
-	InspectMessageQueues, IsConcrete, LocalMint, NetworkExportTableItem, NoChecking,
-	NonFungiblesAdapter, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	FungibleAdapter, FungiblesAdapter, GlobalConsensusParachainConvertsFor, HandleFee,
+	HashedDescription, InspectMessageQueues, IsConcrete, LocalMint, NetworkExportTableItem,
+	NoChecking, NonFungiblesAdapter, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
 	SendXcmFeeToAccount, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, StartsWith,
 	StartsWithExplicitGlobalConsensus, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
 	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, XcmFeeManagerFromComponents,
 };
-use xcm_executor::XcmExecutor;
+use xcm_executor::{traits::FeeReason, XcmExecutor};
 
 parameter_types! {
 	pub const TokenLocation: Location = Location::parent();
@@ -420,7 +423,15 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type FeeManager = XcmFeeManagerFromComponents<
 		WaivedLocations,
-		SendXcmFeeToAccount<Self::AssetTransactor, TreasuryAccount>,
+		(
+			SnowbridgeExportFee<
+				Balance,
+				bridging::to_ethereum::BridgeHubEthereumBaseFee,
+				TokenLocation,
+				bridging::to_ethereum::EthereumLocation,
+			>,
+			SendXcmFeeToAccount<Self::AssetTransactor, TreasuryAccount>,
+		),
 	>;
 	type MessageExporter = ();
 	type UniversalAliases =
@@ -533,6 +544,58 @@ impl<Bridges, Router: InspectMessageQueues, UniversalLocation> InspectMessageQue
 {
 	fn get_messages() -> Vec<(VersionedLocation, Vec<VersionedXcm<()>>)> {
 		Router::get_messages()
+	}
+}
+
+pub struct SnowbridgeExportFee<Balance, ExportFeeBalance, FeeAssetLocation, EthereumLocation>(
+	PhantomData<(Balance, ExportFeeBalance, FeeAssetLocation, EthereumLocation)>,
+);
+
+impl<Balance, ExportFeeBalance, FeeAssetLocation, EthereumLocation> HandleFee
+	for SnowbridgeExportFee<Balance, ExportFeeBalance, FeeAssetLocation, EthereumLocation>
+where
+	Balance: From<u128> + Into<u128>,
+	ExportFeeBalance: Get<Balance>,
+	FeeAssetLocation: Get<Location>,
+	EthereumLocation: Get<Location>,
+{
+	fn handle_fee(
+		fees: xcm::prelude::Assets,
+		_context: Option<&XcmContext>,
+		reason: FeeReason,
+	) -> xcm::prelude::Assets {
+		// Check the reason to see if this export is for snowbridge.
+		if !matches!(reason, FeeReason::InitiateReserveWithdraw { destination }
+			if destination == EthereumLocation::get()
+		) || fees.len() != 1
+		{
+			return fees
+		}
+
+		let fee = fees.get(0);
+
+		if let Some(Asset { id: location, .. }) = fee {
+			if location.0 != FeeAssetLocation::get() {
+				return fees
+			}
+		}
+
+		let fee_amount: Option<u128> = if let Some(Asset { fun: Fungible(amount), .. }) = fee {
+			Some(amount.clone())
+		} else {
+			None
+		};
+
+		if fee_amount.is_none() {
+			return fees
+		}
+
+		let export_fee_balance = ExportFeeBalance::get();
+
+		let delivery_fee =
+			fee_amount.unwrap().saturating_sub(export_fee_balance.saturated_into::<u128>());
+
+		return Asset::from((FeeAssetLocation::get(), delivery_fee)).into()
 	}
 }
 
@@ -735,6 +798,8 @@ pub mod bridging {
 					PalletInstance(INBOUND_QUEUE_PALLET_INDEX)
 				]
 			);
+			pub EthereumLocation: Location = Location::new(2, [GlobalConsensus(EthereumNetwork::get())]);
+
 
 			/// Set up exporters configuration.
 			/// `Option<Asset>` represents static "base fee" which is used for total delivery fee calculation.

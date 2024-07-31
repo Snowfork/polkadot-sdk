@@ -901,7 +901,11 @@ impl<Config: config::Config> XcmExecutor<Config> {
 					message.extend(xcm.0.into_iter());
 					// put back transport_fee in holding register to be charged by XcmSender
 					self.holding.subsume_assets(transport_fee);
-					self.send(dest, Xcm(message), FeeReason::DepositReserveAsset)?;
+					self.send(
+						dest.clone(),
+						Xcm(message),
+						FeeReason::DepositReserveAsset { destination: dest },
+					)?;
 					Ok(())
 				});
 				if Config::TransactionalProcessor::IS_TRANSACTIONAL && result.is_err() {
@@ -921,7 +925,11 @@ impl<Config: config::Config> XcmExecutor<Config> {
 					);
 					let mut message = vec![WithdrawAsset(assets), ClearOrigin];
 					message.extend(xcm.0.into_iter());
-					self.send(reserve, Xcm(message), FeeReason::InitiateReserveWithdraw)?;
+					self.send(
+						reserve.clone(),
+						Xcm(message),
+						FeeReason::InitiateReserveWithdraw { destination: reserve },
+					)?;
 					Ok(())
 				});
 				if Config::TransactionalProcessor::IS_TRANSACTIONAL && result.is_err() {

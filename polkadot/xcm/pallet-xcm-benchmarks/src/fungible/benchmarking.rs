@@ -150,8 +150,8 @@ benchmarks_instance_pallet! {
 
 		let (expected_fees_mode, expected_assets_in_holding) = T::DeliveryHelper::ensure_successful_delivery(
 			&sender_location,
-			&reserve,
-			FeeReason::InitiateReserveWithdraw,
+			&reserve.clone(),
+			FeeReason::InitiateReserveWithdraw{ destination:reserve.clone() },
 		);
 		let sender_account_balance_before = T::TransactAsset::balance(&sender_account);
 
@@ -175,7 +175,7 @@ benchmarks_instance_pallet! {
 		let instruction = Instruction::InitiateReserveWithdraw {
 			// Worst case is looking through all holdings for every asset explicitly - respecting the limit `MAX_ITEMS_IN_ASSETS`.
 			assets: Definite(holding.into_inner().into_iter().take(MAX_ITEMS_IN_ASSETS).collect::<Vec<_>>().into()),
-			reserve,
+			reserve: reserve.clone(),
 			xcm: Xcm(vec![])
 		};
 		let xcm = Xcm(vec![instruction]);
