@@ -388,9 +388,9 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 	const WETH_AMOUNT: u128 = 1_000_000_000;
 	const FEE_AMOUNT: u128 = 2_750_872_500_000;
 	// To cover the delivery cost on BH and
-	const LOCAL_FEE_AMOUNT: u128 = DefaultBridgeHubEthereumBaseFee::get();
+	let local_fee_amount: u128 = DefaultBridgeHubEthereumBaseFee::get();
 	// To cover the delivery cost on Ethereum
-	const REMOTE_FEE_AMOUNT: u128 = FEE_AMOUNT - LOCAL_FEE_AMOUNT;
+	let remote_fee_amount: u128 = FEE_AMOUNT - local_fee_amount;
 
 	let weth_asset_location: Location = Location::new(
 		2,
@@ -420,19 +420,13 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 	AssetHubRococo::execute_with(|| {
 		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
 
-		// DOT as fee asset
-		let fee_asset = Asset { id: AssetId(Location::parent()), fun: Fungible(FEE_AMOUNT) };
-
 		let remote_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(REMOTE_FEE_AMOUNT) };
-
-		let local_fee_asset =
-			Asset { id: AssetId(Location::parent()), fun: Fungible(LOCAL_FEE_AMOUNT) };
+			Asset { id: AssetId(Location::parent()), fun: Fungible(remote_fee_amount) };
 
 		let weth_asset = Asset { id: weth_asset_location.into(), fun: Fungible(WETH_AMOUNT) };
 
 		// Send both assets to BH
-		let assets = vec![fee_asset.clone(), weth_asset.clone()];
+		let assets = vec![remote_fee_asset.clone(), weth_asset.clone()];
 
 		let destination = Location::new(2, [GlobalConsensus(Ethereum { chain_id: CHAIN_ID })]);
 
@@ -450,10 +444,9 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 
 		let xcms = VersionedXcm::from(Xcm(vec![
 			WithdrawAsset(assets.clone().into()),
-			BurnAsset(local_fee_asset.clone().into()),
 			SetFeesMode { jit_withdraw: true },
 			InitiateReserveWithdraw {
-				assets: Definite(vec![remote_fee_asset.clone(), weth_asset.clone()].into()),
+				assets: Definite(assets.clone().into()),
 				// with reserve set to Ethereum destination, the ExportMessage will
 				// be appended to the front of the list by the SovereignPaidRemoteExporter
 				reserve: destination,
