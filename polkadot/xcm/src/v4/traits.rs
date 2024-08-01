@@ -151,7 +151,7 @@ pub trait Reanchorable: Sized {
 }
 
 /// Result value when attempting to send an XCM message.
-pub type SendResult<T> = result::Result<(T, Assets), SendError>;
+pub type SendResult<T> = result::Result<(T, Assets, Option<Assets>), SendError>;
 
 /// Utility for sending an XCM message to a given location.
 ///
@@ -242,6 +242,7 @@ pub trait SendXcm {
 	fn validate(
 		destination: &mut Option<Location>,
 		message: &mut Option<Xcm<()>>,
+		source: Option<&Location>,
 	) -> SendResult<Self::Ticket>;
 
 	/// Actually carry out the delivery operation for a previously validated message sending.
@@ -255,24 +256,27 @@ impl SendXcm for Tuple {
 	fn validate(
 		destination: &mut Option<Location>,
 		message: &mut Option<Xcm<()>>,
+		source: Option<&Location>,
 	) -> SendResult<Self::Ticket> {
 		let mut maybe_cost: Option<Assets> = None;
+		let mut maybe_burnt: Option<Assets> = None;
 		let one_ticket: Self::Ticket = (for_tuples! { #(
 			if maybe_cost.is_some() {
 				None
 			} else {
-				match Tuple::validate(destination, message) {
+				match Tuple::validate(destination, message, source) {
 					Err(SendError::NotApplicable) => None,
 					Err(e) => { return Err(e) },
-					Ok((v, c)) => {
+					Ok((v, c, b)) => {
 						maybe_cost = Some(c);
+						maybe_burnt = b;
 						Some(v)
 					},
 				}
 			}
 		),* });
 		if let Some(cost) = maybe_cost {
-			Ok((one_ticket, cost))
+			Ok((one_ticket, cost, maybe_burnt))
 		} else {
 			Err(SendError::NotApplicable)
 		}
@@ -290,8 +294,12 @@ impl SendXcm for Tuple {
 
 /// Convenience function for using a `SendXcm` implementation. Just interprets the `dest` and wraps
 /// both in `Some` before passing them as as mutable references into `T::send_xcm`.
-pub fn validate_send<T: SendXcm>(dest: Location, msg: Xcm<()>) -> SendResult<T::Ticket> {
-	T::validate(&mut Some(dest), &mut Some(msg))
+pub fn validate_send<T: SendXcm>(
+	dest: Location,
+	msg: Xcm<()>,
+	source: Option<&Location>,
+) -> SendResult<T::Ticket> {
+	T::validate(&mut Some(dest), &mut Some(msg), source)
 }
 
 /// Convenience function for using a `SendXcm` implementation. Just interprets the `dest` and wraps
@@ -305,8 +313,9 @@ pub fn validate_send<T: SendXcm>(dest: Location, msg: Xcm<()>) -> SendResult<T::
 pub fn send_xcm<T: SendXcm>(
 	dest: Location,
 	msg: Xcm<()>,
+	source: Option<&Location>,
 ) -> result::Result<(XcmHash, Assets), SendError> {
-	let (ticket, price) = T::validate(&mut Some(dest), &mut Some(msg))?;
+	let (ticket, price, _) = T::validate(&mut Some(dest), &mut Some(msg), source)?;
 	let hash = T::deliver(ticket)?;
 	Ok((hash, price))
 }

@@ -291,7 +291,7 @@ impl<H: XcmBlobHauler> LocalXcmQueueManager<H> {
 	/// Send congested signal to the `sending_chain_location`.
 	fn send_congested_signal(sender_and_lane: &SenderAndLane) -> Result<(), SendError> {
 		if let Some(msg) = H::CongestedMessage::get() {
-			send_xcm::<H::ToSourceChainSender>(sender_and_lane.location.clone(), msg)?;
+			send_xcm::<H::ToSourceChainSender>(sender_and_lane.location.clone(), msg, None)?;
 			OutboundLanesCongestedSignals::<H::Runtime, H::MessagesInstance>::insert(
 				sender_and_lane.lane,
 				true,
@@ -303,7 +303,7 @@ impl<H: XcmBlobHauler> LocalXcmQueueManager<H> {
 	/// Send `uncongested` signal to the `sending_chain_location`.
 	fn send_uncongested_signal(sender_and_lane: &SenderAndLane) -> Result<(), SendError> {
 		if let Some(msg) = H::UncongestedMessage::get() {
-			send_xcm::<H::ToSourceChainSender>(sender_and_lane.location.clone(), msg)?;
+			send_xcm::<H::ToSourceChainSender>(sender_and_lane.location.clone(), msg, None)?;
 			OutboundLanesCongestedSignals::<H::Runtime, H::MessagesInstance>::remove(
 				sender_and_lane.lane,
 			);
