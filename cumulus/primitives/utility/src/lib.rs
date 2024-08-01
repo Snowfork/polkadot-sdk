@@ -63,7 +63,11 @@ where
 {
 	type Ticket = Vec<u8>;
 
-	fn validate(dest: &mut Option<Location>, msg: &mut Option<Xcm<()>>) -> SendResult<Vec<u8>> {
+	fn validate(
+		dest: &mut Option<Location>,
+		msg: &mut Option<Xcm<()>>,
+		_source: Option<&Location>,
+	) -> SendResult<Vec<u8>> {
 		let d = dest.take().ok_or(SendError::MissingArgument)?;
 
 		if d.contains_parents_only(1) {
@@ -77,7 +81,7 @@ where
 				.map_err(|()| SendError::ExceedsMaxMessageSize)?;
 			let data = versioned_xcm.encode();
 
-			Ok((data, price))
+			Ok((data, price, None))
 		} else {
 			// Anything else is unhandled. This includes a message that is not meant for us.
 			// We need to make sure that dest/msg is not consumed here.
@@ -381,7 +385,8 @@ impl<
 		FungiblesAssetMatcher,
 		OnUnbalanced,
 		AccountId,
-	> where
+	>
+where
 	Fungibles::Balance: Into<u128>,
 {
 	fn new() -> Self {
@@ -524,7 +529,8 @@ impl<
 		FungiblesAssetMatcher,
 		OnUnbalanced,
 		AccountId,
-	> where
+	>
+where
 	Fungibles::Balance: Into<u128>,
 {
 	fn drop(&mut self) {

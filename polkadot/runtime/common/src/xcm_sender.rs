@@ -107,6 +107,7 @@ where
 	fn validate(
 		dest: &mut Option<Location>,
 		msg: &mut Option<Xcm<()>>,
+		_source: Option<&Location>,
 	) -> SendResult<(HostConfiguration<BlockNumberFor<T>>, ParaId, Vec<u8>)> {
 		let d = dest.take().ok_or(MissingArgument)?;
 		let id = if let (0, [Parachain(id)]) = d.unpack() {
@@ -127,7 +128,7 @@ where
 		dmp::Pallet::<T>::can_queue_downward_message(&config, &para, &blob)
 			.map_err(Into::<SendError>::into)?;
 
-		Ok(((config, para, blob), price))
+		Ok(((config, para, blob), price, None))
 	}
 
 	fn deliver(

@@ -125,7 +125,7 @@ impl<
 			},
 		]);
 
-		let (ticket, _) = Router::validate(&mut Some(asset_location), &mut Some(message))?;
+		let (ticket, _, _) = Router::validate(&mut Some(asset_location), &mut Some(message), None)?;
 		Router::deliver(ticket)?;
 		Ok(query_id.into())
 	}

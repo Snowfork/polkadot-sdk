@@ -284,6 +284,7 @@ mod v_coretime {
 			send_xcm::<SendXcm>(
 				Location::new(0, Junction::Parachain(T::BrokerId::get())),
 				message,
+				None,
 			)?;
 		}
 

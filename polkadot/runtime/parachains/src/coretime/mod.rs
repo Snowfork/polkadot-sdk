@@ -285,6 +285,7 @@ impl<T: Config> Pallet<T> {
 			if let Err(err) = send_xcm::<T::SendXcm>(
 				Location::new(0, [Junction::Parachain(T::BrokerId::get())]),
 				message,
+				None,
 			) {
 				log::error!(target: LOG_TARGET, "Sending `NotifyCoreCount` to coretime chain failed: {:?}", err);
 			}
@@ -336,6 +337,7 @@ impl<T: Config> Pallet<T> {
 		if let Err(err) = send_xcm::<T::SendXcm>(
 			Location::new(0, [Junction::Parachain(T::BrokerId::get())]),
 			message,
+			None,
 		) {
 			log::error!(target: LOG_TARGET, "Sending `SwapLeases` to coretime chain failed: {:?}", err);
 		}
@@ -400,7 +402,7 @@ fn do_notify_revenue<T: Config>(when: BlockNumber, raw_revenue: Balance) -> Resu
 
 	message.push(mk_coretime_call::<T>(CoretimeCalls::NotifyRevenue((when, raw_revenue))));
 
-	send_xcm::<T::SendXcm>(dest.clone(), Xcm(message))?;
+	send_xcm::<T::SendXcm>(dest.clone(), Xcm(message), None)?;
 
 	if raw_revenue > 0 {
 		T::AssetTransactor::check_out(&dest, &asset, &dummy_xcm_context);

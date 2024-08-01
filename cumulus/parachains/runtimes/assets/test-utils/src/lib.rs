@@ -29,7 +29,7 @@ use xcm_builder::{CreateMatcher, MatchXcm};
 
 /// Given a message, a sender, and a destination, it returns the delivery fees
 fn get_fungible_delivery_fees<S: SendXcm>(destination: Location, message: Xcm<()>) -> u128 {
-	let Ok((_, delivery_fees)) = validate_send::<S>(destination, message) else {
+	let Ok((_, delivery_fees, _)) = validate_send::<S>(destination, message, None) else {
 		unreachable!("message can be sent; qed")
 	};
 	if let Some(delivery_fee) = delivery_fees.inner().first() {

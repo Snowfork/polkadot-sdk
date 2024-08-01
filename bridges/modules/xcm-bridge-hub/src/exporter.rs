@@ -56,7 +56,8 @@ where
 		universal_source: &mut Option<InteriorLocation>,
 		destination: &mut Option<InteriorLocation>,
 		message: &mut Option<Xcm<()>>,
-	) -> Result<(Self::Ticket, Assets), SendError> {
+		source: Option<&Location>,
+	) -> Result<(Self::Ticket, Assets, Option<Assets>), SendError> {
 		// Find supported lane_id.
 		let sender_and_lane = Self::lane_for(
 			universal_source.as_ref().ok_or(SendError::MissingArgument)?,
@@ -67,12 +68,13 @@ where
 		// check if we are able to route the message. We use existing `HaulBlobExporter` for that.
 		// It will make all required changes and will encode message properly, so that the
 		// `DispatchBlob` at the bridged bridge hub will be able to decode it
-		let ((blob, id), price) = PalletAsHaulBlobExporter::<T, I>::validate(
+		let ((blob, id), price, _) = PalletAsHaulBlobExporter::<T, I>::validate(
 			network,
 			channel,
 			universal_source,
 			destination,
 			message,
+			source,
 		)?;
 
 		let bridge_message = MessagesPallet::<T, I>::validate_message(sender_and_lane.lane, &blob)
@@ -87,7 +89,7 @@ where
 				SendError::Transport("BridgeValidateError")
 			})?;
 
-		Ok(((sender_and_lane, bridge_message, id), price))
+		Ok(((sender_and_lane, bridge_message, id), price, None))
 	}
 
 	fn deliver((sender_and_lane, bridge_message, id): Self::Ticket) -> Result<XcmHash, SendError> {

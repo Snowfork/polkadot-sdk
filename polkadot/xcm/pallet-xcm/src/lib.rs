@@ -1804,8 +1804,9 @@ impl<T: Config> Pallet<T> {
 		})?;
 
 		if let Some(remote_xcm) = remote_xcm {
-			let (ticket, price) = validate_send::<T::XcmRouter>(dest.clone(), remote_xcm.clone())
-				.map_err(Error::<T>::from)?;
+			let (ticket, price, _) =
+				validate_send::<T::XcmRouter>(dest.clone(), remote_xcm.clone(), Some(&origin))
+					.map_err(Error::<T>::from)?;
 			if origin != Here.into_location() {
 				Self::charge_fees(origin.clone(), price).map_err(|error| {
 					log::error!(
@@ -2284,7 +2285,7 @@ impl<T: Config> Pallet<T> {
 				let response = Response::Version(xcm_version);
 				let message =
 					Xcm(vec![QueryResponse { query_id, response, max_weight, querier: None }]);
-				let event = match send_xcm::<T::XcmRouter>(new_key.clone(), message) {
+				let event = match send_xcm::<T::XcmRouter>(new_key.clone(), message, None) {
 					Ok((message_id, cost)) => {
 						let value = (query_id, max_weight, xcm_version);
 						VersionNotifyTargets::<T>::insert(XCM_VERSION, key, value);
@@ -2341,7 +2342,7 @@ impl<T: Config> Pallet<T> {
 							max_weight,
 							querier: None,
 						}]);
-						let event = match send_xcm::<T::XcmRouter>(new_key.clone(), message) {
+						let event = match send_xcm::<T::XcmRouter>(new_key.clone(), message, None) {
 							Ok((message_id, cost)) => {
 								VersionNotifyTargets::<T>::insert(
 									XCM_VERSION,
@@ -2386,7 +2387,8 @@ impl<T: Config> Pallet<T> {
 		});
 		// TODO #3735: Correct weight.
 		let instruction = SubscribeVersion { query_id, max_response_weight: Weight::zero() };
-		let (message_id, cost) = send_xcm::<T::XcmRouter>(dest.clone(), Xcm(vec![instruction]))?;
+		let (message_id, cost) =
+			send_xcm::<T::XcmRouter>(dest.clone(), Xcm(vec![instruction]), None)?;
 		Self::deposit_event(Event::VersionNotifyRequested { destination: dest, cost, message_id });
 		VersionNotifiers::<T>::insert(XCM_VERSION, &versioned_dest, query_id);
 		let query_status =
@@ -2402,7 +2404,7 @@ impl<T: Config> Pallet<T> {
 		let query_id = VersionNotifiers::<T>::take(XCM_VERSION, versioned_dest)
 			.ok_or(XcmError::InvalidLocation)?;
 		let (message_id, cost) =
-			send_xcm::<T::XcmRouter>(dest.clone(), Xcm(vec![UnsubscribeVersion]))?;
+			send_xcm::<T::XcmRouter>(dest.clone(), Xcm(vec![UnsubscribeVersion]), None)?;
 		Self::deposit_event(Event::VersionNotifyUnrequested {
 			destination: dest,
 			cost,
@@ -2429,7 +2431,7 @@ impl<T: Config> Pallet<T> {
 			None
 		};
 		log::debug!(target: "xcm::send_xcm", "dest: {:?}, message: {:?}", &dest, &message);
-		let (ticket, price) = validate_send::<T::XcmRouter>(dest, message)?;
+		let (ticket, price, _) = validate_send::<T::XcmRouter>(dest, message, None)?;
 		if let Some(fee_payer) = maybe_fee_payer {
 			Self::charge_fees(fee_payer, price).map_err(|_| SendError::Fees)?;
 		}
@@ -2558,7 +2560,7 @@ impl<T: Config> Pallet<T> {
 		let message =
 			message.try_into().map_err(|_| XcmPaymentApiError::VersionedConversionFailed)?;
 
-		let (_, fees) = validate_send::<T::XcmRouter>(destination, message).map_err(|error| {
+		let (_, fees,_) = validate_send::<T::XcmRouter>(destination, message,None).map_err(|error| {
 			log::error!(target: "xcm::pallet_xcm::query_delivery_fees", "Error when querying delivery fees: {:?}", error);
 			XcmPaymentApiError::Unroutable
 		})?;
@@ -2959,7 +2961,8 @@ impl<T: Config> VersionChangeNotifier for Pallet<T> {
 		let xcm_version = T::AdvertisedXcmVersion::get();
 		let response = Response::Version(xcm_version);
 		let instruction = QueryResponse { query_id, response, max_weight, querier: None };
-		let (message_id, cost) = send_xcm::<T::XcmRouter>(dest.clone(), Xcm(vec![instruction]))?;
+		let (message_id, cost) =
+			send_xcm::<T::XcmRouter>(dest.clone(), Xcm(vec![instruction]), None)?;
 		Self::deposit_event(Event::<T>::VersionNotifyStarted {
 			destination: dest.clone(),
 			cost,
