@@ -965,6 +965,7 @@ impl<T: Config> SendXcm for Pallet<T> {
 	fn validate(
 		dest: &mut Option<Location>,
 		msg: &mut Option<Xcm<()>>,
+		_source: Option<&Location>,
 	) -> SendResult<(ParaId, VersionedXcm<()>)> {
 		let d = dest.take().ok_or(SendError::MissingArgument)?;
 
@@ -980,7 +981,7 @@ impl<T: Config> SendXcm for Pallet<T> {
 					.validate_xcm_nesting()
 					.map_err(|()| SendError::ExceedsMaxMessageSize)?;
 
-				Ok(((id, versioned_xcm), price))
+				Ok(((id, versioned_xcm), price, None))
 			},
 			_ => {
 				// Anything else is unhandled. This includes a message that is not meant for us.

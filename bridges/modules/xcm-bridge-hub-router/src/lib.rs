@@ -327,6 +327,7 @@ impl<T: Config<I>, I: 'static> SendXcm for Pallet<T, I> {
 	fn validate(
 		dest: &mut Option<Location>,
 		xcm: &mut Option<Xcm<()>>,
+		source: Option<&Location>,
 	) -> SendResult<Self::Ticket> {
 		log::trace!(target: LOG_TARGET, "validate - msg: {xcm:?}, destination: {dest:?}");
 
@@ -342,8 +343,8 @@ impl<T: Config<I>, I: 'static> SendXcm for Pallet<T, I> {
 		// include both the cost of (1) delivery to the sibling bridge hub (returned by
 		// `Config::ToBridgeHubSender`) and (2) delivery to the bridged bridge hub (returned by
 		// `Self::exporter_for`).
-		match ViaBridgeHubExporter::<T, I>::validate(dest, xcm) {
-			Ok((ticket, cost)) => {
+		match ViaBridgeHubExporter::<T, I>::validate(dest, xcm, source) {
+			Ok((ticket, cost, _)) => {
 				// If the ticket is ok, it means we are routing with this router, so we need to
 				// apply more validations to the cloned `dest` and `xcm`, which are required here.
 				let xcm_to_dest_clone = xcm_to_dest_clone.ok_or(SendError::MissingArgument)?;
@@ -374,7 +375,7 @@ impl<T: Config<I>, I: 'static> SendXcm for Pallet<T, I> {
 					.into_version(destination_version)
 					.map_err(|()| SendError::DestinationUnsupported)?;
 
-				Ok(((message_size, ticket), cost))
+				Ok(((message_size, ticket), cost, None))
 			},
 			Err(e) => {
 				log::trace!(target: LOG_TARGET, "validate - ViaBridgeHubExporter - error: {e:?}");

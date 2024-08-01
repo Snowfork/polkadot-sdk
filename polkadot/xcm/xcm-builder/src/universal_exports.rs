@@ -69,6 +69,7 @@ impl<Exporter: ExportXcm, UniversalLocation: Get<InteriorLocation>> SendXcm
 	fn validate(
 		dest: &mut Option<Location>,
 		xcm: &mut Option<Xcm<()>>,
+		source: Option<&Location>,
 	) -> SendResult<Exporter::Ticket> {
 		let d = dest.take().ok_or(MissingArgument)?;
 		let universal_source = UniversalLocation::get();
@@ -81,7 +82,7 @@ impl<Exporter: ExportXcm, UniversalLocation: Get<InteriorLocation>> SendXcm
 		};
 		let (network, destination) = devolved;
 		let xcm = xcm.take().ok_or(SendError::MissingArgument)?;
-		validate_export::<Exporter>(network, 0, universal_source, destination, xcm)
+		validate_export::<Exporter>(network, 0, universal_source, destination, xcm, source)
 	}
 
 	fn deliver(ticket: Exporter::Ticket) -> Result<XcmHash, SendError> {
@@ -204,6 +205,7 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 	fn validate(
 		dest: &mut Option<Location>,
 		msg: &mut Option<Xcm<()>>,
+		source: Option<&Location>,
 	) -> SendResult<Router::Ticket> {
 		let d = dest.clone().ok_or(MissingArgument)?;
 		let devolved = ensure_is_remote(UniversalLocation::get(), d).map_err(|_| NotApplicable)?;
@@ -237,7 +239,7 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 		if let Some(forward_id) = maybe_forward_id {
 			message.0.push(SetTopic(forward_id));
 		}
-		validate_send::<Router>(bridge, message)
+		validate_send::<Router>(bridge, message, source)
 	}
 
 	fn deliver(validation: Self::Ticket) -> Result<XcmHash, SendError> {
@@ -271,6 +273,7 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 	fn validate(
 		dest: &mut Option<Location>,
 		msg: &mut Option<Xcm<()>>,
+		source: Option<&Location>,
 	) -> SendResult<Router::Ticket> {
 		let d = dest.as_ref().ok_or(MissingArgument)?;
 		let devolved =
@@ -325,11 +328,11 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 
 		// We then send a normal message to the bridge asking it to export the prepended
 		// message to the remote chain.
-		let (v, mut cost) = validate_send::<Router>(bridge, message)?;
+		let (v, mut cost, burnt) = validate_send::<Router>(bridge, message, source)?;
 		if let Some(bridge_payment) = maybe_payment {
 			cost.push(bridge_payment);
 		}
-		Ok((v, cost))
+		Ok((v, cost, burnt))
 	}
 
 	fn deliver(ticket: Router::Ticket) -> Result<XcmHash, SendError> {
@@ -434,7 +437,8 @@ impl<
 			message.0.insert(0, DescendOrigin(bridge_instance));
 		}
 
-		let _ = send_xcm::<Router>(dest, message).map_err(|_| DispatchBlobError::RoutingError)?;
+		let _ =
+			send_xcm::<Router>(dest, message, None).map_err(|_| DispatchBlobError::RoutingError)?;
 		Ok(())
 	}
 }
@@ -467,7 +471,8 @@ impl<
 		universal_source: &mut Option<InteriorLocation>,
 		destination: &mut Option<InteriorLocation>,
 		message: &mut Option<Xcm<()>>,
-	) -> Result<((Vec<u8>, XcmHash), Assets), SendError> {
+		_source: Option<&Location>,
+	) -> Result<((Vec<u8>, XcmHash), Assets, Option<Assets>), SendError> {
 		let (bridged_network, bridged_network_location_parents) = {
 			let Location { parents, interior: mut junctions } = BridgedNetwork::get();
 			match junctions.take_first() {
@@ -524,7 +529,7 @@ impl<
 
 		let id = maybe_id.unwrap_or_else(|| message.using_encoded(sp_io::hashing::blake2_256));
 		let blob = BridgeMessage { universal_dest, message }.encode();
-		Ok(((blob, id), Price::get()))
+		Ok(((blob, id), Price::get(), None))
 	}
 
 	fn deliver((blob, id): (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {

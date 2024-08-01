@@ -387,8 +387,13 @@ impl<Config: config::Config> XcmExecutor<Config> {
 			reason = ?reason,
 			"Sending msg",
 		);
-		let (ticket, fee) = validate_send::<Config::XcmSender>(dest, msg)?;
-		self.take_fee(fee, reason)?;
+		let (ticket, fee, fee_to_burn) =
+			validate_send::<Config::XcmSender>(dest, msg, self.origin_ref())?;
+		self.take_fee(fee, reason.clone())?;
+		if let Some(fee_to_burn) = fee_to_burn {
+			self.burn_fee(fee_to_burn, reason)?;
+		}
+
 		Config::XcmSender::deliver(ticket).map_err(Into::into)
 	}
 
@@ -491,6 +496,30 @@ impl<Config: config::Config> XcmExecutor<Config> {
 			self.holding.try_take(fee.into()).map_err(|_| XcmError::NotHoldingFees)?.into()
 		};
 		Config::FeeManager::handle_fee(paid, Some(&self.context), reason);
+		Ok(())
+	}
+
+	fn burn_fee(&mut self, fee: Assets, reason: FeeReason) -> XcmResult {
+		if Config::FeeManager::is_waived(self.origin_ref(), reason.clone()) {
+			return Ok(())
+		}
+		tracing::trace!(
+			target: "xcm::fees",
+			?fee,
+			origin_ref = ?self.origin_ref(),
+			fees_mode = ?self.fees_mode,
+			?reason,
+			"Burning fees",
+		);
+		if self.fees_mode.jit_withdraw {
+			let origin = self.origin_ref().ok_or(XcmError::BadOrigin)?;
+			for asset in fee.inner() {
+				Config::AssetTransactor::withdraw_asset(&asset, origin, Some(&self.context))?;
+			}
+			fee
+		} else {
+			self.holding.try_take(fee.into()).map_err(|_| XcmError::NotHoldingFees)?.into()
+		};
 		Ok(())
 	}
 
@@ -883,8 +912,11 @@ impl<Config: config::Config> XcmExecutor<Config> {
 					let mut message_to_weigh =
 						vec![ReserveAssetDeposited(to_weigh_reanchored), ClearOrigin];
 					message_to_weigh.extend(xcm.0.clone().into_iter());
-					let (_, fee) =
-						validate_send::<Config::XcmSender>(dest.clone(), Xcm(message_to_weigh))?;
+					let (_, fee, _) = validate_send::<Config::XcmSender>(
+						dest.clone(),
+						Xcm(message_to_weigh),
+						self.origin_ref(),
+					)?;
 					// set aside fee to be charged by XcmSender
 					let transport_fee = self.holding.saturating_take(fee.into());
 
@@ -1130,19 +1162,20 @@ impl<Config: config::Config> XcmExecutor<Config> {
 				// to speak for the local network.
 				let origin = self.context.origin.as_ref().ok_or(XcmError::BadOrigin)?.clone();
 				let universal_source = Config::UniversalLocation::get()
-					.within_global(origin)
+					.within_global(origin.clone())
 					.map_err(|()| XcmError::Unanchored)?;
 				let hash = (self.origin_ref(), &destination).using_encoded(blake2_128);
 				let channel = u32::decode(&mut hash.as_ref()).unwrap_or(0);
 				// Hash identifies the lane on the exporter which we use. We use the pairwise
 				// combination of the origin and destination to ensure origin/destination pairs
 				// will generally have their own lanes.
-				let (ticket, fee) = validate_export::<Config::MessageExporter>(
+				let (ticket, fee, _) = validate_export::<Config::MessageExporter>(
 					network,
 					channel,
 					universal_source,
 					destination.clone(),
 					xcm,
+					self.origin_ref(),
 				)?;
 				let old_holding = self.holding.clone();
 				let result = Config::TransactionalProcessor::process(|| {
@@ -1166,10 +1199,12 @@ impl<Config: config::Config> XcmExecutor<Config> {
 					let lock_ticket =
 						Config::AssetLocker::prepare_lock(unlocker.clone(), asset, origin.clone())?;
 					let owner = origin
+						.clone()
 						.reanchored(&unlocker, &context)
 						.map_err(|_| XcmError::ReanchorFailed)?;
 					let msg = Xcm::<()>(vec![NoteUnlockable { asset: remote_asset, owner }]);
-					let (ticket, price) = validate_send::<Config::XcmSender>(unlocker, msg)?;
+					let (ticket, price, _) =
+						validate_send::<Config::XcmSender>(unlocker, msg, self.origin_ref())?;
 					self.take_fee(price, FeeReason::LockAsset)?;
 					lock_ticket.enact()?;
 					Config::XcmSender::deliver(ticket)?;
@@ -1201,7 +1236,8 @@ impl<Config: config::Config> XcmExecutor<Config> {
 				)?;
 				let msg =
 					Xcm::<()>(vec![UnlockAsset { asset: remote_asset, target: remote_target }]);
-				let (ticket, price) = validate_send::<Config::XcmSender>(locker, msg)?;
+				let (ticket, price, _) =
+					validate_send::<Config::XcmSender>(locker, msg, self.origin_ref())?;
 				let old_holding = self.holding.clone();
 				let result = Config::TransactionalProcessor::process(|| {
 					self.take_fee(price, FeeReason::RequestUnlock)?;

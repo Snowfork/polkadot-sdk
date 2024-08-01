@@ -325,7 +325,8 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn send_xcm(xcm: Xcm<()>, dest: ParaId) -> Result<XcmHash, Error<T>> {
 			let dest = Location::new(1, [Parachain(dest.into())]);
-			let (xcm_hash, _) = send_xcm::<T::XcmSender>(dest, xcm).map_err(Error::<T>::from)?;
+			let (xcm_hash, _) =
+				send_xcm::<T::XcmSender>(dest, xcm, None).map_err(Error::<T>::from)?;
 			Ok(xcm_hash)
 		}
 

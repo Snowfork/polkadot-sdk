@@ -54,6 +54,7 @@ pub trait ExportXcm {
 		universal_source: &mut Option<InteriorLocation>,
 		destination: &mut Option<InteriorLocation>,
 		message: &mut Option<Xcm<()>>,
+		source: Option<&Location>,
 	) -> SendResult<Self::Ticket>;
 
 	/// Actually carry out the delivery operation for a previously validated message sending.
@@ -74,24 +75,27 @@ impl ExportXcm for Tuple {
 		universal_source: &mut Option<InteriorLocation>,
 		destination: &mut Option<InteriorLocation>,
 		message: &mut Option<Xcm<()>>,
+		source: Option<&Location>,
 	) -> SendResult<Self::Ticket> {
 		let mut maybe_cost: Option<Assets> = None;
+		let mut maybe_burnt: Option<Assets> = None;
 		let one_ticket: Self::Ticket = (for_tuples! { #(
 			if maybe_cost.is_some() {
 				None
 			} else {
-				match Tuple::validate(network, channel, universal_source, destination, message) {
+				match Tuple::validate(network, channel, universal_source, destination, message,source) {
 					Err(SendError::NotApplicable) => None,
 					Err(e) => { return Err(e) },
-					Ok((v, c)) => {
+					Ok((v, c, b)) => {
 						maybe_cost = Some(c);
+						maybe_burnt = b;
 						Some(v)
 					},
 				}
 			}
 		),* });
 		if let Some(cost) = maybe_cost {
-			Ok((one_ticket, cost))
+			Ok((one_ticket, cost, maybe_burnt))
 		} else {
 			Err(SendError::NotApplicable)
 		}
@@ -115,8 +119,16 @@ pub fn validate_export<T: ExportXcm>(
 	universal_source: InteriorLocation,
 	dest: InteriorLocation,
 	msg: Xcm<()>,
+	source: Option<&Location>,
 ) -> SendResult<T::Ticket> {
-	T::validate(network, channel, &mut Some(universal_source), &mut Some(dest), &mut Some(msg))
+	T::validate(
+		network,
+		channel,
+		&mut Some(universal_source),
+		&mut Some(dest),
+		&mut Some(msg),
+		source,
+	)
 }
 
 /// Convenience function for using a `SendXcm` implementation. Just interprets the `dest` and wraps
@@ -133,13 +145,15 @@ pub fn export_xcm<T: ExportXcm>(
 	universal_source: InteriorLocation,
 	dest: InteriorLocation,
 	msg: Xcm<()>,
+	source: Option<&Location>,
 ) -> Result<(XcmHash, Assets), SendError> {
-	let (ticket, price) = T::validate(
+	let (ticket, price, _) = T::validate(
 		network,
 		channel,
 		&mut Some(universal_source),
 		&mut Some(dest),
 		&mut Some(msg),
+		source,
 	)?;
 	let hash = T::deliver(ticket)?;
 	Ok((hash, price))
