@@ -76,7 +76,7 @@ where
 		}
 
 		let para_id = match local_sub.as_slice() {
-			[Parachain(para_id)] => *para_id,
+			[Parachain(para_id), AccountId32 { .. }] => *para_id,
 			_ => {
 				log::error!(target: "xcm::ethereum_blob_exporter", "could not get parachain id from universal source '{local_sub:?}'.");
 				return Err(SendError::MissingArgument)

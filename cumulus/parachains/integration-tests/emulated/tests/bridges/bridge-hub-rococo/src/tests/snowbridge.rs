@@ -489,7 +489,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		// Assert there is still some fee left in sov account after the transfer
 		let free_balance_of_sovereign_on_bh_after =
 			<BridgeHubRococo as BridgeHubRococoPallet>::Balances::free_balance(assethub_sovereign);
-		assert_eq!(free_balance_of_sovereign_on_bh_after, 15590000);
+		assert_eq!(free_balance_of_sovereign_on_bh_after, 10686667);
 	});
 }
 

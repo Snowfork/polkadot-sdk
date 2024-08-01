@@ -491,12 +491,16 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 		let export_instruction =
 			ExportMessage { network: remote_network, destination: remote_location, xcm };
 
+		let sender = if let Some(origin) = source { Some(origin.clone().interior) } else { None }
+			.ok_or(NotApplicable)?;
+
 		let mut message = Xcm(if let Some(ref payment) = maybe_payment {
 			let fees = payment
 				.clone()
 				.reanchored(&bridge, &UniversalLocation::get())
 				.map_err(|_| Unroutable)?;
 			vec![
+				DescendOrigin(sender),
 				ReceiveTeleportedAsset(fees.clone().into()),
 				BuyExecution { fees, weight_limit: Unlimited },
 				// `SetAppendix` ensures that `fees` are not trapped in any case, for example, when
@@ -727,7 +731,7 @@ pub mod bridging {
 		parameter_types! {
 			/// User fee for delivery cost on bridge hub. Leave some buffer here for avoid spamming
 			/// should cover at least the BuyExecution on BH
-			pub const DefaultBridgeHubEthereumBaseFee: Balance = 48_000_000;
+			pub const DefaultBridgeHubEthereumBaseFee: Balance = 60_000_000;
 			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
 				1,
