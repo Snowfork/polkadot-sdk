@@ -478,6 +478,11 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 			return Err(NotApplicable)
 		};
 
+		// Ensure the export fee configured is not None.
+		let payments: xcm::prelude::Assets =
+			if let Some(ref payment) = maybe_payment { Some(payment.clone().into()) } else { None }
+				.ok_or(NotApplicable)?;
+
 		// `xcm` should already end with `SetTopic` - if it does, then extract and derive into
 		// an onward topic ID.
 		let maybe_forward_id = match xcm.last() {
@@ -521,11 +526,8 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 
 		// We then send a normal message to the bridge asking it to export the prepended
 		// message to the remote chain.
-		let (v, mut cost, _) = validate_send::<Router>(bridge, message, None)?;
-		if let Some(bridge_payment) = maybe_payment {
-			cost.push(bridge_payment);
-		}
-		Ok((v, cost, None))
+		let (v, cost, _) = validate_send::<Router>(bridge, message, None)?;
+		Ok((v, cost, Some(payments)))
 	}
 
 	fn deliver(ticket: Router::Ticket) -> Result<XcmHash, SendError> {
