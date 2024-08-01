@@ -42,7 +42,7 @@ impl<Inner: SendXcm> SendXcm for WithUniqueTopic<Inner> {
 	fn validate(
 		destination: &mut Option<Location>,
 		message: &mut Option<Xcm<()>>,
-		source: Option<&Location>,
+		_source: Option<&Location>,
 	) -> SendResult<Self::Ticket> {
 		let mut message = message.take().ok_or(SendError::MissingArgument)?;
 		let unique_id = if let Some(SetTopic(id)) = message.last() {
@@ -52,9 +52,8 @@ impl<Inner: SendXcm> SendXcm for WithUniqueTopic<Inner> {
 			message.0.push(SetTopic(unique_id));
 			unique_id
 		};
-		let (ticket, assets, assets_to_burn) =
-			Inner::validate(destination, &mut Some(message), source)?;
-		Ok(((ticket, unique_id), assets, assets_to_burn))
+		let (ticket, assets, _) = Inner::validate(destination, &mut Some(message), None)?;
+		Ok(((ticket, unique_id), assets, None))
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<XcmHash, SendError> {
@@ -93,7 +92,7 @@ impl<Inner: SendXcm, TopicSource: SourceTopic> SendXcm for WithTopicSource<Inner
 	fn validate(
 		destination: &mut Option<Location>,
 		message: &mut Option<Xcm<()>>,
-		source: Option<&Location>,
+		_source: Option<&Location>,
 	) -> SendResult<Self::Ticket> {
 		let mut message = message.take().ok_or(SendError::MissingArgument)?;
 		let unique_id = if let Some(SetTopic(id)) = message.last() {
@@ -103,10 +102,9 @@ impl<Inner: SendXcm, TopicSource: SourceTopic> SendXcm for WithTopicSource<Inner
 			message.0.push(SetTopic(unique_id));
 			unique_id
 		};
-		let (ticket, assets, assets_to_burn) =
-			Inner::validate(destination, &mut Some(message), source)
-				.map_err(|_| SendError::NotApplicable)?;
-		Ok(((ticket, unique_id), assets, assets_to_burn))
+		let (ticket, assets, _) = Inner::validate(destination, &mut Some(message), None)
+			.map_err(|_| SendError::NotApplicable)?;
+		Ok(((ticket, unique_id), assets, None))
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<XcmHash, SendError> {
@@ -185,7 +183,7 @@ impl<Inner: SendXcm> SendXcm for EnsureDecodableXcm<Inner> {
 	fn validate(
 		destination: &mut Option<Location>,
 		message: &mut Option<Xcm<()>>,
-		source: Option<&Location>,
+		_source: Option<&Location>,
 	) -> SendResult<Self::Ticket> {
 		if let Some(msg) = message {
 			let versioned_xcm = VersionedXcm::<()>::from(msg.clone());
@@ -197,7 +195,7 @@ impl<Inner: SendXcm> SendXcm for EnsureDecodableXcm<Inner> {
 				return Err(SendError::Transport("EnsureDecodableXcm validate_xcm_nesting error"))
 			}
 		}
-		Inner::validate(destination, message, source)
+		Inner::validate(destination, message, None)
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<XcmHash, SendError> {

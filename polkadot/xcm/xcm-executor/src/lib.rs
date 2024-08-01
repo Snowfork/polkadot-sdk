@@ -387,13 +387,8 @@ impl<Config: config::Config> XcmExecutor<Config> {
 			reason = ?reason,
 			"Sending msg",
 		);
-		let (ticket, fee, fee_to_burn) =
-			validate_send::<Config::XcmSender>(dest, msg, self.origin_ref())?;
-		self.take_fee(fee, reason.clone())?;
-		if let Some(fee_to_burn) = fee_to_burn {
-			self.burn_fee(fee_to_burn, reason)?;
-		}
-
+		let (ticket, fee, _) = validate_send::<Config::XcmSender>(dest, msg, self.origin_ref())?;
+		self.take_fee(fee, reason)?;
 		Config::XcmSender::deliver(ticket).map_err(Into::into)
 	}
 

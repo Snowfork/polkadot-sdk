@@ -273,7 +273,7 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 	fn validate(
 		dest: &mut Option<Location>,
 		msg: &mut Option<Xcm<()>>,
-		source: Option<&Location>,
+		_source: Option<&Location>,
 	) -> SendResult<Router::Ticket> {
 		let d = dest.as_ref().ok_or(MissingArgument)?;
 		let devolved =
@@ -328,11 +328,11 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 
 		// We then send a normal message to the bridge asking it to export the prepended
 		// message to the remote chain.
-		let (v, mut cost, burnt) = validate_send::<Router>(bridge, message, source)?;
+		let (v, mut cost, _) = validate_send::<Router>(bridge, message, None)?;
 		if let Some(bridge_payment) = maybe_payment {
 			cost.push(bridge_payment);
 		}
-		Ok((v, cost, burnt))
+		Ok((v, cost, None))
 	}
 
 	fn deliver(ticket: Router::Ticket) -> Result<XcmHash, SendError> {
