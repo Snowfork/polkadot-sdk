@@ -42,7 +42,7 @@ impl<Inner: SendXcm> SendXcm for WithUniqueTopic<Inner> {
 	fn validate(
 		destination: &mut Option<Location>,
 		message: &mut Option<Xcm<()>>,
-		_source: Option<&Location>,
+		source: Option<&Location>,
 	) -> SendResult<Self::Ticket> {
 		let mut message = message.take().ok_or(SendError::MissingArgument)?;
 		let unique_id = if let Some(SetTopic(id)) = message.last() {
@@ -52,8 +52,8 @@ impl<Inner: SendXcm> SendXcm for WithUniqueTopic<Inner> {
 			message.0.push(SetTopic(unique_id));
 			unique_id
 		};
-		let (ticket, assets, _) = Inner::validate(destination, &mut Some(message), None)?;
-		Ok(((ticket, unique_id), assets, None))
+		let (ticket, assets, burnt) = Inner::validate(destination, &mut Some(message), source)?;
+		Ok(((ticket, unique_id), assets, burnt))
 	}
 
 	fn deliver(ticket: Self::Ticket) -> Result<XcmHash, SendError> {
