@@ -393,6 +393,7 @@ macro_rules! decl_test_network {
 			fn validate(
 				destination: &mut Option<$crate::Location>,
 				message: &mut Option<$crate::Xcm<()>>,
+				_source: Option<&$crate::Location>
 			) -> $crate::SendResult<($crate::ParaId, $crate::Location, $crate::Xcm<()>)> {
 				use $crate::XcmpMessageHandlerT;
 
@@ -408,7 +409,7 @@ macro_rules! decl_test_network {
 					},
 				}
 				let m = message.take().ok_or($crate::SendError::MissingArgument)?;
-				Ok(((T::get(), d, m), $crate::Assets::new()))
+				Ok(((T::get(), d, m), $crate::Assets::new(), None))
 			}
 			fn deliver(
 				triple: ($crate::ParaId, $crate::Location, $crate::Xcm<()>),
@@ -426,6 +427,7 @@ macro_rules! decl_test_network {
 			fn validate(
 				destination: &mut Option<$crate::Location>,
 				message: &mut Option<$crate::Xcm<()>>,
+				_source: Option<&$crate::Location>,
 			) -> $crate::SendResult<($crate::Location, $crate::Xcm<()>)> {
 				use $crate::DmpMessageHandlerT;
 
@@ -440,7 +442,7 @@ macro_rules! decl_test_network {
 					},
 				}
 				let m = message.take().ok_or($crate::SendError::MissingArgument)?;
-				Ok(((d, m), $crate::Assets::new()))
+				Ok(((d, m), $crate::Assets::new(), None))
 			}
 			fn deliver(
 				pair: ($crate::Location, $crate::Xcm<()>),

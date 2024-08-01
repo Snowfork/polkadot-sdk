@@ -87,7 +87,7 @@ benchmarks_instance_pallet! {
 		// make local queue congested, because it means additional db write
 		T::make_congested();
 	}: {
-		send_xcm::<crate::Pallet<T, I>>(dest, xcm).expect("message is sent")
+		send_xcm::<crate::Pallet<T, I>>(dest, xcm, None).expect("message is sent")
 	}
 	verify {
 		assert!(Bridge::<T, I>::get().delivery_fee_factor > MINIMAL_DELIVERY_FEE_FACTOR);

@@ -116,6 +116,7 @@ pub mod pallet {
 						.encode()
 						.into(),
 					}]),
+					None,
 				) {
 					Ok((hash, cost)) => {
 						Pings::<T>::insert(seq, n);
@@ -217,6 +218,7 @@ pub mod pallet {
 					.encode()
 					.into(),
 				}]),
+				None,
 			) {
 				Ok((hash, cost)) =>
 					Self::deposit_event(Event::PongSent(para, seq, payload, hash, cost)),

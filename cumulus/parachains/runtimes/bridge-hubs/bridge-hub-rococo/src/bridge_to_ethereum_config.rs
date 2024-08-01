@@ -201,8 +201,9 @@ pub mod benchmark_helpers {
 		fn validate(
 			_dest: &mut Option<Location>,
 			xcm: &mut Option<Xcm<()>>,
+			_source: Option<&Location>,
 		) -> SendResult<Self::Ticket> {
-			Ok((xcm.clone().unwrap(), Assets::new()))
+			Ok((xcm.clone().unwrap(), Assets::new(), None))
 		}
 		fn deliver(xcm: Xcm<()>) -> Result<XcmHash, SendError> {
 			let hash = xcm.using_encoded(sp_io::hashing::blake2_256);
