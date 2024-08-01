@@ -128,14 +128,15 @@ impl SendXcm for MockXcmSender {
 	fn validate(
 		dest: &mut Option<Location>,
 		xcm: &mut Option<Xcm<()>>,
+		_source: Option<&Location>,
 	) -> SendResult<Self::Ticket> {
 		if let Some(location) = dest {
 			match location.unpack() {
 				(_, [Parachain(1001)]) => return Err(XcmpSendError::NotApplicable),
-				_ => Ok((xcm.clone().unwrap(), Assets::default())),
+				_ => Ok((xcm.clone().unwrap(), Assets::default(), None)),
 			}
 		} else {
-			Ok((xcm.clone().unwrap(), Assets::default()))
+			Ok((xcm.clone().unwrap(), Assets::default(), None))
 		}
 	}
 

@@ -71,7 +71,7 @@ fn exporter_validate_with_unknown_network_yields_not_applicable() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::NotApplicable));
 }
@@ -90,7 +90,7 @@ fn exporter_validate_with_invalid_destination_yields_missing_argument() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::MissingArgument));
 }
@@ -112,7 +112,7 @@ fn exporter_validate_with_x8_destination_yields_not_applicable() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::NotApplicable));
 }
@@ -131,7 +131,7 @@ fn exporter_validate_without_universal_source_yields_missing_argument() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::MissingArgument));
 }
@@ -150,7 +150,7 @@ fn exporter_validate_without_global_universal_location_yields_unroutable() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::Unroutable));
 }
@@ -169,7 +169,7 @@ fn exporter_validate_without_global_bridge_location_yields_not_applicable() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::NotApplicable));
 }
@@ -189,7 +189,7 @@ fn exporter_validate_with_remote_universal_source_yields_not_applicable() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::NotApplicable));
 }
@@ -208,7 +208,7 @@ fn exporter_validate_without_para_id_in_source_yields_missing_argument() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::MissingArgument));
 }
@@ -228,7 +228,7 @@ fn exporter_validate_complex_para_id_in_source_yields_missing_argument() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::MissingArgument));
 }
@@ -248,7 +248,7 @@ fn exporter_validate_without_xcm_message_yields_missing_argument() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 	assert_eq!(result, Err(XcmSendError::MissingArgument));
 }
@@ -295,7 +295,7 @@ fn exporter_validate_with_max_target_fee_yields_unroutable() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 
 	assert_eq!(result, Err(XcmSendError::Unroutable));
@@ -322,7 +322,7 @@ fn exporter_validate_with_unparsable_xcm_yields_unroutable() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 
 	assert_eq!(result, Err(XcmSendError::Unroutable));
@@ -368,7 +368,7 @@ fn exporter_validate_xcm_success_case_1() {
 		MockOkOutboundQueue,
 		AgentIdOf,
 	>::validate(
-		network, channel, &mut universal_source, &mut destination, &mut message
+		network, channel, &mut universal_source, &mut destination, &mut message, None
 	);
 
 	assert!(result.is_ok());
