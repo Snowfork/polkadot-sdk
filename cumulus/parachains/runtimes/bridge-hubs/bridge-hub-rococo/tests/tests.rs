@@ -18,11 +18,13 @@
 
 use bp_polkadot_core::Signature;
 use bridge_hub_rococo_runtime::{
-	bridge_common_config, bridge_to_bulletin_config, bridge_to_westend_config,
+	bridge_common_config, bridge_to_bulletin_config,
+	bridge_to_ethereum_config::EthereumGatewayAddress,
+	bridge_to_westend_config,
 	xcm_config::{RelayNetwork, TokenLocation, XcmConfig},
-	AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages, EthereumGatewayAddress,
-	Executive, ExistentialDeposit, ParachainSystem, PolkadotXcm, Runtime, RuntimeCall,
-	RuntimeEvent, RuntimeOrigin, SessionKeys, SignedExtra, TransactionPayment, UncheckedExtrinsic,
+	AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages, Executive, ExistentialDeposit,
+	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, SessionKeys,
+	SignedExtra, TransactionPayment, UncheckedExtrinsic,
 };
 use bridge_hub_test_utils::SlotDurations;
 use codec::{Decode, Encode};
@@ -148,8 +150,7 @@ mod bridge_hub_westend_tests {
 	use bridge_hub_test_utils::test_cases::from_parachain;
 	use bridge_to_westend_config::{
 		BridgeHubWestendChainId, BridgeHubWestendLocation, WestendGlobalConsensusNetwork,
-		WithBridgeHubWestendMessageBridge, WithBridgeHubWestendMessagesInstance,
-		XCM_LANE_FOR_ASSET_HUB_ROCOCO_TO_ASSET_HUB_WESTEND,
+		WithBridgeHubWestendMessagesInstance, XCM_LANE_FOR_ASSET_HUB_ROCOCO_TO_ASSET_HUB_WESTEND,
 	};
 
 	// Para id of sibling chain used in tests.
@@ -162,7 +163,6 @@ mod bridge_hub_westend_tests {
 		BridgeGrandpaWestendInstance,
 		BridgeParachainWestendInstance,
 		WithBridgeHubWestendMessagesInstance,
-		WithBridgeHubWestendMessageBridge,
 	>;
 
 	#[test]
@@ -457,8 +457,8 @@ mod bridge_hub_bulletin_tests {
 	use bridge_hub_test_utils::test_cases::from_grandpa_chain;
 	use bridge_to_bulletin_config::{
 		RococoBulletinChainId, RococoBulletinGlobalConsensusNetwork,
-		RococoBulletinGlobalConsensusNetworkLocation, WithRococoBulletinMessageBridge,
-		WithRococoBulletinMessagesInstance, XCM_LANE_FOR_ROCOCO_PEOPLE_TO_ROCOCO_BULLETIN,
+		RococoBulletinGlobalConsensusNetworkLocation, WithRococoBulletinMessagesInstance,
+		XCM_LANE_FOR_ROCOCO_PEOPLE_TO_ROCOCO_BULLETIN,
 	};
 
 	// Para id of sibling chain used in tests.
@@ -470,7 +470,6 @@ mod bridge_hub_bulletin_tests {
 		AllPalletsWithoutSystem,
 		BridgeGrandpaRococoBulletinInstance,
 		WithRococoBulletinMessagesInstance,
-		WithRococoBulletinMessageBridge,
 	>;
 
 	#[test]
@@ -592,46 +591,6 @@ mod bridge_hub_bulletin_tests {
 			XCM_LANE_FOR_ROCOCO_PEOPLE_TO_ROCOCO_BULLETIN,
 			|| (),
 			construct_and_apply_extrinsic,
-		)
-	}
-
-	#[test]
-	pub fn can_calculate_fee_for_standalone_message_delivery_transaction() {
-		bridge_hub_test_utils::check_sane_fees_values(
-			"bp_bridge_hub_rococo::BridgeHubRococoBaseDeliveryFeeInRocs",
-			bp_bridge_hub_rococo::BridgeHubRococoBaseDeliveryFeeInRocs::get(),
-			|| {
-				from_grandpa_chain::can_calculate_fee_for_standalone_message_delivery_transaction::<
-					RuntimeTestsAdapter,
-				>(collator_session_keys(), construct_and_estimate_extrinsic_fee)
-			},
-			Perbill::from_percent(33),
-			None, /* we don't want lowering according to the Bulletin setup, because
-			       * `from_grandpa_chain` is cheaper then `from_parachain_chain` */
-			&format!(
-				"Estimate fee for `single message delivery` for runtime: {:?}",
-				<Runtime as frame_system::Config>::Version::get()
-			),
-		)
-	}
-
-	#[test]
-	pub fn can_calculate_fee_for_standalone_message_confirmation_transaction() {
-		bridge_hub_test_utils::check_sane_fees_values(
-			"bp_bridge_hub_rococo::BridgeHubRococoBaseConfirmationFeeInRocs",
-			bp_bridge_hub_rococo::BridgeHubRococoBaseConfirmationFeeInRocs::get(),
-			|| {
-				from_grandpa_chain::can_calculate_fee_for_standalone_message_confirmation_transaction::<
-					RuntimeTestsAdapter,
-				>(collator_session_keys(), construct_and_estimate_extrinsic_fee)
-			},
-			Perbill::from_percent(33),
-			None, /* we don't want lowering according to the Bulletin setup, because
-			       * `from_grandpa_chain` is cheaper then `from_parachain_chain` */
-			&format!(
-				"Estimate fee for `single message confirmation` for runtime: {:?}",
-				<Runtime as frame_system::Config>::Version::get()
-			),
 		)
 	}
 }
