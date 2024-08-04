@@ -13,25 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::imports::*;
-use bridge_hub_rococo_runtime::{EthereumBeaconClient, EthereumInboundQueue, RuntimeOrigin};
 use codec::{Decode, Encode};
-use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
-use rococo_system_emulated_network::penpal_emulated_chain::CustomizableAssetFromSystemAssetHub;
-use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
-use snowbridge_core::{inbound::InboundQueueFixture, outbound::OperatingMode};
-use snowbridge_pallet_inbound_queue_fixtures::{
-	register_token::make_register_token_message, send_token::make_send_token_message,
-	send_token_to_penpal::make_send_token_to_penpal_message,
-};
-use snowbridge_pallet_system;
-use snowbridge_router_primitives::inbound::{
-	Command, ConvertMessage, Destination, GlobalConsensusEthereumConvertsFor, MessageV1,
-	VersionedMessage,
-};
-use sp_core::H256;
-use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
+use snowbridge_core::outbound::OperatingMode;
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
@@ -40,8 +25,6 @@ const TREASURY_ACCOUNT: [u8; 32] =
 	hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
 const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
-const INSUFFICIENT_XCM_FEE: u128 = 1000;
-const XCM_FEE: u128 = 4_000_000_000;
 const ETHEREUM_EXECUTION_FEE: u128 = 2_750_872_500_000;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone, TypeInfo)]
@@ -57,18 +40,6 @@ pub enum ControlCall {
 pub enum SnowbridgeControl {
 	#[codec(index = 83)]
 	Control(ControlCall),
-}
-
-pub fn send_inbound_message(fixture: InboundQueueFixture) -> DispatchResult {
-	EthereumBeaconClient::store_finalized_header(
-		fixture.finalized_header,
-		fixture.block_roots_root,
-	)
-	.unwrap();
-	EthereumInboundQueue::submit(
-		RuntimeOrigin::signed(BridgeHubRococoSender::get()),
-		fixture.message,
-	)
 }
 
 /// Tests the full cycle of token transfers:
@@ -93,43 +64,29 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 
 	const WETH_AMOUNT: u128 = 1_000_000_000;
 
-	BridgeHubRococo::execute_with(|| {
-		type RuntimeEvent = <BridgeHubRococo as Chain>::RuntimeEvent;
-
-		// Construct RegisterToken message and sent to inbound queue
-		send_inbound_message(make_register_token_message()).unwrap();
-
-		// Check that the register token message was sent using xcm
-		assert_expected_events!(
-			BridgeHubRococo,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
-		);
-
-		// Construct SendToken message and sent to inbound queue
-		send_inbound_message(make_send_token_message()).unwrap();
-
-		// Check that the send token message was sent using xcm
-		assert_expected_events!(
-			BridgeHubRococo,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
-		);
-	});
+	let weth_asset_location: Location = Location::new(
+		2,
+		[EthereumNetwork::get().into(), AccountKey20 { network: None, key: WETH }],
+	);
 
 	AssetHubRococo::execute_with(|| {
-		type RuntimeEvent = <AssetHubRococo as Chain>::RuntimeEvent;
 		type RuntimeOrigin = <AssetHubRococo as Chain>::RuntimeOrigin;
 
-		// Check that AssetHub has issued the foreign asset
-		assert_expected_events!(
-			AssetHubRococo,
-			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-			]
-		);
+		// Register WETH and Mint some to AssetHubRococoReceiver
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::force_create(
+			RuntimeOrigin::root(),
+			weth_asset_location.clone().try_into().unwrap(),
+			AssetHubRococoReceiver::get().into(),
+			false,
+			1,
+		));
+		assert_ok!(<AssetHubRococo as AssetHubRococoPallet>::ForeignAssets::mint(
+			RuntimeOrigin::signed(AssetHubRococoReceiver::get()),
+			weth_asset_location.clone().try_into().unwrap(),
+			AssetHubRococoReceiver::get().into(),
+			WETH_AMOUNT,
+		));
+
 		let asset = Asset {
 			id: AssetId(Location::new(
 				2,
@@ -145,7 +102,6 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 			AssetHubRococoReceiver::get(),
 		);
 
-		// Todo: Change fee asset to WETH and remove the exchange_rate config on BH
 		let fee_asset: Asset = (AssetId::from(Location::parent()), ETHEREUM_EXECUTION_FEE).into();
 		// Send the Weth back to Ethereum
 		<AssetHubRococo as AssetHubRococoPallet>::SnowbridgeXcmHelper::transfer_to_ethereum(
