@@ -154,6 +154,8 @@ parameter_types! {
 		rewards: Rewards { local: DOT, remote: meth(1) },
 		multiplier: FixedU128::from_rational(1, 1),
 	};
+	pub DefaultFee: Asset = (Parent, 1_000_000_000).into();
+	pub MaxSendCost: u128 =  1;
 }
 
 pub const DOT: u128 = 10_000_000_000;
@@ -227,6 +229,7 @@ impl inbound_queue::Config for Test {
 	type LengthToFee = IdentityFee<u128>;
 	type MaxMessageSize = ConstU32<1024>;
 	type AssetTransactor = SuccessfulTransactor;
+	type MaxSendCost = MaxSendCost;
 }
 
 pub fn last_events(n: usize) -> Vec<RuntimeEvent> {

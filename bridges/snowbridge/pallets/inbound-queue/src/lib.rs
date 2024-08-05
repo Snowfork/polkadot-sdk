@@ -53,6 +53,7 @@ use sp_runtime::traits::Zero;
 use sp_std::vec;
 use xcm::prelude::{
 	send_xcm, Junction::*, Location, SendError as XcmpSendError, SendXcm, Xcm, XcmContext, XcmHash,
+	*,
 };
 use xcm_executor::traits::TransactAsset;
 
@@ -61,9 +62,8 @@ use snowbridge_core::{
 	sibling_sovereign_account, BasicOperatingMode, Channel, ChannelId, ParaId, PricingParameters,
 	StaticLookup,
 };
-use snowbridge_router_primitives::{
-	inbound,
-	inbound::{ConvertMessage, ConvertMessageError},
+use snowbridge_router_primitives::inbound::{
+	ConvertMessage, ConvertMessageError, VersionedMessage,
 };
 use sp_runtime::{traits::Saturating, SaturatedConversion, TokenError};
 
@@ -141,6 +141,9 @@ pub mod pallet {
 
 		/// To withdraw and deposit an asset.
 		type AssetTransactor: TransactAsset;
+
+		/// The most expensive xcm here only used to estimate send cost
+		type MaxSendCost: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::hooks]
@@ -278,12 +281,11 @@ pub mod pallet {
 			}
 
 			// Decode message into XCM
-			let (xcm, fee) =
-				match inbound::VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
-					Ok(message) => T::MessageConverter::convert(envelope.message_id, message)
-						.map_err(|e| Error::<T>::ConvertMessage(e))?,
-					Err(_) => return Err(Error::<T>::InvalidPayload.into()),
-				};
+			let (xcm, fee) = match VersionedMessage::decode_all(&mut envelope.payload.as_ref()) {
+				Ok(message) => T::MessageConverter::convert(envelope.message_id, message)
+					.map_err(|e| Error::<T>::ConvertMessage(e))?,
+				Err(_) => return Err(Error::<T>::InvalidPayload.into()),
+			};
 
 			log::info!(
 				target: LOG_TARGET,
@@ -329,12 +331,20 @@ pub mod pallet {
 			Ok(xcm_hash)
 		}
 
+		pub fn calculate_send_cost(xcm: Xcm<()>, dest: ParaId) -> Result<Assets, Error<T>> {
+			let dest = Location::new(1, [Parachain(dest.into())]);
+			let (_, fee) = T::XcmSender::validate(&mut Some(dest), &mut Some(xcm))
+				.map_err(Error::<T>::from)?;
+			Ok(fee)
+		}
+
 		pub fn calculate_delivery_cost(length: u32) -> BalanceOf<T> {
 			let weight_fee = T::WeightToFee::weight_to_fee(&T::WeightInfo::submit());
 			let len_fee = T::LengthToFee::weight_to_fee(&Weight::from_parts(length as u64, 0));
 			weight_fee
 				.saturating_add(len_fee)
 				.saturating_add(T::PricingParameters::get().rewards.local)
+				.saturating_add(T::MaxSendCost::get())
 		}
 
 		/// Burn the amount of the fee embedded into the XCM for teleports
@@ -365,7 +375,6 @@ pub mod pallet {
 	/// API for accessing the delivery cost of a message
 	impl<T: Config> Get<BalanceOf<T>> for Pallet<T> {
 		fn get() -> BalanceOf<T> {
-			// Cost here based on MaxMessagePayloadSize(the worst case)
 			Self::calculate_delivery_cost(T::MaxMessageSize::get())
 		}
 	}
