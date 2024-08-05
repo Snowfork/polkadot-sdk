@@ -22,8 +22,8 @@ use xcm_builder::{
 	ChildParachainAsNative, ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
 	DescribeAllTerminal, FixedRateOfFungible, FixedWeightBounds, FrameTransactionalProcessor,
 	FungibleAdapter, FungiblesAdapter, HashedDescription, IsConcrete, MatchedConvertedConcreteId,
-	NoChecking, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
-	TakeWeightCredit, XcmFeeManagerFromComponents, XcmFeeToAccount,
+	NoChecking, SendXcmFeeToAccount, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeWeightCredit, XcmFeeManagerFromComponents,
 };
 use xcm_executor::{
 	traits::{Identity, JustTry},
@@ -367,7 +367,7 @@ parameter_types! {
 	pub TrustedUsdc: (AssetFilter, Location) = (Usdc::get().into(), UsdcReserveLocation::get());
 	pub const MaxInstructions: u32 = 100;
 	pub const MaxAssetsIntoHolding: u32 = 64;
-	pub XcmFeesTargetAccount: AccountId = AccountId::new([167u8; 32]);
+	pub TreasuryAccount: AccountId = AccountId::new([167u8; 32]);
 }
 
 pub const XCM_FEES_NOT_WAIVED_USER_ACCOUNT: [u8; 32] = [37u8; 32];
@@ -418,7 +418,7 @@ impl xcm_executor::Config for XcmConfig {
 	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
 	type FeeManager = XcmFeeManagerFromComponents<
 		EverythingBut<XcmFeesNotWaivedLocations>,
-		XcmFeeToAccount<Self::AssetTransactor, AccountId, XcmFeesTargetAccount>,
+		SendXcmFeeToAccount<Self::AssetTransactor, TreasuryAccount>,
 	>;
 	type MessageExporter = ();
 	type UniversalAliases = Nothing;
@@ -439,6 +439,8 @@ parameter_types! {
 				parents: 2,
 				interior: Junctions::from([GlobalConsensus(Ethereum { chain_id: 11155111 })]),
 	};
+	pub BridgeHub: Location = Location { parents:1, interior: Junctions::from([Parachain(1013)])};
+	pub DeliveryFee: Asset = Asset::from((Location::parent(),48_000_000));
 }
 
 impl Config for Test {
@@ -451,6 +453,8 @@ impl Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type Destination = EthereumLocation;
+	type DeliveryFee = DeliveryFee;
+	type Forwarder = BridgeHub;
 }
 
 impl origin::Config for Test {}

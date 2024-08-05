@@ -24,7 +24,10 @@ use crate::{
 use parachains_common::{AccountId, Balance};
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::{gwei, meth, AllowSiblingsOnly, PricingParameters, Rewards};
-use snowbridge_router_primitives::{inbound::MessageToXcm, outbound::EthereumBlobExporter};
+use snowbridge_router_primitives::{
+	inbound::MessageToXcm,
+	outbound::{v2::EthereumBlobExporter as EthereumBlobExporterV2, EthereumBlobExporter},
+};
 use sp_core::H160;
 use testnet_parachains_constants::rococo::{
 	currency::*,
@@ -43,6 +46,13 @@ use sp_runtime::{
 
 /// Exports message to the Ethereum Gateway contract.
 pub type SnowbridgeExporter = EthereumBlobExporter<
+	UniversalLocation,
+	EthereumNetwork,
+	snowbridge_pallet_outbound_queue::Pallet<Runtime>,
+	snowbridge_core::AgentIdOf,
+>;
+
+pub type SnowbridgeExporterV2 = EthereumBlobExporterV2<
 	UniversalLocation,
 	EthereumNetwork,
 	snowbridge_pallet_outbound_queue::Pallet<Runtime>,

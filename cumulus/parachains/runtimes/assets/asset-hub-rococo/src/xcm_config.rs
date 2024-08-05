@@ -513,18 +513,14 @@ parameter_types! {
 				parents: 2,
 				interior: Junctions::from([GlobalConsensus(Ethereum { chain_id: 11155111 })]),
 	};
+	pub BridgeHub: Location = Location { parents:1, interior: Junctions::from([Parachain(1013)])};
+	pub DeliveryFee: Asset = Asset::from((Location::parent(),60_000_000));
 }
 
 impl snowbridge_pallet_xcm_helper::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	type XcmRouter = WithUniqueTopic<
-		SovereignPaidRemoteExporter<
-			bridging::EthereumNetworkExportTable,
-			XcmpQueue,
-			UniversalLocation,
-		>,
-	>;
+	type XcmRouter = WithUniqueTopic<LocalXcmRouter>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -535,6 +531,8 @@ impl snowbridge_pallet_xcm_helper::Config for Runtime {
 	>;
 	type UniversalLocation = UniversalLocation;
 	type Destination = EthereumLocation;
+	type Forwarder = BridgeHub;
+	type DeliveryFee = DeliveryFee;
 }
 
 /// All configuration related to bridging

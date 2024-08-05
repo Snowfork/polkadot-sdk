@@ -34,8 +34,6 @@ use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 pub const CHAIN_ID: u64 = 11155111;
-const TREASURY_ACCOUNT: [u8; 32] =
-	hex!("6d6f646c70792f74727372790000000000000000000000000000000000000000");
 pub const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const INSUFFICIENT_XCM_FEE: u128 = 1000;
@@ -495,8 +493,8 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		assert!(
 			events.iter().any(|event| matches!(
 				event,
-				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *who == TREASURY_ACCOUNT.into() && *amount == 16903333
+				RuntimeEvent::Balances(pallet_balances::Event::Burned { who, amount })
+					if *who == assethub_sovereign.clone().into() && *amount == DefaultBridgeHubEthereumBaseFee::get()
 			)),
 			"Snowbridge sovereign takes local fee."
 		);

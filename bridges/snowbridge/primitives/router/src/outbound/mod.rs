@@ -51,7 +51,7 @@ where
 			return Err(SendError::NotApplicable)
 		}
 
-		let dest = destination.take().ok_or(SendError::MissingArgument)?;
+		let dest = destination.clone().take().ok_or(SendError::MissingArgument)?;
 		if dest != Here {
 			log::trace!(target: "xcm::ethereum_blob_exporter", "skipped due to unmatched remote destination {dest:?}.");
 			return Err(SendError::NotApplicable)
@@ -117,7 +117,7 @@ where
 		})?;
 
 		// convert fee to Asset
-		let fee = Asset::from((Location::parent(), fee.local)).into();
+		let fee = Asset::from((Location::parent(), fee.total())).into();
 
 		Ok(((ticket.encode(), message_id), fee))
 	}
@@ -153,6 +153,8 @@ enum XcmConverterError {
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
 	SetTopicExpected,
+	FeeAssetExpected,
+	FeeAssetInvalid,
 }
 
 macro_rules! match_expression {
@@ -269,6 +271,259 @@ impl<'a, Call> XcmConverter<'a, Call> {
 			network == self.ethereum_network
 		} else {
 			true
+		}
+	}
+}
+
+pub mod v2 {
+	use super::*;
+	const TARGET: &str = "ethereum_blob_exporter_v2";
+	pub struct EthereumBlobExporter<
+		UniversalLocation,
+		EthereumNetwork,
+		OutboundQueue,
+		AgentHashedDescription,
+	>(PhantomData<(UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription)>);
+
+	impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription> ExportXcm
+		for EthereumBlobExporter<
+			UniversalLocation,
+			EthereumNetwork,
+			OutboundQueue,
+			AgentHashedDescription,
+		>
+	where
+		UniversalLocation: Get<InteriorLocation>,
+		EthereumNetwork: Get<NetworkId>,
+		OutboundQueue: SendMessage<Balance = u128>,
+		AgentHashedDescription: ConvertLocation<H256>,
+	{
+		type Ticket = (Vec<u8>, XcmHash);
+
+		fn validate(
+			network: NetworkId,
+			_channel: u32,
+			universal_source: &mut Option<InteriorLocation>,
+			destination: &mut Option<InteriorLocation>,
+			message: &mut Option<Xcm<()>>,
+		) -> SendResult<Self::Ticket> {
+			let expected_network = EthereumNetwork::get();
+			let universal_location = UniversalLocation::get();
+
+			if network != expected_network {
+				log::trace!(target: TARGET, "skipped due to unmatched bridge network {network:?}.");
+				return Err(SendError::NotApplicable)
+			}
+
+			let destination = destination.clone();
+
+			let dest = destination.ok_or(SendError::MissingArgument)?;
+			if dest != Junctions::from([GlobalConsensus(network)]) {
+				log::trace!(target: TARGET, "skipped due to unmatched remote destination {dest:?}.");
+				return Err(SendError::NotApplicable)
+			}
+
+			let (local_net, local_sub) = universal_source
+				.take()
+				.ok_or_else(|| {
+					log::error!(target: TARGET, "universal source not provided.");
+					SendError::MissingArgument
+				})?
+				.split_global()
+				.map_err(|()| {
+					log::error!(target: TARGET, "could not get global consensus from universal source '{universal_source:?}'.");
+					SendError::Unroutable
+				})?;
+
+			if Ok(local_net) != universal_location.global_consensus() {
+				log::trace!(target: TARGET, "skipped due to unmatched relay network {local_net:?}.");
+				return Err(SendError::NotApplicable)
+			}
+
+			let para_id = match local_sub.as_slice() {
+				[Parachain(para_id), AccountId32 { .. }] => *para_id,
+				_ => {
+					log::error!(target: TARGET, "could not get parachain id from universal source '{local_sub:?}'.");
+					return Err(SendError::MissingArgument)
+				},
+			};
+
+			let message = message.take().ok_or_else(|| {
+				log::error!(target: TARGET, "xcm message not provided.");
+				SendError::MissingArgument
+			})?;
+
+			let mut converter = XcmConverter::new(&message, &expected_network);
+			let (agent_execute_command, message_id) = converter.convert().map_err(|err| {
+				log::error!(target: TARGET, "unroutable due to pattern matching error '{err:?}'.");
+				SendError::Unroutable
+			})?;
+
+			let source_location = Location::new(1, local_sub.clone());
+			let agent_id = match AgentHashedDescription::convert_location(&source_location) {
+				Some(id) => id,
+				None => {
+					log::error!(target: TARGET, "unroutable due to not being able to create agent id. '{source_location:?}'");
+					return Err(SendError::Unroutable)
+				},
+			};
+
+			let channel_id: ChannelId = ParaId::from(para_id).into();
+
+			let outbound_message = Message {
+				id: Some(message_id.into()),
+				channel_id,
+				command: Command::AgentExecute { agent_id, command: agent_execute_command },
+			};
+
+			// validate the message
+			let (ticket, fee) = OutboundQueue::validate(&outbound_message).map_err(|err| {
+				log::error!(target: TARGET, "OutboundQueue validation of message failed. {err:?}");
+				SendError::Unroutable
+			})?;
+
+			// convert fee to Asset
+			let fee = Asset::from((Location::parent(), fee.local)).into();
+
+			Ok(((ticket.encode(), message_id), fee))
+		}
+
+		fn deliver(blob: (Vec<u8>, XcmHash)) -> Result<XcmHash, SendError> {
+			let ticket: OutboundQueue::Ticket = OutboundQueue::Ticket::decode(&mut blob.0.as_ref())
+				.map_err(|_| {
+					log::trace!(target: TARGET, "undeliverable due to decoding error");
+					SendError::NotApplicable
+				})?;
+
+			let message_id = OutboundQueue::deliver(ticket).map_err(|_| {
+				log::error!(target: TARGET, "OutboundQueue submit of message failed");
+				SendError::Transport("other transport error")
+			})?;
+
+			log::info!(target: TARGET, "message delivered {message_id:#?}.");
+			Ok(message_id.into())
+		}
+	}
+
+	struct XcmConverter<'a, Call> {
+		iter: Peekable<Iter<'a, Instruction<Call>>>,
+		ethereum_network: &'a NetworkId,
+	}
+	impl<'a, Call> XcmConverter<'a, Call> {
+		fn new(message: &'a Xcm<Call>, ethereum_network: &'a NetworkId) -> Self {
+			Self { iter: message.inner().iter().peekable(), ethereum_network }
+		}
+
+		fn convert(&mut self) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+			// Get withdraw/deposit and make native tokens create message.
+			let result = self.native_tokens_unlock_message()?;
+
+			// All xcm instructions must be consumed before exit.
+			if self.next().is_ok() {
+				return Err(XcmConverterError::EndOfXcmMessageExpected)
+			}
+
+			Ok(result)
+		}
+
+		fn native_tokens_unlock_message(
+			&mut self,
+		) -> Result<(AgentExecuteCommand, [u8; 32]), XcmConverterError> {
+			use XcmConverterError::*;
+
+			// Get the reserve assets from WithdrawAsset.
+			let reserve_assets =
+				match_expression!(self.next()?, WithdrawAsset(reserve_assets), reserve_assets)
+					.ok_or(WithdrawAssetExpected)?;
+
+			// Check if clear origin exists and skip over it.
+			if match_expression!(self.peek(), Ok(ClearOrigin), ()).is_some() {
+				let _ = self.next();
+			}
+
+			// Get the fee asset item from BuyExecution.
+			let fee_asset = match_expression!(self.next()?, BuyExecution { fees, .. }, fees)
+				.ok_or(FeeAssetExpected)?;
+			ensure!(fee_asset.clone().id == AssetId::from(Location::parent()), FeeAssetInvalid);
+			let fee_amount = match fee_asset.clone().fun {
+				Fungible(fee_amount) => Ok(fee_amount),
+				_ => Err(FeeAssetInvalid),
+			}?;
+			let reserve_fee_asset = reserve_assets.get(0).ok_or(AssetResolutionFailed)?;
+			ensure!(
+				reserve_fee_asset.clone().id == AssetId::from(Location::parent()),
+				FeeAssetInvalid
+			);
+			let reserve_fee_amount = match reserve_fee_asset.clone().fun {
+				Fungible(fee_amount) => Ok(fee_amount),
+				_ => Err(FeeAssetInvalid),
+			}?;
+			ensure!(fee_amount <= reserve_fee_amount, FeeAssetInvalid);
+
+			let (deposit_assets, beneficiary) = match_expression!(
+				self.next()?,
+				DepositAsset { assets, beneficiary },
+				(assets, beneficiary)
+			)
+			.ok_or(DepositAssetExpected)?;
+
+			// assert that the beneficiary is AccountKey20.
+			let recipient = match_expression!(
+				beneficiary.unpack(),
+				(0, [AccountKey20 { network, key }])
+					if self.network_matches(network),
+				H160(*key)
+			)
+			.ok_or(BeneficiaryResolutionFailed)?;
+
+			// Make sure there are reserved assets.
+			if reserve_assets.len() == 0 {
+				return Err(NoReserveAssets)
+			}
+
+			// Check the the deposit asset filter matches what was reserved.
+			if reserve_assets.inner().iter().any(|asset| !deposit_assets.matches(asset)) {
+				return Err(FilterDoesNotConsumeAllAssets)
+			}
+
+			let reserve_asset = reserve_assets.get(1).ok_or(AssetResolutionFailed)?;
+
+			let (token, amount) = match reserve_asset {
+				Asset { id: AssetId(inner_location), fun: Fungible(amount) } =>
+					match inner_location.unpack() {
+						(2, [GlobalConsensus(network), AccountKey20 { key, .. }])
+							if self.network_matches(&Some(network.clone())) =>
+							Some((H160(*key), *amount)),
+						_ => None,
+					},
+				_ => None,
+			}
+			.ok_or(AssetResolutionFailed)?;
+
+			// transfer amount must be greater than 0.
+			ensure!(amount > 0, ZeroAssetTransfer);
+
+			// Check if there is a SetTopic and skip over it if found.
+			let topic_id =
+				match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
+
+			Ok((AgentExecuteCommand::TransferToken { token, recipient, amount }, *topic_id))
+		}
+
+		fn next(&mut self) -> Result<&'a Instruction<Call>, XcmConverterError> {
+			self.iter.next().ok_or(XcmConverterError::UnexpectedEndOfXcm)
+		}
+
+		fn peek(&mut self) -> Result<&&'a Instruction<Call>, XcmConverterError> {
+			self.iter.peek().ok_or(XcmConverterError::UnexpectedEndOfXcm)
+		}
+
+		fn network_matches(&self, network: &Option<NetworkId>) -> bool {
+			if let Some(network) = network {
+				network == self.ethereum_network
+			} else {
+				true
+			}
 		}
 	}
 }

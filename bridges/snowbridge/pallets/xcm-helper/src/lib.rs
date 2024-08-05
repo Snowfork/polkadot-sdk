@@ -14,7 +14,7 @@ pub mod pallet {
 		dispatch::{GetDispatchInfo, PostDispatchInfo},
 		pallet_prelude::*,
 	};
-	use frame_system::pallet_prelude::*;
+	use frame_system::{pallet_prelude::*, unique};
 	use sp_core::H160;
 	use sp_runtime::traits::Dispatchable;
 	use sp_std::{boxed::Box, vec, vec::Vec};
@@ -56,6 +56,12 @@ pub mod pallet {
 
 		/// Ethereum's location of this runtime.
 		type Destination: Get<Location>;
+
+		/// DeliveryFee for the execution cost on BH
+		type DeliveryFee: Get<Asset>;
+
+		/// The location of BH
+		type Forwarder: Get<Location>;
 	}
 
 	#[pallet::pallet]
@@ -96,6 +102,8 @@ pub mod pallet {
 		FeesNotMet,
 		UnweighableMessage,
 		LocalExecutionIncomplete,
+		InvalidNetwork,
+		Unroutable,
 	}
 
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
@@ -120,8 +128,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			let origin = T::ExecuteXcmOrigin::ensure_origin(origin)?;
 
-			let dest = T::Destination::get();
-
 			// construct the inner xcm of ExportMessage
 			let transact = TransactInfo { target, call, gas_limit };
 			let message = Xcm(vec![Transact {
@@ -130,7 +136,7 @@ pub mod pallet {
 				call: transact.encode().into(),
 			}]);
 
-			Self::send_xcm(origin, dest, message, None)?;
+			Self::send_xcm(origin, T::Forwarder::get(), message)?;
 
 			Ok(())
 		}
@@ -179,7 +185,7 @@ pub mod pallet {
 				&fee,
 			)?;
 
-			Self::execute_xcm_transfer(origin, dest, local_xcm, remote_xcm, fee)
+			Self::execute_xcm_transfer(origin, T::Forwarder::get(), local_xcm, remote_xcm)
 		}
 	}
 
@@ -197,21 +203,11 @@ pub mod pallet {
 		}
 
 		/// Send xcm to bridge hub with designated fee charged
-		fn send_xcm(
-			origin: Location,
-			dest: Location,
-			remote_xcm: Xcm<()>,
-			remote_fee: Option<Asset>,
-		) -> DispatchResult {
+		fn send_xcm(origin: Location, dest: Location, remote_xcm: Xcm<()>) -> DispatchResult {
 			let (ticket, delivery_fee) =
 				validate_send::<T::XcmRouter>(dest.clone(), remote_xcm.clone())
 					.map_err(|_| Error::<T>::InvalidXcm)?;
 			Self::charge_fees(origin.clone(), delivery_fee).map_err(|_| Error::<T>::FeesNotMet)?;
-
-			if let Some(execution_fee) = remote_fee {
-				Self::charge_fees(origin.clone(), execution_fee.into())
-					.map_err(|_| Error::<T>::FeesNotMet)?;
-			}
 
 			let message_id = T::XcmRouter::deliver(ticket).map_err(|_| Error::<T>::SendFailure)?;
 			Self::deposit_event(Event::Sent {
@@ -230,7 +226,6 @@ pub mod pallet {
 			dest: Location,
 			mut local_xcm: Xcm<<T as Config>::RuntimeCall>,
 			remote_xcm: Xcm<()>,
-			fee: Asset,
 		) -> DispatchResult {
 			log::debug!(
 				target: "xcm::transfer_to_ethereum",
@@ -251,7 +246,7 @@ pub mod pallet {
 			Self::deposit_event(Event::Attempted { outcome: outcome.clone() });
 			outcome.ensure_complete().map_err(|_| Error::<T>::LocalExecutionIncomplete)?;
 
-			Self::send_xcm(origin, dest, remote_xcm, Some(fee))?;
+			Self::send_xcm(origin, dest, remote_xcm)?;
 
 			Ok(())
 		}
@@ -300,7 +295,8 @@ pub mod pallet {
 			asset: &Asset,
 			fee: &Asset,
 		) -> Result<(Xcm<<T as Config>::RuntimeCall>, Xcm<()>), Error<T>> {
-			let assets: Assets = asset.clone().into();
+			let assets: Assets = vec![asset.clone()].into();
+			let burn_assets: Assets = vec![fee.clone(), T::DeliveryFee::get()].into();
 			let context = T::UniversalLocation::get();
 
 			let mut reanchored_assets = assets.clone();
@@ -317,6 +313,10 @@ pub mod pallet {
 			let local_execute_xcm = Xcm(vec![
 				// locally move `assets` to `dest`s local sovereign account
 				TransferAsset { assets, beneficiary: dest.clone() },
+				// withdraw reserve-based assets
+				WithdrawAsset(burn_assets.clone()),
+				// burn reserve-based assets
+				BurnAsset(burn_assets),
 			]);
 			// XCM instructions to be executed on bridge hub
 			let xcm_on_dest = Xcm(vec![
@@ -333,24 +333,15 @@ pub mod pallet {
 
 		/// Construct Xcm for Ethereum native asset
 		fn destination_reserve_transfer_programs(
-			_origin: Location,
+			origin: Location,
 			dest: Location,
 			beneficiary: Location,
 			asset: &Asset,
 			fee: &Asset,
 		) -> Result<(Xcm<<T as Config>::RuntimeCall>, Xcm<()>), Error<T>> {
-			let assets: Assets = asset.clone().into();
-			let context = T::UniversalLocation::get();
+			let assets: Assets = vec![asset.clone(), fee.clone(), T::DeliveryFee::get()].into();
 
-			let mut reanchored_assets = assets.clone();
-			reanchored_assets
-				.reanchor(&dest, &context)
-				.map_err(|_| Error::<T>::CannotReanchor)?;
-
-			let mut reanchored_fee = fee.clone();
-			reanchored_fee = reanchored_fee
-				.reanchored(&dest, &context)
-				.map_err(|_| Error::<T>::CannotReanchor)?;
+			let transfeable_assets: Assets = vec![asset.clone(), fee.clone()].into();
 
 			// XCM instructions to be executed on local chain
 			let local_execute_xcm = Xcm(vec![
@@ -359,14 +350,37 @@ pub mod pallet {
 				// burn reserve-based assets
 				BurnAsset(assets),
 			]);
-			// XCM instructions to be executed on bridge hub
-			let xcm_on_dest = Xcm(vec![
+
+			let network: NetworkId = match T::Destination::get() {
+				Location { parents: 2, interior: Junctions::X1(junction) } =>
+					match junction.first() {
+						Some(&GlobalConsensus(network_id)) => Ok(network_id),
+						_ => Err(Error::<T>::InvalidNetwork),
+					},
+				_ => Err(Error::<T>::InvalidNetwork),
+			}?;
+
+			let mut inner_xcm = Xcm(vec![
 				// withdraw `assets` from origin chain's sovereign account
-				WithdrawAsset(reanchored_assets),
+				WithdrawAsset(transfeable_assets),
 				// following instructions are not exec'ed on behalf of origin chain anymore
 				ClearOrigin,
-				BuyExecution { fees: reanchored_fee, weight_limit: Unlimited },
+				BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 				DepositAsset { assets: Wild(AllCounted(1)), beneficiary },
+			]);
+			let unique_id = unique(&inner_xcm);
+			inner_xcm.0.push(SetTopic(unique_id));
+
+			// XCM instructions to be executed on bridge hub
+			let xcm_on_dest = Xcm(vec![
+				DescendOrigin(origin.clone().interior),
+				ReceiveTeleportedAsset(vec![T::DeliveryFee::get()].into()),
+				BuyExecution { fees: T::DeliveryFee::get().into(), weight_limit: Unlimited },
+				SetAppendix(Xcm(vec![DepositAsset {
+					assets: AllCounted(1).into(),
+					beneficiary: origin.clone(),
+				}])),
+				ExportMessage { network, destination: dest.interior, xcm: inner_xcm },
 			]);
 
 			Ok((local_execute_xcm, xcm_on_dest))

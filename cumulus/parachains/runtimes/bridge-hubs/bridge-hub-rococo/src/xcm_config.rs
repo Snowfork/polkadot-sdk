@@ -23,21 +23,23 @@ use bp_messages::LaneId;
 use bp_relayers::{PayRewardFromAccount, RewardsAccountOwner, RewardsAccountParams};
 use bp_runtime::ChainId;
 use core::marker::PhantomData;
+use cumulus_primitives_core::ParaId;
 use frame_support::{
 	parameter_types,
-	traits::{tokens::imbalance::ResolveTo, ConstU32, Contains, Equals, Everything, Nothing},
+	traits::{
+		tokens::imbalance::ResolveTo, ConstU32, Contains, ContainsPair, Equals, Everything, Nothing,
+	},
 };
 use frame_system::EnsureRoot;
 use pallet_collator_selection::StakingPotAccountId;
 use pallet_xcm::XcmPassthrough;
 use parachains_common::{
 	xcm_config::{
-		AllSiblingSystemParachains, ConcreteAssetFromSystem, ParentRelayOrSiblingParachains,
-		RelayOrOtherSystemParachains,
+		AllSiblingSystemParachains, ParentRelayOrSiblingParachains, RelayOrOtherSystemParachains,
 	},
 	TREASURY_PALLET_ID,
 };
-use polkadot_parachain_primitives::primitives::Sibling;
+use polkadot_parachain_primitives::primitives::{IsSystem, Sibling};
 use polkadot_runtime_common::xcm_sender::ExponentialPrice;
 use sp_core::Get;
 use sp_runtime::traits::AccountIdConversion;
@@ -168,9 +170,29 @@ pub type WaivedLocations = (
 	Equals<RelayTreasuryLocation>,
 );
 
+pub struct ConcreteAssetFromUserOriginOfSystemChain<AssetLocation>(PhantomData<AssetLocation>);
+impl<AssetLocation: Get<Location>> ContainsPair<Asset, Location>
+	for ConcreteAssetFromUserOriginOfSystemChain<AssetLocation>
+{
+	fn contains(asset: &Asset, origin: &Location) -> bool {
+		log::trace!(target: "xcm::contains", "ConcreteAssetFromSystem asset: {:?}, origin: {:?}", asset, origin);
+		let is_system = match origin.unpack() {
+			// The Relay Chain
+			(1, []) => true,
+			// System parachain
+			(1, [Parachain(id)]) => ParaId::from(*id).is_system(),
+			// User from system chain
+			(1, [Parachain(id), AccountId32 { .. }]) => ParaId::from(*id).is_system(),
+			// Others
+			_ => false,
+		};
+		asset.id.0 == AssetLocation::get() && is_system
+	}
+}
+
 /// Cases where a remote origin is accepted as trusted Teleporter for a given asset:
 /// - NativeToken with the parent Relay Chain and sibling parachains.
-pub type TrustedTeleporters = ConcreteAssetFromSystem<TokenLocation>;
+pub type TrustedTeleporters = ConcreteAssetFromUserOriginOfSystemChain<TokenLocation>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -221,6 +243,7 @@ impl xcm_executor::Config for XcmConfig {
 		crate::bridge_to_westend_config::ToBridgeHubWestendHaulBlobExporter,
 		crate::bridge_to_bulletin_config::ToRococoBulletinHaulBlobExporter,
 		crate::bridge_to_ethereum_config::SnowbridgeExporter,
+		crate::bridge_to_ethereum_config::SnowbridgeExporterV2,
 	);
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
