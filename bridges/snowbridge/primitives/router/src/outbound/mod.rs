@@ -499,7 +499,7 @@ pub mod v2 {
 				Asset { id: AssetId(inner_location), fun: Fungible(amount) } =>
 					match inner_location.unpack() {
 						(2, [GlobalConsensus(network), AccountKey20 { key, .. }])
-							if self.network_matches(&Some(network.clone())) =>
+							if self.network_matches(&Some(*network)) =>
 							Some((H160(*key), *amount)),
 						_ => None,
 					},
