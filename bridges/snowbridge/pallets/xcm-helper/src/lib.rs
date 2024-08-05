@@ -17,7 +17,7 @@ pub mod pallet {
 	use frame_system::{pallet_prelude::*, unique};
 	use sp_core::H160;
 	use sp_runtime::traits::Dispatchable;
-	use sp_std::{boxed::Box, vec, vec::Vec};
+	use sp_std::{boxed::Box, vec};
 	use xcm::prelude::*;
 	use xcm_executor::traits::{TransferType, WeightBounds, XcmAssetTransfers};
 
@@ -103,14 +103,6 @@ pub mod pallet {
 		UnweighableMessage,
 		LocalExecutionIncomplete,
 		InvalidNetwork,
-		Unroutable,
-	}
-
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-	pub struct TransactInfo {
-		pub target: H160,
-		pub call: Vec<u8>,
-		pub gas_limit: u64,
 	}
 
 	#[pallet::hooks]
@@ -119,30 +111,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(Weight::from_parts(100_000_000, 0))]
-		pub fn transact_to_ethereum(
-			origin: OriginFor<T>,
-			target: H160,
-			call: Vec<u8>,
-			gas_limit: u64,
-		) -> DispatchResult {
-			let origin = T::ExecuteXcmOrigin::ensure_origin(origin)?;
-
-			// construct the inner xcm of ExportMessage
-			let transact = TransactInfo { target, call, gas_limit };
-			let message = Xcm(vec![Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: Weight::default(),
-				call: transact.encode().into(),
-			}]);
-
-			Self::send_xcm(origin, T::Forwarder::get(), message)?;
-
-			Ok(())
-		}
-
-		#[pallet::call_index(1)]
-		#[pallet::weight(Weight::from_parts(100_000_000, 0))]
+		#[pallet::weight(Weight::from_parts(4_000_000_000, 0))]
 		pub fn transfer_to_ethereum(
 			origin: OriginFor<T>,
 			beneficiary: H160,
@@ -158,11 +127,9 @@ pub mod pallet {
 
 			let dest = T::Destination::get();
 
+			// If fungible asset, ensure non-zero amount.
 			let asset: Asset = (*asset).try_into().map_err(|()| Error::<T>::BadVersion)?;
-			let fee: Asset = (*fee).try_into().map_err(|()| Error::<T>::BadVersion)?;
-
 			if let Fungible(x) = asset.fun {
-				// If fungible asset, ensure non-zero amount.
 				ensure!(x > 0, Error::<T>::Empty);
 			}
 
@@ -170,6 +137,7 @@ pub mod pallet {
 			let asset_transfer_type = T::XcmExecutor::determine_for(&asset, &dest)
 				.map_err(|_| Error::<T>::CannotDetermine)?;
 
+			let fee: Asset = (*fee).try_into().map_err(|()| Error::<T>::BadVersion)?;
 			log::debug!(
 				target: "xcm::transfer_to_ethereum",
 				"origin {:?}, dest {:?}, beneficiary {:?}, asset {:?}, fee {:?}, transfer_type {:?}",
@@ -289,7 +257,7 @@ pub mod pallet {
 
 		/// Construct Xcm for Polkadot native asset
 		fn local_reserve_transfer_programs(
-			_origin: Location,
+			origin: Location,
 			dest: Location,
 			beneficiary: Location,
 			asset: &Asset,
@@ -297,35 +265,45 @@ pub mod pallet {
 		) -> Result<(Xcm<<T as Config>::RuntimeCall>, Xcm<()>), Error<T>> {
 			let assets: Assets = vec![asset.clone()].into();
 			let burn_assets: Assets = vec![fee.clone(), T::DeliveryFee::get()].into();
-			let context = T::UniversalLocation::get();
-
-			let mut reanchored_assets = assets.clone();
-			reanchored_assets
-				.reanchor(&dest, &context)
-				.map_err(|_| Error::<T>::CannotReanchor)?;
-
-			let mut reanchored_fee = fee.clone();
-			reanchored_fee = reanchored_fee
-				.reanchored(&dest, &context)
-				.map_err(|_| Error::<T>::CannotReanchor)?;
 
 			// XCM instructions to be executed on local chain
 			let local_execute_xcm = Xcm(vec![
 				// locally move `assets` to `dest`s local sovereign account
-				TransferAsset { assets, beneficiary: dest.clone() },
+				TransferAsset { assets: assets.clone(), beneficiary: dest.clone() },
 				// withdraw reserve-based assets
 				WithdrawAsset(burn_assets.clone()),
 				// burn reserve-based assets
 				BurnAsset(burn_assets),
 			]);
+
+			let network: NetworkId = match T::Destination::get() {
+				Location { parents: 2, interior: Junctions::X1(junction) } =>
+					match junction.first() {
+						Some(&GlobalConsensus(network_id)) => Ok(network_id),
+						_ => Err(Error::<T>::InvalidNetwork),
+					},
+				_ => Err(Error::<T>::InvalidNetwork),
+			}?;
+
+			let mut inner_xcm = Xcm(vec![
+				ReserveAssetDeposited(assets),
+				ClearOrigin,
+				BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+				DepositAsset { assets: Wild(AllCounted(1)), beneficiary },
+			]);
+			let unique_id = unique(&inner_xcm);
+			inner_xcm.0.push(SetTopic(unique_id));
+
 			// XCM instructions to be executed on bridge hub
 			let xcm_on_dest = Xcm(vec![
-				// let (dest) chain know assets are in its SA on reserve
-				ReserveAssetDeposited(reanchored_assets),
-				// following instructions are not exec'ed on behalf of origin chain anymore
-				ClearOrigin,
-				BuyExecution { fees: reanchored_fee, weight_limit: Unlimited },
-				DepositAsset { assets: Wild(AllCounted(1)), beneficiary },
+				DescendOrigin(origin.clone().interior),
+				ReceiveTeleportedAsset(vec![T::DeliveryFee::get()].into()),
+				BuyExecution { fees: T::DeliveryFee::get().into(), weight_limit: Unlimited },
+				SetAppendix(Xcm(vec![DepositAsset {
+					assets: AllCounted(1).into(),
+					beneficiary: origin.clone(),
+				}])),
+				ExportMessage { network, destination: dest.interior, xcm: inner_xcm },
 			]);
 
 			Ok((local_execute_xcm, xcm_on_dest))
@@ -340,8 +318,6 @@ pub mod pallet {
 			fee: &Asset,
 		) -> Result<(Xcm<<T as Config>::RuntimeCall>, Xcm<()>), Error<T>> {
 			let assets: Assets = vec![asset.clone(), fee.clone(), T::DeliveryFee::get()].into();
-
-			let transfeable_assets: Assets = vec![asset.clone(), fee.clone()].into();
 
 			// XCM instructions to be executed on local chain
 			let local_execute_xcm = Xcm(vec![
@@ -361,9 +337,7 @@ pub mod pallet {
 			}?;
 
 			let mut inner_xcm = Xcm(vec![
-				// withdraw `assets` from origin chain's sovereign account
-				WithdrawAsset(transfeable_assets),
-				// following instructions are not exec'ed on behalf of origin chain anymore
+				WithdrawAsset(vec![asset.clone()].into()),
 				ClearOrigin,
 				BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 				DepositAsset { assets: Wild(AllCounted(1)), beneficiary },
