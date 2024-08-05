@@ -152,9 +152,8 @@ enum XcmConverterError {
 	ZeroAssetTransfer,
 	BeneficiaryResolutionFailed,
 	AssetResolutionFailed,
+	InvalidFeeAsset,
 	SetTopicExpected,
-	FeeAssetExpected,
-	FeeAssetInvalid,
 }
 
 macro_rules! match_expression {
@@ -237,6 +236,14 @@ impl<'a, Call> XcmConverter<'a, Call> {
 		// We only support a single asset at a time.
 		ensure!(reserve_assets.len() == 1, TooManyAssets);
 		let reserve_asset = reserve_assets.get(0).ok_or(AssetResolutionFailed)?;
+
+		// If there was a fee specified verify it.
+		if let Some(fee_asset) = fee_asset {
+			// The fee asset must be the same as the reserve asset.
+			if fee_asset.id != reserve_asset.id || fee_asset.fun > reserve_asset.fun {
+				return Err(InvalidFeeAsset)
+			}
+		}
 
 		let (token, amount) = match reserve_asset {
 			Asset { id: AssetId(inner_location), fun: Fungible(amount) } =>
@@ -443,22 +450,22 @@ pub mod v2 {
 
 			// Get the fee asset item from BuyExecution.
 			let fee_asset = match_expression!(self.next()?, BuyExecution { fees, .. }, fees)
-				.ok_or(FeeAssetExpected)?;
-			ensure!(fee_asset.clone().id == AssetId::from(Location::parent()), FeeAssetInvalid);
+				.ok_or(InvalidFeeAsset)?;
+			ensure!(fee_asset.clone().id == AssetId::from(Location::parent()), InvalidFeeAsset);
 			let fee_amount = match fee_asset.clone().fun {
 				Fungible(fee_amount) => Ok(fee_amount),
-				_ => Err(FeeAssetInvalid),
+				_ => Err(InvalidFeeAsset),
 			}?;
 			let reserve_fee_asset = reserve_assets.get(0).ok_or(AssetResolutionFailed)?;
 			ensure!(
 				reserve_fee_asset.clone().id == AssetId::from(Location::parent()),
-				FeeAssetInvalid
+				InvalidFeeAsset
 			);
 			let reserve_fee_amount = match reserve_fee_asset.clone().fun {
 				Fungible(fee_amount) => Ok(fee_amount),
-				_ => Err(FeeAssetInvalid),
+				_ => Err(InvalidFeeAsset),
 			}?;
-			ensure!(fee_amount <= reserve_fee_amount, FeeAssetInvalid);
+			ensure!(fee_amount <= reserve_fee_amount, InvalidFeeAsset);
 
 			let (deposit_assets, beneficiary) = match_expression!(
 				self.next()?,
