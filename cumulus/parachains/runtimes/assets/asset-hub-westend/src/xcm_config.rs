@@ -83,6 +83,7 @@ parameter_types! {
 	pub StakingPot: AccountId = CollatorSelection::account_id();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(westend_runtime_constants::TREASURY_PALLET_ID)).into();
+	pub GlobalWestendLocation: Location = Location::new(1,[GlobalConsensus(Westend)]);
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -105,6 +106,20 @@ pub type LocationToAccountId = (
 	// (Used to get convert ethereum contract locations to sovereign account)
 	GlobalConsensusEthereumConvertsFor<AccountId>,
 );
+
+/// Means for transacting the native currency on this chain.
+pub type GlobalFungibleTransactor = FungibleAdapter<
+	// Use this currency:
+	Balances,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	IsConcrete<GlobalWestendLocation>,
+	// Convert an XCM Location into a local account id:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We don't track any teleports of `Balances`.
+	(),
+>;
 
 /// Means for transacting the native currency on this chain.
 pub type FungibleTransactor = FungibleAdapter<
@@ -217,6 +232,7 @@ pub type PoolFungiblesTransactor = FungiblesAdapter<
 /// Means for transacting assets on this chain.
 pub type AssetTransactors = (
 	FungibleTransactor,
+	GlobalFungibleTransactor,
 	FungiblesTransactor,
 	ForeignFungiblesTransactor,
 	PoolFungiblesTransactor,
@@ -646,8 +662,8 @@ pub mod bridging {
 
 	pub mod to_ethereum {
 		use super::*;
-		use assets_common::matching::FromNetwork;
 		use alloc::collections::btree_set::BTreeSet;
+		use assets_common::matching::FromNetwork;
 		use testnet_parachains_constants::westend::snowbridge::{
 			EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX,
 		};
@@ -657,7 +673,7 @@ pub mod bridging {
 			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
 			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
 			/// Polkadot uses 10 decimals, Kusama and Rococo 12 decimals.
-			pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
+			pub const DefaultBridgeHubEthereumBaseFee: Balance = 3_200_000_000_000;
 			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
 				1,

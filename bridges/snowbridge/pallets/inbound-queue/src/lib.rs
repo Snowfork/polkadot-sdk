@@ -291,10 +291,8 @@ pub mod pallet {
 				fee
 			);
 
-			if fee > BalanceOf::<T>::zero() {
-				// Burning fees for teleport
-				Self::burn_fees(channel.para_id, fee)?;
-			}
+			// Burning fees for teleport
+			Self::burn_fees(channel.para_id, fee)?;
 
 			// Attempt to send XCM to a dest parachain
 			let message_id = Self::send_xcm(xcm, channel.para_id)?;

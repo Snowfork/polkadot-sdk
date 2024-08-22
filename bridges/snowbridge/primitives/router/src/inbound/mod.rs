@@ -377,7 +377,7 @@ where
 		}
 		.ok_or(ConvertMessageError::InvalidDestination)?;
 
-		let fee_asset: Asset = (Location::here(), destination_fee).into();
+		let fee_asset: Asset = (Location::parent(), destination_fee).into();
 
 		let versioned_asset_id =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
@@ -392,16 +392,17 @@ where
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let instructions = vec![
+			ReceiveTeleportedAsset(fee_asset.clone().into()),
+			BuyExecution { fees: fee_asset, weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
 			WithdrawAsset(assets),
-			BuyExecution { fees: fee_asset, weight_limit: Unlimited },
 			ClearOrigin,
 			DepositAsset { assets: AllCounted(2).into(), beneficiary },
 			SetTopic(message_id.into()),
 		];
 
-		Ok((instructions.into(), Balance::zero()))
+		Ok((instructions.into(), destination_fee.into()))
 	}
 }
 
