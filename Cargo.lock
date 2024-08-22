@@ -21976,6 +21976,7 @@ version = "1.0.0"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
+ "hex-literal",
  "polkadot-core-primitives",
  "rococo-runtime-constants",
  "smallvec",

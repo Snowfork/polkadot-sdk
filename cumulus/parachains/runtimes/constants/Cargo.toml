@@ -27,6 +27,7 @@ xcm = { workspace = true }
 
 # Cumulus
 cumulus-primitives-core = { workspace = true }
+hex-literal = { workspace = true, default-features = true }
 
 [features]
 default = ["std"]

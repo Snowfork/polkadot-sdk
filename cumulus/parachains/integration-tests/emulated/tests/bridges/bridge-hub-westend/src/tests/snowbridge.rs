@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::imports::*;
-use asset_hub_westend_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubEthereumBaseFee;
+use asset_hub_westend_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubBaseFee;
 use bridge_hub_westend_runtime::EthereumInboundQueue;
 use codec::{Decode, Encode};
 use frame_support::pallet_prelude::TypeInfo;
@@ -23,11 +23,10 @@ use snowbridge_router_primitives::inbound::{
 	Command, ConvertMessage, Destination, MessageV1, VersionedMessage,
 };
 use sp_core::H256;
-use testnet_parachains_constants::westend::snowbridge::EthereumNetwork;
+pub use testnet_parachains_constants::westend::snowbridge::{EthereumNetwork, WETH};
 
-const INITIAL_FUND: u128 = 5_000_000_000 * WESTEND_ED;
-const CHAIN_ID: u64 = 11155111;
-const WETH: [u8; 20] = hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d");
+const INITIAL_FUND: u128 = 100_000_000_000_000;
+pub const CHAIN_ID: u64 = 11155111;
 const ETHEREUM_DESTINATION_ADDRESS: [u8; 20] = hex!("44a57ee2f2FCcb85FDa2B0B18EBD0D8D2333700e");
 const XCM_FEE: u128 = 100_000_000_000;
 const WETH_AMOUNT: u128 = 1_000_000_000;
@@ -240,7 +239,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 					AccountKey20 { network: None, key: WETH },
 				],
 			)),
-			fun: Fungible(WETH_AMOUNT),
+			fun: Fungible(WETH_AMOUNT / 10),
 		}];
 		let multi_assets = VersionedAssets::V4(Assets::from(assets));
 
@@ -273,11 +272,10 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		);
 		// Assert at least DefaultBridgeHubEthereumBaseFee charged from the sender
 		let free_balance_diff = free_balance_before - free_balance_after;
-		assert!(free_balance_diff > DefaultBridgeHubEthereumBaseFee::get());
+		assert!(free_balance_diff > DefaultBridgeHubBaseFee::get());
 	});
 
 	BridgeHubWestend::execute_with(|| {
-		use bridge_hub_westend_runtime::xcm_config::TreasuryAccount;
 		type RuntimeEvent = <BridgeHubWestend as Chain>::RuntimeEvent;
 		// Check that the transfer token back to Ethereum message was queue in the Ethereum
 		// Outbound Queue
@@ -287,25 +285,6 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 
 	RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued
 	{..}) => {},             ]
-		);
-		let events = BridgeHubWestend::events();
-		// Check that the local fee was credited to the Snowbridge sovereign account
-		assert!(
-			events.iter().any(|event| matches!(
-				event,
-				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *who == TreasuryAccount::get().into() && *amount == 5071000000
-			)),
-			"Snowbridge sovereign takes local fee."
-		);
-		// Check that the remote fee was credited to the AssetHub sovereign account
-		assert!(
-			events.iter().any(|event| matches!(
-				event,
-				RuntimeEvent::Balances(pallet_balances::Event::Minted { who, amount })
-					if *who == assethub_sovereign && *amount == 2680000000000,
-			)),
-			"AssetHub sovereign takes remote fee."
 		);
 	});
 }

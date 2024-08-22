@@ -176,6 +176,8 @@ pub mod snowbridge {
 	/// The pallet index of the Ethereum inbound queue pallet in the bridge hub runtime.
 	pub const INBOUND_QUEUE_PALLET_INDEX: u8 = 80;
 
+	pub const WETH: [u8; 20] = hex_literal::hex!("7b79995e5f793a07bc00c21412e50ecae098e7f9");
+
 	parameter_types! {
 		/// Network and location for the Ethereum chain. On Westend, the Ethereum chain bridged
 		/// to is the Sepolia Ethereum testnet, with chain ID 11155111.

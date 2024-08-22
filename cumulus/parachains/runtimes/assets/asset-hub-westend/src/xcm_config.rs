@@ -53,7 +53,7 @@ use xcm_builder::{
 	GlobalConsensusParachainConvertsFor, HashedDescription, IsConcrete, LocalMint,
 	NetworkExportTableItem, NoChecking, NonFungiblesAdapter, ParentAsSuperuser, ParentIsPreset,
 	RelayChainAsNative, SendXcmFeeToAccount, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignPaidRemoteExporter,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignPaidMultipleFeeAssetsRemoteExporter,
 	SovereignSignedViaLocation, StartsWith, StartsWithExplicitGlobalConsensus, TakeWeightCredit,
 	TrailingSetTopicAsId, UsingComponents, WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
 	XcmFeeManagerFromComponents,
@@ -474,7 +474,7 @@ pub type XcmRouter = WithUniqueTopic<(
 	ToRococoXcmRouter,
 	// Router which wraps and sends xcm to BridgeHub to be delivered to the Ethereum
 	// GlobalConsensus
-	SovereignPaidRemoteExporter<
+	SovereignPaidMultipleFeeAssetsRemoteExporter<
 		bridging::to_ethereum::EthereumNetworkExportTable,
 		XcmpQueue,
 		UniversalLocation,
@@ -646,19 +646,19 @@ pub mod bridging {
 
 	pub mod to_ethereum {
 		use super::*;
-		use assets_common::matching::FromNetwork;
 		use alloc::collections::btree_set::BTreeSet;
+		use assets_common::matching::FromNetwork;
 		use testnet_parachains_constants::westend::snowbridge::{
-			EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX,
+			EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX, WETH,
 		};
 
 		parameter_types! {
-			/// User fee for ERC20 token transfer back to Ethereum.
-			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/ROC 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
-			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
-			/// Polkadot uses 10 decimals, Kusama and Rococo 12 decimals.
-			pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
-			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
+			/// OutboundQueue::local_fee + xcm_fee
+			pub const DefaultBridgeHubBaseFee: Balance = 40_000_000_000;
+			pub storage BridgeHubBaseFee: Balance = DefaultBridgeHubBaseFee::get();
+			/// OutboundQueue::remote_fee
+			pub const DefaultEthereumBaseFee: Balance = 1_000;
+			pub storage EthereumBaseFee: Balance = DefaultEthereumBaseFee::get();
 			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
 				1,
 				[
@@ -667,6 +667,14 @@ pub mod bridging {
 				]
 			);
 
+			pub EthereumFeeAssetId: AssetId = Location::new(
+				2,
+				[
+					GlobalConsensus(EthereumNetwork::get()),
+					AccountKey20 { network: None, key: WETH },
+				],
+			).into();
+
 			/// Set up exporters configuration.
 			/// `Option<Asset>` represents static "base fee" which is used for total delivery fee calculation.
 			pub BridgeTable: alloc::vec::Vec<NetworkExportTableItem> = alloc::vec![
@@ -674,10 +682,13 @@ pub mod bridging {
 					EthereumNetwork::get(),
 					Some(alloc::vec![Junctions::Here]),
 					SiblingBridgeHub::get(),
-					Some((
+					Some(xcm::prelude::Assets::from(alloc::vec![(
 						XcmBridgeHubRouterFeeAssetId::get(),
-						BridgeHubEthereumBaseFee::get(),
-					).into())
+						BridgeHubBaseFee::get(),
+					).into(),(
+						EthereumFeeAssetId::get(),
+						EthereumBaseFee::get(),
+					).into()]))
 				),
 			];
 

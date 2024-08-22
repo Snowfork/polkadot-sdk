@@ -242,7 +242,7 @@ impl<T: Config<I>, I: 'static> ExporterFor for Pallet<T, I> {
 		network: &NetworkId,
 		remote_location: &InteriorLocation,
 		message: &Xcm<()>,
-	) -> Option<(Location, Option<Asset>)> {
+	) -> Option<(Location, Option<Assets>)> {
 		log::trace!(
 			target: LOG_TARGET,
 			"exporter_for - network: {network:?}, remote_location: {remote_location:?}, msg: {message:?}",
@@ -274,7 +274,7 @@ impl<T: Config<I>, I: 'static> ExporterFor for Pallet<T, I> {
 
 		// take `base_fee` from `T::Brides`, but it has to be the same `T::FeeAsset`
 		let base_fee = match maybe_payment {
-			Some(payment) => match payment {
+			Some(payment) => match payment.get(0)?.clone() {
 				Asset { fun: Fungible(amount), id } if id.eq(&T::FeeAsset::get()) => amount,
 				invalid_asset => {
 					log::error!(

@@ -100,7 +100,7 @@ pub trait ExporterFor {
 		network: &NetworkId,
 		remote_location: &InteriorLocation,
 		message: &Xcm<()>,
-	) -> Option<(Location, Option<Asset>)>;
+	) -> Option<(Location, Option<Assets>)>;
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(30)]
@@ -109,7 +109,7 @@ impl ExporterFor for Tuple {
 		network: &NetworkId,
 		remote_location: &InteriorLocation,
 		message: &Xcm<()>,
-	) -> Option<(Location, Option<Asset>)> {
+	) -> Option<(Location, Option<Assets>)> {
 		for_tuples!( #(
 			if let Some(r) = Tuple::exporter_for(network, remote_location, message) {
 				return Some(r);
@@ -133,7 +133,7 @@ pub struct NetworkExportTableItem {
 	pub bridge: Location,
 	/// The local payment.
 	/// See [`ExporterFor`] for more details.
-	pub payment: Option<Asset>,
+	pub payment: Option<Assets>,
 }
 
 impl NetworkExportTableItem {
@@ -141,7 +141,7 @@ impl NetworkExportTableItem {
 		remote_network: NetworkId,
 		remote_location_filter: Option<Vec<InteriorLocation>>,
 		bridge: Location,
-		payment: Option<Asset>,
+		payment: Option<Assets>,
 	) -> Self {
 		Self { remote_network, remote_location_filter, bridge, payment }
 	}
@@ -156,7 +156,7 @@ impl<T: Get<Vec<NetworkExportTableItem>>> ExporterFor for NetworkExportTable<T> 
 		network: &NetworkId,
 		remote_location: &InteriorLocation,
 		_: &Xcm<()>,
-	) -> Option<(Location, Option<Asset>)> {
+	) -> Option<(Location, Option<Assets>)> {
 		T::get()
 			.into_iter()
 			.find(|item| {
@@ -304,9 +304,11 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 				.clone()
 				.reanchored(&bridge, &UniversalLocation::get())
 				.map_err(|_| Unroutable)?;
+			let fee = fees.get(0).ok_or(Fees)?;
+
 			vec![
-				WithdrawAsset(fees.clone().into()),
-				BuyExecution { fees, weight_limit: Unlimited },
+				WithdrawAsset(fee.clone().into()),
+				BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
 				// `SetAppendix` ensures that `fees` are not trapped in any case, for example, when
 				// `ExportXcm::validate` encounters an error during the processing of
 				// `ExportMessage`.
@@ -327,7 +329,9 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 		// message to the remote chain.
 		let (v, mut cost) = validate_send::<Router>(bridge, message)?;
 		if let Some(bridge_payment) = maybe_payment {
-			cost.push(bridge_payment);
+			for asset in bridge_payment.into_inner().iter() {
+				cost.push(asset.clone());
+			}
 		}
 		Ok((v, cost))
 	}
@@ -339,6 +343,94 @@ impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocat
 
 impl<Bridges, Router: InspectMessageQueues, UniversalLocation> InspectMessageQueues
 	for SovereignPaidRemoteExporter<Bridges, Router, UniversalLocation>
+{
+	fn get_messages() -> Vec<(VersionedLocation, Vec<VersionedXcm<()>>)> {
+		Router::get_messages()
+	}
+}
+
+pub struct SovereignPaidMultipleFeeAssetsRemoteExporter<Bridges, Router, UniversalLocation>(
+	PhantomData<(Bridges, Router, UniversalLocation)>,
+);
+impl<Bridges: ExporterFor, Router: SendXcm, UniversalLocation: Get<InteriorLocation>> SendXcm
+	for SovereignPaidMultipleFeeAssetsRemoteExporter<Bridges, Router, UniversalLocation>
+{
+	type Ticket = Router::Ticket;
+
+	fn validate(
+		dest: &mut Option<Location>,
+		msg: &mut Option<Xcm<()>>,
+	) -> SendResult<Router::Ticket> {
+		let d = dest.as_ref().ok_or(MissingArgument)?;
+		let devolved =
+			ensure_is_remote(UniversalLocation::get(), d.clone()).map_err(|_| NotApplicable)?;
+		let (remote_network, remote_location) = devolved;
+		let xcm = msg.take().ok_or(MissingArgument)?;
+
+		// find exporter
+		let Some((bridge, maybe_payment)) =
+			Bridges::exporter_for(&remote_network, &remote_location, &xcm)
+		else {
+			// We need to make sure that msg is not consumed in case of `NotApplicable`.
+			*msg = Some(xcm);
+			return Err(SendError::NotApplicable)
+		};
+
+		// `xcm` should already end with `SetTopic` - if it does, then extract and derive into
+		// an onward topic ID.
+		let maybe_forward_id = match xcm.last() {
+			Some(SetTopic(t)) => Some(forward_id_for(t)),
+			_ => None,
+		};
+
+		let local_from_bridge =
+			UniversalLocation::get().invert_target(&bridge).map_err(|_| Unroutable)?;
+		let export_instruction =
+			ExportMessage { network: remote_network, destination: remote_location, xcm };
+
+		let mut message = Xcm(if let Some(ref payment) = maybe_payment {
+			let fees = payment
+				.clone()
+				.reanchored(&bridge, &UniversalLocation::get())
+				.map_err(|_| Unroutable)?;
+			let fee = fees.get(0).ok_or(Fees)?;
+			vec![
+				WithdrawAsset(fee.clone().into()),
+				BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+				// `SetAppendix` ensures that `fees` are not trapped in any case, for example, when
+				// `ExportXcm::validate` encounters an error during the processing of
+				// `ExportMessage`.
+				SetAppendix(Xcm(vec![DepositAsset {
+					assets: AllCounted(1).into(),
+					beneficiary: local_from_bridge,
+				}])),
+				export_instruction,
+			]
+		} else {
+			vec![export_instruction]
+		});
+		if let Some(forward_id) = maybe_forward_id {
+			message.0.push(SetTopic(forward_id));
+		}
+
+		// We then send a normal message to the bridge asking it to export the prepended
+		// message to the remote chain.
+		let (v, mut cost) = validate_send::<Router>(bridge, message)?;
+		if let Some(bridge_payment) = maybe_payment {
+			for asset in bridge_payment.into_inner().iter() {
+				cost.push(asset.clone());
+			}
+		}
+		Ok((v, cost))
+	}
+
+	fn deliver(ticket: Router::Ticket) -> Result<XcmHash, SendError> {
+		Router::deliver(ticket)
+	}
+}
+
+impl<Bridges, Router: InspectMessageQueues, UniversalLocation> InspectMessageQueues
+	for SovereignPaidMultipleFeeAssetsRemoteExporter<Bridges, Router, UniversalLocation>
 {
 	fn get_messages() -> Vec<(VersionedLocation, Vec<VersionedXcm<()>>)> {
 		Router::get_messages()

@@ -133,7 +133,8 @@ mod universal_exports;
 pub use universal_exports::{
 	ensure_is_remote, BridgeBlobDispatcher, BridgeMessage, DispatchBlob, DispatchBlobError,
 	ExporterFor, HaulBlob, HaulBlobError, HaulBlobExporter, NetworkExportTable,
-	NetworkExportTableItem, SovereignPaidRemoteExporter, UnpaidLocalExporter, UnpaidRemoteExporter,
+	NetworkExportTableItem, SovereignPaidMultipleFeeAssetsRemoteExporter,
+	SovereignPaidRemoteExporter, UnpaidLocalExporter, UnpaidRemoteExporter,
 };
 
 mod weight;
