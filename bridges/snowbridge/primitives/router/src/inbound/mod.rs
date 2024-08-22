@@ -155,7 +155,8 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
-	> where
+	>
+where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
@@ -201,7 +202,8 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
-	> where
+	>
+where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
