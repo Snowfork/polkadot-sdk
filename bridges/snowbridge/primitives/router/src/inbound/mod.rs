@@ -333,8 +333,10 @@ impl<
 			},
 			None => {
 				instructions.extend(vec![
-					// Deposit asset to beneficiary.
-					DepositAsset { assets: Definite(asset.into()), beneficiary },
+					// Deposit both asset and fees to beneficiary so the fees will not get
+					// trapped. Another benefit is when fees left more than ED on AssetHub could be
+					// used to create the beneficiary account in case it does not exist.
+					DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
 				]);
 			},
 		}

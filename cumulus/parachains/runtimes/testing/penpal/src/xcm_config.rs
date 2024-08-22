@@ -28,9 +28,7 @@ use super::{
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee,
 	XcmpQueue,
 };
-use crate::{
-	xcm_config::to_ethereum::UniversalAliases, BaseDeliveryFee, FeeAssetId, TransactionByteFee, Vec,
-};
+use crate::{BaseDeliveryFee, FeeAssetId, TransactionByteFee};
 use core::marker::PhantomData;
 use frame_support::{
 	parameter_types,
@@ -42,18 +40,18 @@ use pallet_xcm::XcmPassthrough;
 use parachains_common::{xcm_config::AssetFeeAsExistentialDepositMultiplier, TREASURY_PALLET_ID};
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::{impls::ToAuthor, xcm_sender::ExponentialPrice};
-use snowbridge_router_primitives::inbound::GlobalConsensusEthereumConvertsFor;
-use sp_runtime::traits::{AccountIdConversion, ConvertInto};
+use sp_runtime::traits::{AccountIdConversion, ConvertInto, Identity, TryConvertInto};
 use xcm::latest::prelude::*;
 use xcm_builder::{
-	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, AsPrefixedGeneralIndex, ConvertedConcreteId, EnsureXcmOrigin,
-	FixedWeightBounds, FrameTransactionalProcessor, FungibleAdapter, FungiblesAdapter, IsConcrete,
-	LocalMint, NativeAsset, NoChecking, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	AccountId32Aliases, AllowHrmpNotificationsFromRelayChain, AllowKnownQueryResponses,
+	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom, AsPrefixedGeneralIndex,
+	ConvertedConcreteId, EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor,
+	FungibleAdapter, FungiblesAdapter, IsConcrete, LocalMint, NativeAsset, NoChecking,
+	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SendXcmFeeToAccount,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignPaidRemoteExporter, SovereignSignedViaLocation, StartsWith,
-	TakeWeightCredit, TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
-	XcmFeeManagerFromComponents, XcmFeeToAccount,
+	SignedToAccountId32, SovereignSignedViaLocation, StartsWith, TakeWeightCredit,
+	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, WithUniqueTopic,
+	XcmFeeManagerFromComponents,
 };
 use xcm_executor::{traits::JustTry, XcmExecutor};
 
@@ -61,12 +59,17 @@ parameter_types! {
 	pub const RelayLocation: Location = Location::parent();
 	// Local native currency which is stored in `pallet_balances``
 	pub const PenpalNativeCurrency: Location = Location::here();
+	// The Penpal runtime is utilized for testing with various environment setups.
+	// This storage item allows us to customize the `NetworkId` where Penpal is deployed.
+	// By default, it is set to `NetworkId::Rococo` and can be changed using `System::set_storage`.
+	pub storage RelayNetworkId: NetworkId = NetworkId::Westend;
+	pub RelayNetwork: Option<NetworkId> = Some(RelayNetworkId::get());
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
+	pub UniversalLocation: InteriorLocation = [
+		GlobalConsensus(RelayNetworkId::get()),
+		Parachain(ParachainInfo::parachain_id().into())
+	].into();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
-	pub storage RelayNetwork: NetworkId = NetworkId::Rococo;
-	pub storage UniversalLocation: InteriorLocation =
-		[GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into())].into();
-	pub storage ForeignPenpalNativeCurrency: Location = Location::new(1,UniversalLocation::get());
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -79,12 +82,10 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
-	// Ethereum sovereign account.
-	GlobalConsensusEthereumConvertsFor<AccountId>,
 );
 
 /// Means for transacting assets on this chain.
-pub type CurrencyTransactor = FungibleAdapter<
+pub type FungibleTransactor = FungibleAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
@@ -94,20 +95,6 @@ pub type CurrencyTransactor = FungibleAdapter<
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
 	// We don't track any teleports.
-	(),
->;
-
-/// Transacting the native currency back from a different consensus.
-pub type ForeignCurrencyTransactor = FungibleAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<ForeignPenpalNativeCurrency>,
-	// Convert an XCM Location into a local account id:
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-	AccountId,
-	// We don't track any teleports of `Balances`.
 	(),
 >;
 
@@ -145,7 +132,11 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	CheckingAccount,
 >;
 
-pub type ForeignAssetsConvertedConcreteId = assets_common::LocationConvertedConcreteId<
+// Using the latest `Location`, we don't need to worry about migrations for Penpal.
+pub type ForeignAssetsAssetId = Location;
+pub type ForeignAssetsConvertedConcreteId = xcm_builder::MatchedConvertedConcreteId<
+	Location,
+	Balance,
 	EverythingBut<(
 		// Here we rely on fact that something like this works:
 		// assert!(Location::new(1,
@@ -153,7 +144,8 @@ pub type ForeignAssetsConvertedConcreteId = assets_common::LocationConvertedConc
 		// assert!([Parachain(100)].into().starts_with(&Here));
 		StartsWith<assets_common::matching::LocalLocationPattern>,
 	)>,
-	Balance,
+	Identity,
+	TryConvertInto,
 >;
 
 /// Means for transacting foreign assets from different global consensus.
@@ -173,12 +165,7 @@ pub type ForeignFungiblesTransactor = FungiblesAdapter<
 >;
 
 /// Means for transacting assets on this chain.
-pub type AssetTransactors = (
-	CurrencyTransactor,
-	ForeignCurrencyTransactor,
-	ForeignFungiblesTransactor,
-	FungiblesTransactor,
-);
+pub type AssetTransactors = (FungibleTransactor, ForeignFungiblesTransactor, FungiblesTransactor);
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
@@ -231,6 +218,8 @@ pub type Barrier = TrailingSetTopicAsId<(
 			AllowTopLevelPaidExecutionFrom<Everything>,
 			// Subscriptions for version tracking are OK.
 			AllowSubscriptionsFrom<Everything>,
+			// HRMP notifications from the relay chain are OK.
+			AllowHrmpNotificationsFromRelayChain,
 		),
 		UniversalLocation,
 		ConstU32<8>,
@@ -338,7 +327,6 @@ impl xcm_executor::Config for XcmConfig {
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type Trader = (
 		UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>,
-		UsingComponents<WeightToFee, PenpalNativeCurrency, AccountId, Balances, ToAuthor<Runtime>>,
 		// This trader allows to pay with `is_sufficient=true` "Foreign" assets from dedicated
 		// `pallet_assets` instance - `ForeignAssets`.
 		cumulus_primitives_utility::TakeFirstAssetTrader<
@@ -363,10 +351,10 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type FeeManager = XcmFeeManagerFromComponents<
 		(),
-		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
+		SendXcmFeeToAccount<Self::AssetTransactor, TreasuryAccount>,
 	>;
 	type MessageExporter = ();
-	type UniversalAliases = UniversalAliases;
+	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
 	type Aliasers = Nothing;
@@ -374,6 +362,7 @@ impl xcm_executor::Config for XcmConfig {
 	type HrmpNewChannelOpenRequestHandler = ();
 	type HrmpChannelAcceptedHandler = ();
 	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = PolkadotXcm;
 }
 
 /// Multiplier used for dedicated `TakeFirstAssetTrader` with `ForeignAssets` instance.
@@ -398,11 +387,6 @@ pub type XcmRouter = WithUniqueTopic<(
 	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, PriceForParentDelivery>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
-	SovereignPaidRemoteExporter<
-		to_ethereum::EthereumNetworkExportTable,
-		XcmpQueue,
-		UniversalLocation,
-	>,
 )>;
 
 impl pallet_xcm::Config for Runtime {
@@ -441,56 +425,8 @@ impl cumulus_pallet_xcm::Config for Runtime {
 /// Simple conversion of `u32` into an `AssetId` for use in benchmarking.
 pub struct XcmBenchmarkHelper;
 #[cfg(feature = "runtime-benchmarks")]
-impl pallet_assets::BenchmarkHelper<xcm::v3::Location> for XcmBenchmarkHelper {
-	fn create_asset_id_parameter(id: u32) -> xcm::v3::Location {
-		xcm::v3::Location::new(1, [xcm::v3::Junction::Parachain(id)])
-	}
-}
-
-pub mod to_ethereum {
-	use super::*;
-	use sp_std::collections::btree_set::BTreeSet;
-	use xcm_builder::NetworkExportTableItem;
-
-	parameter_types! {
-		pub storage DefaultBridgeHubEthereumBaseFee: Balance = 4_000_000_000_000;
-		pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
-		pub storage SiblingBridgeHub: Location = Location::new(1, [Parachain(1013)]);
-		pub storage EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
-		pub BridgeTable: Vec<NetworkExportTableItem> = sp_std::vec![
-			NetworkExportTableItem::new(
-				EthereumNetwork::get(),
-				Some(sp_std::vec![Here]),
-				SiblingBridgeHub::get(),
-				Some((
-						RelayLocation::get(),
-						BridgeHubEthereumBaseFee::get(),
-					).into())
-			),
-		];
-		pub EthereumBridgeTable: Vec<NetworkExportTableItem> =
-		Vec::new().into_iter()
-		.chain(BridgeTable::get())
-		.collect();
-
-		pub storage SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
-				1,
-				[
-					Parachain(1013),
-					PalletInstance(80)
-				]);
-		pub storage UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(
-			sp_std::vec![
-				(SiblingBridgeHubWithEthereumInboundQueueInstance::get(), GlobalConsensus(EthereumNetwork::get())),
-			]
-		);
-	}
-
-	pub type EthereumNetworkExportTable = xcm_builder::NetworkExportTable<EthereumBridgeTable>;
-
-	impl Contains<(Location, Junction)> for UniversalAliases {
-		fn contains(alias: &(Location, Junction)) -> bool {
-			UniversalAliases::get().contains(alias)
-		}
+impl pallet_assets::BenchmarkHelper<ForeignAssetsAssetId> for XcmBenchmarkHelper {
+	fn create_asset_id_parameter(id: u32) -> ForeignAssetsAssetId {
+		Location::new(1, [Parachain(id)])
 	}
 }

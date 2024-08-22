@@ -15,19 +15,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod builder;
 mod pallet_dummy;
 mod test_debug;
 
 use self::{
 	test_debug::TestDebug,
-	test_utils::{ensure_stored, expected_deposit, hash},
+	test_utils::{ensure_stored, expected_deposit},
 };
 use crate::{
 	self as pallet_contracts,
 	chain_extension::{
 		ChainExtension, Environment, Ext, InitState, RegisteredChainExtension,
-		Result as ExtensionResult, RetVal, ReturnFlags, SysConfig,
+		Result as ExtensionResult, RetVal, ReturnFlags,
 	},
 	exec::{Frame, Key},
 	migration::codegen::LATEST_MIGRATION_VERSION,
@@ -64,7 +63,7 @@ use sp_io::hashing::blake2_256;
 use sp_keystore::{testing::MemoryKeystore, KeystoreExt};
 use sp_runtime::{
 	testing::H256,
-	traits::{BlakeTwo256, Convert, Hash, IdentityLookup},
+	traits::{BlakeTwo256, Convert, IdentityLookup},
 	AccountId32, BuildStorage, DispatchError, Perbill, TokenError,
 };
 
@@ -98,8 +97,7 @@ macro_rules! assert_refcount {
 }
 
 pub mod test_utils {
-
-	use super::{Contracts, DepositPerByte, DepositPerItem, Hash, SysConfig, Test};
+	use super::{Contracts, DepositPerByte, DepositPerItem, Test};
 	use crate::{
 		exec::AccountIdOf, BalanceOf, CodeHash, CodeInfo, CodeInfoOf, Config, ContractInfo,
 		ContractInfoOf, Nonce, PristineCode,
@@ -147,9 +145,6 @@ pub mod test_utils {
 			.saturating_mul(info_size)
 			.saturating_add(DepositPerItem::get())
 	}
-	pub fn hash<S: Encode>(s: &S) -> <<Test as SysConfig>::Hashing as Hash>::Output {
-		<<Test as SysConfig>::Hashing as Hash>::hash_of(s)
-	}
 	pub fn expected_deposit(code_len: usize) -> u64 {
 		// For code_info, the deposit for max_encoded_len is taken.
 		let code_info_len = CodeInfo::<Test>::max_encoded_len() as u64;
@@ -163,6 +158,38 @@ pub mod test_utils {
 		assert!(CodeInfoOf::<Test>::contains_key(&code_hash));
 		// Assert that contract code is stored, and get its size.
 		PristineCode::<Test>::try_get(&code_hash).unwrap().len()
+	}
+}
+
+mod builder {
+	use super::Test;
+	use crate::{
+		test_utils::{builder::*, AccountId32, ALICE},
+		tests::RuntimeOrigin,
+		AccountIdLookupOf, Code, CodeHash,
+	};
+
+	pub fn bare_instantiate(code: Code<CodeHash<Test>>) -> BareInstantiateBuilder<Test> {
+		BareInstantiateBuilder::<Test>::bare_instantiate(ALICE, code)
+	}
+
+	pub fn bare_call(dest: AccountId32) -> BareCallBuilder<Test> {
+		BareCallBuilder::<Test>::bare_call(ALICE, dest)
+	}
+
+	pub fn instantiate_with_code(code: Vec<u8>) -> InstantiateWithCodeBuilder<Test> {
+		InstantiateWithCodeBuilder::<Test>::instantiate_with_code(
+			RuntimeOrigin::signed(ALICE),
+			code,
+		)
+	}
+
+	pub fn instantiate(code_hash: CodeHash<Test>) -> InstantiateBuilder<Test> {
+		InstantiateBuilder::<Test>::instantiate(RuntimeOrigin::signed(ALICE), code_hash)
+	}
+
+	pub fn call(dest: AccountIdLookupOf<Test>) -> CallBuilder<Test> {
+		CallBuilder::<Test>::call(RuntimeOrigin::signed(ALICE), dest)
 	}
 }
 
@@ -334,34 +361,24 @@ parameter_types! {
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
+	type Block = Block;
 	type AccountId = AccountId32;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Block = Block;
 	type AccountData = pallet_balances::AccountData<u64>;
 }
+
 impl pallet_insecure_randomness_collective_flip::Config for Test {}
+
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
 impl pallet_balances::Config for Test {
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
-	type Balance = u64;
-	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
+	type ReserveIdentifier = [u8; 8];
 	type AccountStore = System;
-	type WeightInfo = ();
-	type FreezeIdentifier = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = RuntimeHoldReason;
-	type RuntimeFreezeReason = RuntimeFreezeReason;
 }
 
-impl pallet_timestamp::Config for Test {
-	type Moment = u64;
-	type OnTimestampSet = ();
-	type MinimumPeriod = ConstU64<1>;
-	type WeightInfo = ();
-}
+#[derive_impl(pallet_timestamp::config_preludes::TestDefaultConfig)]
+impl pallet_timestamp::Config for Test {}
+
 impl pallet_utility::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
@@ -394,6 +411,7 @@ parameter_types! {
 	pub static DepositPerByte: BalanceOf<Test> = 1;
 	pub const DepositPerItem: BalanceOf<Test> = 2;
 	pub static MaxDelegateDependencies: u32 = 32;
+	pub static MaxTransientStorageSize: u32 = 4 * 1024;
 
 	pub static CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(0);
 	// We need this one set high enough for running benchmarks.
@@ -441,7 +459,7 @@ parameter_types! {
 	pub static InstantiateAccount: Option<<Test as frame_system::Config>::AccountId> = None;
 }
 
-pub struct EnsureAccount<T, A>(sp_std::marker::PhantomData<(T, A)>);
+pub struct EnsureAccount<T, A>(core::marker::PhantomData<(T, A)>);
 impl<T: Config, A: sp_core::Get<Option<crate::AccountIdOf<T>>>>
 	EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureAccount<T, A>
 where
@@ -467,16 +485,13 @@ parameter_types! {
 	pub static UnstableInterface: bool = true;
 }
 
+#[derive_impl(crate::config_preludes::TestDefaultConfig)]
 impl Config for Test {
 	type Time = Timestamp;
 	type Randomness = Randomness;
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
 	type CallFilter = TestFilter;
 	type CallStack = [Frame<Self>; 5];
-	type WeightPrice = Self;
-	type WeightInfo = ();
 	type ChainExtension =
 		(TestExtension, DisabledExtension, RevertingExtension, TempStorageExtension);
 	type Schedule = MySchedule;
@@ -484,20 +499,14 @@ impl Config for Test {
 	type DepositPerItem = DepositPerItem;
 	type DefaultDepositLimit = DefaultDepositLimit;
 	type AddressGenerator = DefaultAddressGenerator;
-	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;
-	type MaxStorageKeyLen = ConstU32<128>;
 	type UnsafeUnstableInterface = UnstableInterface;
 	type UploadOrigin = EnsureAccount<Self, UploadAccount>;
 	type InstantiateOrigin = EnsureAccount<Self, InstantiateAccount>;
-	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
-	type RuntimeHoldReason = RuntimeHoldReason;
 	type Migrations = crate::migration::codegen::BenchMigrations;
 	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
 	type MaxDelegateDependencies = MaxDelegateDependencies;
+	type MaxTransientStorageSize = MaxTransientStorageSize;
 	type Debug = TestDebug;
-	type Environment = ();
-	type ApiVersion = ();
-	type Xcm = ();
 }
 
 pub const ALICE: AccountId32 = AccountId32::new([1u8; 32]);
@@ -758,7 +767,7 @@ fn instantiate_and_call_and_deposit_event() {
 						deployer: ALICE,
 						contract: addr.clone()
 					}),
-					topics: vec![hash(&ALICE), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -769,7 +778,7 @@ fn instantiate_and_call_and_deposit_event() {
 							amount: test_utils::contract_info_storage_deposit(&addr),
 						}
 					),
-					topics: vec![hash(&ALICE), hash(&addr)],
+					topics: vec![],
 				},
 			]
 		);
@@ -864,8 +873,7 @@ fn gas_syncs_work() {
 		let result = builder::bare_call(addr.clone()).data(1u32.encode()).build();
 		assert_ok!(result.result);
 		let gas_consumed_once = result.gas_consumed.ref_time();
-		let host_consumed_once =
-			<Test as Config>::Schedule::get().host_fn_weights.caller_is_origin.ref_time();
+		let host_consumed_once = <Test as Config>::WeightInfo::seal_caller_is_origin().ref_time();
 		let engine_consumed_once = gas_consumed_once - host_consumed_once - engine_consumed_noop;
 
 		let result = builder::bare_call(addr).data(2u32.encode()).build();
@@ -957,6 +965,68 @@ fn storage_max_value_limit() {
 }
 
 #[test]
+fn transient_storage_work() {
+	let (code, _code_hash) = compile_module::<Test>("transient_storage").unwrap();
+
+	ExtBuilder::default().build().execute_with(|| {
+		let _ = <Test as Config>::Currency::set_balance(&ALICE, 1_000_000);
+		let min_balance = Contracts::min_balance();
+		let addr = builder::bare_instantiate(Code::Upload(code))
+			.value(min_balance * 100)
+			.build_and_unwrap_account_id();
+
+		builder::bare_call(addr).build_and_unwrap_result();
+	});
+}
+
+#[test]
+fn transient_storage_limit_in_call() {
+	let (wasm_caller, _code_hash_caller) =
+		compile_module::<Test>("create_transient_storage_and_call").unwrap();
+	let (wasm_callee, _code_hash_callee) = compile_module::<Test>("set_transient_storage").unwrap();
+	ExtBuilder::default().build().execute_with(|| {
+		let _ = <Test as Config>::Currency::set_balance(&ALICE, 1_000_000);
+		let min_balance = Contracts::min_balance();
+
+		// Create both contracts: Constructors do nothing.
+		let addr_caller = builder::bare_instantiate(Code::Upload(wasm_caller))
+			.value(min_balance * 100)
+			.build_and_unwrap_account_id();
+		let addr_callee = builder::bare_instantiate(Code::Upload(wasm_callee))
+			.value(min_balance * 100)
+			.build_and_unwrap_account_id();
+
+		let storage_value_size = 1000;
+		MaxTransientStorageSize::set(4 * 1024);
+		// Call contracts with storage values within the limit.
+		// Caller and Callee contracts each set a transient storage value of size 1000.
+		assert_ok!(builder::call(addr_caller.clone())
+			.data((storage_value_size, storage_value_size, &addr_callee).encode())
+			.build(),);
+
+		MaxTransientStorageSize::set(512);
+		// Call a contract with a storage value that is too large.
+		// Limit exceeded in the caller contract.
+		assert_err_ignore_postinfo!(
+			builder::call(addr_caller.clone())
+				.data((storage_value_size, storage_value_size, &addr_callee).encode())
+				.build(),
+			<Error<Test>>::OutOfTransientStorage,
+		);
+
+		MaxTransientStorageSize::set(1536);
+		// Call a contract with a storage value that is too large.
+		// Limit exceeded in the callee contract.
+		assert_err_ignore_postinfo!(
+			builder::call(addr_caller)
+				.data((storage_value_size, storage_value_size, &addr_callee).encode())
+				.build(),
+			<Error<Test>>::ContractTrapped
+		);
+	});
+}
+
+#[test]
 fn deploy_and_call_other_contract() {
 	let (caller_wasm, _caller_code_hash) = compile_module::<Test>("caller_contract").unwrap();
 	let (callee_wasm, callee_code_hash) = compile_module::<Test>("return_with_data").unwrap();
@@ -1029,7 +1099,7 @@ fn deploy_and_call_other_contract() {
 						deployer: caller_addr.clone(),
 						contract: callee_addr.clone(),
 					}),
-					topics: vec![hash(&caller_addr), hash(&callee_addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -1046,10 +1116,7 @@ fn deploy_and_call_other_contract() {
 						caller: Origin::from_account_id(caller_addr.clone()),
 						contract: callee_addr.clone(),
 					}),
-					topics: vec![
-						hash(&Origin::<Test>::from_account_id(caller_addr.clone())),
-						hash(&callee_addr)
-					],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -1057,7 +1124,7 @@ fn deploy_and_call_other_contract() {
 						caller: Origin::from_account_id(ALICE),
 						contract: caller_addr.clone(),
 					}),
-					topics: vec![hash(&Origin::<Test>::from_account_id(ALICE)), hash(&caller_addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -1068,7 +1135,7 @@ fn deploy_and_call_other_contract() {
 							amount: test_utils::contract_info_storage_deposit(&callee_addr),
 						}
 					),
-					topics: vec![hash(&ALICE), hash(&callee_addr)],
+					topics: vec![],
 				},
 			]
 		);
@@ -1294,7 +1361,7 @@ fn self_destruct_works() {
 						contract: addr.clone(),
 						beneficiary: DJANGO
 					}),
-					topics: vec![hash(&addr), hash(&DJANGO)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -1302,7 +1369,7 @@ fn self_destruct_works() {
 						caller: Origin::from_account_id(ALICE),
 						contract: addr.clone(),
 					}),
-					topics: vec![hash(&Origin::<Test>::from_account_id(ALICE)), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -1313,7 +1380,7 @@ fn self_destruct_works() {
 							amount: info_deposit,
 						}
 					),
-					topics: vec![hash(&addr), hash(&ALICE)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2459,14 +2526,7 @@ fn failed_deposit_charge_should_roll_back_call() {
 				transfer_proxy_call,
 			);
 
-			<Pallet<Test>>::call(
-				RuntimeOrigin::signed(ALICE),
-				addr_caller.clone(),
-				0,
-				GAS_LIMIT,
-				None,
-				data.encode(),
-			)
+			builder::call(addr_caller).data(data.encode()).build()
 		})
 	};
 
@@ -2508,7 +2568,7 @@ fn upload_code_works() {
 					deposit_held: deposit_expected,
 					uploader: ALICE
 				}),
-				topics: vec![code_hash],
+				topics: vec![],
 			},]
 		);
 	});
@@ -2596,7 +2656,7 @@ fn remove_code_works() {
 						deposit_held: deposit_expected,
 						uploader: ALICE
 					}),
-					topics: vec![code_hash],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2605,7 +2665,7 @@ fn remove_code_works() {
 						deposit_released: deposit_expected,
 						remover: ALICE
 					}),
-					topics: vec![code_hash],
+					topics: vec![],
 				},
 			]
 		);
@@ -2645,7 +2705,7 @@ fn remove_code_wrong_origin() {
 					deposit_held: deposit_expected,
 					uploader: ALICE
 				}),
-				topics: vec![code_hash],
+				topics: vec![],
 			},]
 		);
 	});
@@ -2724,7 +2784,7 @@ fn instantiate_with_zero_balance_works() {
 						deposit_held: deposit_expected,
 						uploader: ALICE
 					}),
-					topics: vec![code_hash],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2756,7 +2816,7 @@ fn instantiate_with_zero_balance_works() {
 						deployer: ALICE,
 						contract: addr.clone(),
 					}),
-					topics: vec![hash(&ALICE), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2767,7 +2827,7 @@ fn instantiate_with_zero_balance_works() {
 							amount: test_utils::contract_info_storage_deposit(&addr),
 						}
 					),
-					topics: vec![hash(&ALICE), hash(&addr)],
+					topics: vec![],
 				},
 			]
 		);
@@ -2809,7 +2869,7 @@ fn instantiate_with_below_existential_deposit_works() {
 						deposit_held: deposit_expected,
 						uploader: ALICE
 					}),
-					topics: vec![code_hash],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2850,7 +2910,7 @@ fn instantiate_with_below_existential_deposit_works() {
 						deployer: ALICE,
 						contract: addr.clone(),
 					}),
-					topics: vec![hash(&ALICE), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2861,7 +2921,7 @@ fn instantiate_with_below_existential_deposit_works() {
 							amount: test_utils::contract_info_storage_deposit(&addr),
 						}
 					),
-					topics: vec![hash(&ALICE), hash(&addr)],
+					topics: vec![],
 				},
 			]
 		);
@@ -2922,7 +2982,7 @@ fn storage_deposit_works() {
 						caller: Origin::from_account_id(ALICE),
 						contract: addr.clone(),
 					}),
-					topics: vec![hash(&Origin::<Test>::from_account_id(ALICE)), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2933,7 +2993,7 @@ fn storage_deposit_works() {
 							amount: charged0,
 						}
 					),
-					topics: vec![hash(&ALICE), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2941,7 +3001,7 @@ fn storage_deposit_works() {
 						caller: Origin::from_account_id(ALICE),
 						contract: addr.clone(),
 					}),
-					topics: vec![hash(&Origin::<Test>::from_account_id(ALICE)), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2952,7 +3012,7 @@ fn storage_deposit_works() {
 							amount: charged1,
 						}
 					),
-					topics: vec![hash(&ALICE), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2960,7 +3020,7 @@ fn storage_deposit_works() {
 						caller: Origin::from_account_id(ALICE),
 						contract: addr.clone(),
 					}),
-					topics: vec![hash(&Origin::<Test>::from_account_id(ALICE)), hash(&addr)],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -2971,7 +3031,7 @@ fn storage_deposit_works() {
 							amount: refunded0,
 						}
 					),
-					topics: vec![hash(&addr.clone()), hash(&ALICE)],
+					topics: vec![],
 				},
 			]
 		);
@@ -3075,7 +3135,7 @@ fn set_code_extrinsic() {
 					new_code_hash,
 					old_code_hash: code_hash,
 				}),
-				topics: vec![hash(&addr), new_code_hash, code_hash],
+				topics: vec![],
 			},]
 		);
 	});
@@ -3227,7 +3287,7 @@ fn set_code_hash() {
 						new_code_hash,
 						old_code_hash: code_hash,
 					}),
-					topics: vec![hash(&contract_addr), new_code_hash, code_hash],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -3235,10 +3295,7 @@ fn set_code_hash() {
 						caller: Origin::from_account_id(ALICE),
 						contract: contract_addr.clone(),
 					}),
-					topics: vec![
-						hash(&Origin::<Test>::from_account_id(ALICE)),
-						hash(&contract_addr)
-					],
+					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::Initialization,
@@ -3246,10 +3303,7 @@ fn set_code_hash() {
 						caller: Origin::from_account_id(ALICE),
 						contract: contract_addr.clone(),
 					}),
-					topics: vec![
-						hash(&Origin::<Test>::from_account_id(ALICE)),
-						hash(&contract_addr)
-					],
+					topics: vec![],
 				},
 			],
 		);
@@ -4244,5 +4298,101 @@ fn gas_consumed_is_linear_for_nested_calls() {
 
 		let gas_per_recursion = gas_2.checked_sub(&gas_1).unwrap();
 		assert_eq!(gas_max, gas_0 + gas_per_recursion * max_call_depth as u64);
+	});
+}
+
+#[test]
+fn read_only_call_cannot_store() {
+	let (wasm_caller, _code_hash_caller) = compile_module::<Test>("read_only_call").unwrap();
+	let (wasm_callee, _code_hash_callee) = compile_module::<Test>("store_call").unwrap();
+	ExtBuilder::default().existential_deposit(200).build().execute_with(|| {
+		let _ = <Test as Config>::Currency::set_balance(&ALICE, 1_000_000);
+
+		// Create both contracts: Constructors do nothing.
+		let addr_caller =
+			builder::bare_instantiate(Code::Upload(wasm_caller)).build_and_unwrap_account_id();
+		let addr_callee =
+			builder::bare_instantiate(Code::Upload(wasm_callee)).build_and_unwrap_account_id();
+
+		// Read-only call fails when modifying storage.
+		assert_err_ignore_postinfo!(
+			builder::call(addr_caller).data((&addr_callee, 100u32).encode()).build(),
+			<Error<Test>>::ContractTrapped
+		);
+	});
+}
+
+#[test]
+fn read_only_call_cannot_transfer() {
+	let (wasm_caller, _code_hash_caller) =
+		compile_module::<Test>("call_with_flags_and_value").unwrap();
+	let (wasm_callee, _code_hash_callee) = compile_module::<Test>("dummy").unwrap();
+	ExtBuilder::default().existential_deposit(200).build().execute_with(|| {
+		let _ = <Test as Config>::Currency::set_balance(&ALICE, 1_000_000);
+
+		// Create both contracts: Constructors do nothing.
+		let addr_caller =
+			builder::bare_instantiate(Code::Upload(wasm_caller)).build_and_unwrap_account_id();
+		let addr_callee =
+			builder::bare_instantiate(Code::Upload(wasm_callee)).build_and_unwrap_account_id();
+
+		// Read-only call fails when a non-zero value is set.
+		assert_err_ignore_postinfo!(
+			builder::call(addr_caller)
+				.data(
+					(addr_callee, pallet_contracts_uapi::CallFlags::READ_ONLY.bits(), 100u64)
+						.encode()
+				)
+				.build(),
+			<Error<Test>>::StateChangeDenied
+		);
+	});
+}
+
+#[test]
+fn read_only_subsequent_call_cannot_store() {
+	let (wasm_read_only_caller, _code_hash_caller) =
+		compile_module::<Test>("read_only_call").unwrap();
+	let (wasm_caller, _code_hash_caller) =
+		compile_module::<Test>("call_with_flags_and_value").unwrap();
+	let (wasm_callee, _code_hash_callee) = compile_module::<Test>("store_call").unwrap();
+	ExtBuilder::default().existential_deposit(200).build().execute_with(|| {
+		let _ = <Test as Config>::Currency::set_balance(&ALICE, 1_000_000);
+
+		// Create contracts: Constructors do nothing.
+		let addr_caller = builder::bare_instantiate(Code::Upload(wasm_read_only_caller))
+			.build_and_unwrap_account_id();
+		let addr_subsequent_caller =
+			builder::bare_instantiate(Code::Upload(wasm_caller)).build_and_unwrap_account_id();
+		let addr_callee =
+			builder::bare_instantiate(Code::Upload(wasm_callee)).build_and_unwrap_account_id();
+
+		// Subsequent call input.
+		let input = (&addr_callee, pallet_contracts_uapi::CallFlags::empty().bits(), 0u64, 100u32);
+
+		// Read-only call fails when modifying storage.
+		assert_err_ignore_postinfo!(
+			builder::call(addr_caller)
+				.data((&addr_subsequent_caller, input).encode())
+				.build(),
+			<Error<Test>>::ContractTrapped
+		);
+	});
+}
+
+#[test]
+fn read_only_call_works() {
+	let (wasm_caller, _code_hash_caller) = compile_module::<Test>("read_only_call").unwrap();
+	let (wasm_callee, _code_hash_callee) = compile_module::<Test>("dummy").unwrap();
+	ExtBuilder::default().existential_deposit(200).build().execute_with(|| {
+		let _ = <Test as Config>::Currency::set_balance(&ALICE, 1_000_000);
+
+		// Create both contracts: Constructors do nothing.
+		let addr_caller =
+			builder::bare_instantiate(Code::Upload(wasm_caller)).build_and_unwrap_account_id();
+		let addr_callee =
+			builder::bare_instantiate(Code::Upload(wasm_callee)).build_and_unwrap_account_id();
+
+		assert_ok!(builder::call(addr_caller.clone()).data(addr_callee.encode()).build());
 	});
 }
