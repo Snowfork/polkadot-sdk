@@ -613,7 +613,9 @@ pub mod pallet {
 			let asset: Location =
 				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			Self::do_register_token(para_id, agent_id, asset, metadata)?;
+			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
+
+			Self::do_register_token(para_id, agent_id, asset, metadata, pays_fee)?;
 
 			Ok(())
 		}
@@ -641,7 +643,9 @@ pub mod pallet {
 			let asset: Location =
 				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			Self::do_register_token(para_id, agent_id, asset, metadata)?;
+			let pays_fee = PaysFee::<T>::No;
+
+			Self::do_register_token(para_id, agent_id, asset, metadata, pays_fee)?;
 
 			Ok(())
 		}
@@ -740,6 +744,7 @@ pub mod pallet {
 			agent_id: AgentId,
 			asset_id: Location,
 			metadata: AssetRegistrarMetadata,
+			pays_fee: PaysFee<T>,
 		) -> Result<(), DispatchError> {
 			// Check that the channel exists
 			let channel_id: ChannelId = para_id.into();
@@ -762,7 +767,6 @@ pub mod pallet {
 				symbol: metadata.symbol,
 				decimals: metadata.decimals,
 			};
-			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
 			Self::send(channel_id, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::RegisterToken {
