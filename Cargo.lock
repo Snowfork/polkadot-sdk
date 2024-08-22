@@ -12501,7 +12501,6 @@ dependencies = [
  "polkadot-runtime-common",
  "scale-info",
  "smallvec",
- "snowbridge-router-primitives",
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",

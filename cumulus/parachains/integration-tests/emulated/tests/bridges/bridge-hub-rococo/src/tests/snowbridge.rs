@@ -18,10 +18,7 @@ use emulated_integration_tests_common::xcm_emulator::ConvertLocation;
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
 use rococo_westend_system_emulated_network::BridgeHubRococoParaSender as BridgeHubRococoSender;
-use snowbridge_core::{
-	inbound::InboundQueueFixture, outbound::OperatingMode, AssetRegistrarMetadata, Channel,
-	ChannelId, TokenIdOf,
-};
+use snowbridge_core::{inbound::InboundQueueFixture, outbound::OperatingMode};
 use snowbridge_pallet_inbound_queue_fixtures::{
 	register_token::make_register_token_message, send_token::make_send_token_message,
 	send_token_to_penpal::make_send_token_to_penpal_message,
@@ -32,8 +29,8 @@ use snowbridge_router_primitives::inbound::{
 	VersionedMessage,
 };
 use sp_core::H256;
+use sp_runtime::{DispatchError::Token, TokenError::FundsUnavailable};
 use testnet_parachains_constants::rococo::snowbridge::EthereumNetwork;
-use xcm::v3::MultiLocation;
 
 const INITIAL_FUND: u128 = 5_000_000_000 * ROCOCO_ED;
 pub const CHAIN_ID: u64 = 11155111;
@@ -50,12 +47,6 @@ pub enum ControlCall {
 	CreateAgent,
 	#[codec(index = 4)]
 	CreateChannel { mode: OperatingMode },
-	#[codec(index = 11)]
-	ForceRegisterToken {
-		location: Box<VersionedLocation>,
-		asset: Box<VersionedLocation>,
-		metadata: AssetRegistrarMetadata,
-	},
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -516,6 +507,16 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 }
 
 #[test]
+fn send_token_from_ethereum_to_asset_hub_fail_for_insufficient_fund() {
+	// Insufficient fund
+	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), 1_000);
+
+	BridgeHubRococo::execute_with(|| {
+		assert_err!(send_inbound_message(make_register_token_message()), Token(FundsUnavailable));
+	});
+}
+
+#[test]
 fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 	BridgeHubRococo::fund_para_sovereign(AssetHubRococo::para_id().into(), INITIAL_FUND);
 
@@ -534,7 +535,6 @@ fn register_weth_token_in_asset_hub_fail_for_insufficient_fee() {
 				fee: INSUFFICIENT_XCM_FEE,
 			},
 		});
-
 		let (xcm, _) = Converter::convert(message_id, message).unwrap();
 		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubRococo::para_id().into()).unwrap();
 
