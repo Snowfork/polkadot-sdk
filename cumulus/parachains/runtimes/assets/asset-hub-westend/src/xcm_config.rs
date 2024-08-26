@@ -83,7 +83,6 @@ parameter_types! {
 	pub StakingPot: AccountId = CollatorSelection::account_id();
 	pub TreasuryAccount: AccountId = TREASURY_PALLET_ID.into_account_truncating();
 	pub RelayTreasuryLocation: Location = (Parent, PalletInstance(westend_runtime_constants::TREASURY_PALLET_ID)).into();
-	pub GlobalWestendLocation: Location = Location::new(1,[GlobalConsensus(Westend)]);
 }
 
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
@@ -106,20 +105,6 @@ pub type LocationToAccountId = (
 	// (Used to get convert ethereum contract locations to sovereign account)
 	GlobalConsensusEthereumConvertsFor<AccountId>,
 );
-
-/// Means for transacting the native currency on this chain.
-pub type GlobalFungibleTransactor = FungibleAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<GlobalWestendLocation>,
-	// Convert an XCM Location into a local account id:
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-	AccountId,
-	// We don't track any teleports of `Balances`.
-	(),
->;
 
 /// Means for transacting the native currency on this chain.
 pub type FungibleTransactor = FungibleAdapter<
@@ -232,7 +217,6 @@ pub type PoolFungiblesTransactor = FungiblesAdapter<
 /// Means for transacting assets on this chain.
 pub type AssetTransactors = (
 	FungibleTransactor,
-	GlobalFungibleTransactor,
 	FungiblesTransactor,
 	ForeignFungiblesTransactor,
 	PoolFungiblesTransactor,

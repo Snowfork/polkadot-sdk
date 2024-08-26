@@ -28,9 +28,7 @@ use sp_core::H256;
 use sp_io::hashing::keccak_256;
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use sp_std::prelude::*;
-use xcm::prelude::{
-	GeneralIndex, GeneralKey, GlobalConsensus, Junction::Parachain, Location, PalletInstance,
-};
+use xcm::prelude::{GeneralIndex, Junction::Parachain, Location, PalletInstance};
 use xcm_builder::{DescribeAllTerminal, DescribeFamily, DescribeLocation, HashedDescription};
 
 /// The ID of an agent contract
@@ -177,28 +175,15 @@ pub struct AssetRegistrarMetadata {
 
 pub type TokenId = H256;
 
-pub type TokenIdOf = HashedDescription<TokenId, DescribeSiblingAssetId>;
+pub type TokenIdOf =
+	HashedDescription<TokenId, (DescribeSiblingAssetId, DescribeFamily<DescribeAllTerminal>)>;
 
 pub struct DescribeSiblingAssetId;
 impl DescribeLocation for DescribeSiblingAssetId {
 	fn describe_location(l: &Location) -> Option<Vec<u8>> {
 		match l.unpack() {
-			(1, [GlobalConsensus(network)]) => Some((*network).encode()),
-			(1, [GlobalConsensus(network), Parachain(id)]) => Some((*network, *id).encode()),
-			(1, [GlobalConsensus(network), Parachain(id), PalletInstance(instance)]) =>
-				Some((*network, *id, *instance).encode()),
-			(1, [GlobalConsensus(network), Parachain(id), GeneralIndex(index)]) =>
-				Some((*network, *id, *index).encode()),
-			(1, [GlobalConsensus(network), Parachain(id), GeneralKey { data, .. }]) =>
-				Some((*network, *id, *data).encode()),
-			(
-				1,
-				[GlobalConsensus(network), Parachain(id), PalletInstance(instance), GeneralIndex(index)],
-			) => Some((*network, *id, *instance, *index).encode()),
-			(
-				1,
-				[GlobalConsensus(network), Parachain(id), PalletInstance(instance), GeneralKey { data, .. }],
-			) => Some((*network, *id, *instance, *data).encode()),
+			(1, [Parachain(id), PalletInstance(instance), GeneralIndex(index)]) =>
+				Some((*id, *instance, *index).encode()),
 			_ => None,
 		}
 	}

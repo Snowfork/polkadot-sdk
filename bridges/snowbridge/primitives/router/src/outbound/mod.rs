@@ -373,7 +373,7 @@ where
 			}
 		}
 
-		let (asset_id, amount) = match reserve_asset {
+		let (reanchored_asset_id, amount) = match reserve_asset {
 			Asset { id: AssetId(inner_location), fun: Fungible(amount) } =>
 				Some((inner_location.clone(), *amount)),
 			_ => None,
@@ -382,6 +382,12 @@ where
 
 		// transfer amount must be greater than 0.
 		ensure!(amount > 0, ZeroAssetTransfer);
+
+		// Remove the GlobalConsensus prefix after reanchored and get the original asset_id
+		let asset_id = Location::new(
+			reanchored_asset_id.parents,
+			reanchored_asset_id.interior.split_first().0,
+		);
 
 		let token_id = TokenIdOf::convert_location(&asset_id).ok_or(InvalidAsset)?;
 

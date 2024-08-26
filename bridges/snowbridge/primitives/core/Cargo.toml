@@ -35,7 +35,6 @@ ethabi = { workspace = true }
 
 [dev-dependencies]
 hex = { workspace = true, default-features = true }
-xcm-executor = { workspace = true, default-features = true }
 
 [features]
 default = ["std"]
@@ -63,5 +62,4 @@ runtime-benchmarks = [
 	"polkadot-parachain-primitives/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
-	"xcm-executor/runtime-benchmarks",
 ]
