@@ -387,8 +387,6 @@ where
 
 		let asset: Asset = (asset_id, amount).into();
 
-		let assets: Assets = vec![asset, fee_asset.clone()].into();
-
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
 		let instructions = vec![
@@ -396,7 +394,7 @@ where
 			BuyExecution { fees: fee_asset, weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
-			WithdrawAsset(assets),
+			WithdrawAsset(asset.clone().into()),
 			ClearOrigin,
 			DepositAsset { assets: AllCounted(2).into(), beneficiary },
 			SetTopic(message_id.into()),
