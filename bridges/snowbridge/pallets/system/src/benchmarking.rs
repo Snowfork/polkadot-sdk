@@ -168,12 +168,11 @@ mod benchmarks {
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
 		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
 
-		let relay_token_asset_id: Location =
-			Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+		let relay_token_asset_id: Location = Location::parent();
 		let asset = Box::new(VersionedLocation::V4(relay_token_asset_id));
 		let asset_metadata = AssetRegistrarMetadata {
-			name: "roc".as_bytes().to_vec(),
-			symbol: "roc".as_bytes().to_vec(),
+			name: "wnd".as_bytes().to_vec(),
+			symbol: "wnd".as_bytes().to_vec(),
 			decimals: 12,
 		};
 
@@ -192,12 +191,11 @@ mod benchmarks {
 		SnowbridgeControl::<T>::create_agent(origin.clone())?;
 		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
 
-		let relay_token_asset_id: Location =
-			Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+		let relay_token_asset_id: Location = Location::parent();
 		let asset = Box::new(VersionedLocation::V4(relay_token_asset_id));
 		let asset_metadata = AssetRegistrarMetadata {
-			name: "roc".as_bytes().to_vec(),
-			symbol: "roc".as_bytes().to_vec(),
+			name: "wnd".as_bytes().to_vec(),
+			symbol: "wnd".as_bytes().to_vec(),
 			decimals: 12,
 		};
 
