@@ -61,10 +61,7 @@ impl SendMessageFeeProvider for MockErrOutboundQueue {
 pub struct MockTokenIdConvert;
 impl MaybeEquivalence<TokenId, VersionedLocation> for MockTokenIdConvert {
 	fn convert(_id: &TokenId) -> Option<VersionedLocation> {
-		Some(VersionedLocation::V4(Location {
-			parents: 1,
-			interior: GlobalConsensus(Rococo).into(),
-		}))
+		Some(VersionedLocation::V4(Location::parent()))
 	}
 	fn convert_back(_loc: &VersionedLocation) -> Option<TokenId> {
 		None
@@ -1104,7 +1101,7 @@ fn xcm_converter_transfer_native_token_success() {
 	let beneficiary_address: [u8; 20] = hex!("2000000000000000000000000000000000000000");
 
 	let amount = 1000000;
-	let asset_location = Location { parents: 1, interior: [GlobalConsensus(Rococo)].into() };
+	let asset_location = Location::parent();
 	let token_id = TokenIdOf::convert_location(&asset_location).unwrap();
 
 	let assets: Assets = vec![Asset { id: AssetId(asset_location), fun: Fungible(amount) }].into();
