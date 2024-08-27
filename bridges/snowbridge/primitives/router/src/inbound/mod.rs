@@ -65,6 +65,8 @@ pub enum Command {
 		destination: Destination,
 		/// Amount to transfer
 		amount: u128,
+		/// XCM execution fee on AssetHub
+		fee: u128,
 	},
 }
 
@@ -180,9 +182,15 @@ where
 				Ok(Self::convert_send_token(message_id, chain_id, token, destination, amount, fee)),
 			V1(MessageV1 {
 				chain_id,
-				command: SendNativeToken { token_id, destination, amount },
-			}) =>
-				Self::convert_send_native_token(message_id, chain_id, token_id, destination, amount),
+				command: SendNativeToken { token_id, destination, amount, fee },
+			}) => Self::convert_send_native_token(
+				message_id,
+				chain_id,
+				token_id,
+				destination,
+				amount,
+				fee,
+			),
 		}
 	}
 }
@@ -363,21 +371,25 @@ where
 		token_id: TokenId,
 		destination: Destination,
 		amount: u128,
+		asset_hub_fee: u128,
 	) -> Result<(Xcm<()>, Balance), ConvertMessageError> {
 		let network = Ethereum { chain_id };
+		let asset_hub_fee_asset: Asset = (Location::parent(), asset_hub_fee).into();
 
-		let (beneficiary, destination_fee) = match destination {
+		let (dest_para_id, beneficiary, dest_para_fee) = match destination {
+			// Final destination is a 32-byte account on AssetHub
+			Destination::AccountId32 { id } =>
+				(None, Location::new(0, [AccountId32 { network: None, id }]), 0),
 			// Final destination is a 32-byte account on a sibling of AssetHub
-			Destination::ForeignAccountId32 { id, fee, .. } =>
-				Some((Location::new(0, [AccountId32 { network: None, id }]), fee)),
+			Destination::ForeignAccountId32 { para_id, id, fee } =>
+				(Some(para_id), Location::new(0, [AccountId32 { network: None, id }]), fee),
 			// Final destination is a 20-byte account on a sibling of AssetHub
-			Destination::ForeignAccountId20 { id, fee, .. } =>
-				Some((Location::new(0, [AccountKey20 { network: None, key: id }]), fee)),
-			_ => None,
-		}
-		.ok_or(ConvertMessageError::InvalidDestination)?;
+			Destination::ForeignAccountId20 { para_id, id, fee } =>
+				(Some(para_id), Location::new(0, [AccountKey20 { network: None, key: id }]), fee),
+		};
 
-		let fee_asset: Asset = (Location::parent(), destination_fee).into();
+		let total_fees = asset_hub_fee.saturating_add(dest_para_fee);
+		let total_fee_asset: Asset = (Location::parent(), total_fees).into();
 
 		let versioned_asset_id =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
@@ -389,18 +401,50 @@ where
 
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
-		let instructions = vec![
-			ReceiveTeleportedAsset(fee_asset.clone().into()),
-			BuyExecution { fees: fee_asset, weight_limit: Unlimited },
+		let mut instructions = vec![
+			ReceiveTeleportedAsset(total_fee_asset.clone().into()),
+			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
 			WithdrawAsset(asset.clone().into()),
-			ClearOrigin,
-			DepositAsset { assets: AllCounted(2).into(), beneficiary },
-			SetTopic(message_id.into()),
+			SetFeesMode { jit_withdraw: true },
 		];
 
-		Ok((instructions.into(), destination_fee.into()))
+		match dest_para_id {
+			Some(dest_para_id) => {
+				let dest_para_fee_asset: Asset = (Location::parent(), dest_para_fee).into();
+
+				instructions.extend(vec![
+					// Perform a deposit reserve to send to destination chain.
+					InitiateReserveWithdraw {
+						assets: Wild(AllCounted(2)),
+						reserve: Location::new(1, [Parachain(dest_para_id)]),
+						xcm: vec![
+							// Buy execution on target.
+							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
+							// Deposit asset to beneficiary.
+							DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+							// Forward message id to destination parachain.
+							SetTopic(message_id.into()),
+						]
+						.into(),
+					},
+				]);
+			},
+			None => {
+				instructions.extend(vec![
+					// Deposit both asset and fees to beneficiary so the fees will not get
+					// trapped. Another benefit is when fees left more than ED on AssetHub could be
+					// used to create the beneficiary account in case it does not exist.
+					DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+				]);
+			},
+		}
+
+		// Forward message id to Asset Hub.
+		instructions.push(SetTopic(message_id.into()));
+
+		Ok((instructions.into(), total_fees.into()))
 	}
 }
 

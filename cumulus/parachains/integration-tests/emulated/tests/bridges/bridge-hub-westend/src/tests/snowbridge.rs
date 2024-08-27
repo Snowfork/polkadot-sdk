@@ -16,9 +16,10 @@ use crate::imports::*;
 use asset_hub_westend_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubEthereumBaseFee;
 use bridge_hub_westend_runtime::EthereumInboundQueue;
 use codec::{Decode, Encode};
-use emulated_integration_tests_common::PenpalSiblingSovereignAccount;
+use emulated_integration_tests_common::{PenpalBSiblingSovereignAccount, TELEPORTABLE_ASSET_ID};
 use frame_support::pallet_prelude::TypeInfo;
 use hex_literal::hex;
+use rococo_westend_system_emulated_network::penpal_emulated_chain::penpal_runtime::xcm_config::RelayLocation;
 use snowbridge_core::{outbound::OperatingMode, AssetRegistrarMetadata, TokenIdOf};
 use snowbridge_router_primitives::inbound::{
 	Command, ConvertMessage, Destination, GlobalConsensusEthereumConvertsFor, MessageV1,
@@ -502,12 +503,9 @@ fn send_relay_token_from_ethereum() {
 			chain_id: CHAIN_ID,
 			command: Command::SendNativeToken {
 				token_id,
-				destination: Destination::ForeignAccountId32 {
-					para_id: AssetHubWestend::para_id().into(),
-					id: AssetHubWestendReceiver::get().into(),
-					fee: XCM_FEE,
-				},
+				destination: Destination::AccountId32 { id: AssetHubWestendReceiver::get().into() },
 				amount: TOKEN_AMOUNT,
+				fee: XCM_FEE,
 			},
 		});
 		// Convert the message to XCM
@@ -569,16 +567,14 @@ fn send_penpal_token_from_ah_to_ethereum() {
 	BridgeHubWestend::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
 
 	let penpal_asset_location_on_ah =
-		Location::new(1, [Junction::Parachain(PenpalA::para_id().into())])
+		Location::new(1, [Junction::Parachain(PenpalB::para_id().into())])
 			.appended_with(PenpalLocalTeleportableToAssetHub::get())
 			.unwrap();
 	let v3_location: MultiLocation = penpal_asset_location_on_ah.clone().try_into().unwrap();
 	const TOKEN_AMOUNT: u128 = 100_000_000_000;
 
 	AssetHubWestend::mint_foreign_asset(
-		<AssetHubWestend as Chain>::RuntimeOrigin::signed(
-			PenpalSiblingSovereignAccount::get().clone(),
-		),
+		<AssetHubWestend as Chain>::RuntimeOrigin::signed(PenpalBSiblingSovereignAccount::get()),
 		v3_location,
 		AssetHubWestendSender::get(),
 		TOKEN_AMOUNT,
@@ -665,7 +661,7 @@ fn send_penpal_token_from_ah_to_ethereum() {
 #[test]
 fn send_penpal_token_from_ethereum_to_ah() {
 	let penpal_asset_location_on_ah =
-		Location::new(1, [Parachain(PenpalA::para_id().into()).into()])
+		Location::new(1, [Parachain(PenpalB::para_id().into()).into()])
 			.appended_with(PenpalLocalTeleportableToAssetHub::get())
 			.unwrap();
 
@@ -686,9 +682,7 @@ fn send_penpal_token_from_ethereum_to_ah() {
 	AssetHubWestend::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
 
 	AssetHubWestend::mint_foreign_asset(
-		<AssetHubWestend as Chain>::RuntimeOrigin::signed(
-			PenpalSiblingSovereignAccount::get().clone(),
-		),
+		<AssetHubWestend as Chain>::RuntimeOrigin::signed(PenpalBSiblingSovereignAccount::get()),
 		v3_location,
 		ethereum_sovereign.clone(),
 		TOKEN_AMOUNT,
@@ -711,12 +705,9 @@ fn send_penpal_token_from_ethereum_to_ah() {
 			chain_id: CHAIN_ID,
 			command: Command::SendNativeToken {
 				token_id,
-				destination: Destination::ForeignAccountId32 {
-					para_id: AssetHubWestend::para_id().into(),
-					id: AssetHubWestendReceiver::get().into(),
-					fee: XCM_FEE,
-				},
+				destination: Destination::AccountId32 { id: AssetHubWestendReceiver::get().into() },
 				amount: TOKEN_AMOUNT,
+				fee: XCM_FEE,
 			},
 		});
 		// Convert the message to XCM
@@ -755,4 +746,126 @@ fn send_penpal_token_from_ethereum_to_ah() {
 			"Token minted to beneficiary."
 		);
 	});
+}
+
+#[test]
+fn send_penpal_token_from_ethereum_to_penpal() {
+	let penpal_asset_location_on_ah =
+		Location::new(1, [Parachain(PenpalB::para_id().into()).into()])
+			.appended_with(PenpalLocalTeleportableToAssetHub::get())
+			.unwrap();
+
+	let v3_location: MultiLocation = penpal_asset_location_on_ah.clone().try_into().unwrap();
+
+	let token_id = TokenIdOf::convert_location(&penpal_asset_location_on_ah).unwrap();
+
+	const TOKEN_AMOUNT: u128 = 100_000_000_000;
+
+	let ethereum_sovereign: AccountId =
+		GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(&Location::new(
+			2,
+			[GlobalConsensus(EthereumNetwork::get())],
+		))
+		.unwrap()
+		.into();
+
+	AssetHubWestend::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
+
+	AssetHubWestend::mint_foreign_asset(
+		<AssetHubWestend as Chain>::RuntimeOrigin::signed(PenpalBSiblingSovereignAccount::get()),
+		v3_location.clone(),
+		ethereum_sovereign.clone(),
+		TOKEN_AMOUNT,
+	);
+
+	let ah_sovereign =
+		PenpalB::sovereign_account_id_of(PenpalB::sibling_location_of(AssetHubWestend::para_id()));
+	PenpalB::fund_accounts(vec![(ah_sovereign.clone(), INITIAL_FUND)]);
+	PenpalB::mint_foreign_asset(
+		<PenpalB as Chain>::RuntimeOrigin::signed(PenpalAssetOwner::get()),
+		RelayLocation::get(),
+		ah_sovereign.clone(),
+		INITIAL_FUND,
+	);
+	PenpalB::mint_asset(
+		<PenpalB as Chain>::RuntimeOrigin::signed(PenpalAssetOwner::get()),
+		TELEPORTABLE_ASSET_ID,
+		ah_sovereign.clone(),
+		TOKEN_AMOUNT,
+	);
+
+	BridgeHubWestend::execute_with(|| {
+		type Runtime = <BridgeHubWestend as Chain>::Runtime;
+
+		type RuntimeEvent = <BridgeHubWestend as Chain>::RuntimeEvent;
+
+		// create token
+		snowbridge_pallet_system::Tokens::<Runtime>::insert(
+			token_id,
+			VersionedLocation::from(penpal_asset_location_on_ah.clone()),
+		);
+
+		// Send token back to AH
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendNativeToken {
+				token_id,
+				destination: Destination::ForeignAccountId32 {
+					para_id: PenpalB::para_id().into(),
+					id: PenpalBReceiver::get().into(),
+					fee: XCM_FEE,
+				},
+				amount: TOKEN_AMOUNT,
+				fee: XCM_FEE,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubWestend::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubWestend,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubWestend::execute_with(|| {
+		type RuntimeEvent = <AssetHubWestend as Chain>::RuntimeEvent;
+
+		// Check that token burnt from some reserved account
+		assert_expected_events!(
+			AssetHubWestend,
+			vec![
+				RuntimeEvent::ForeignAssets(pallet_assets::Event::Burned { .. }) => {},
+			]
+		);
+	});
+
+	PenpalB::execute_with(|| {
+		type RuntimeEvent = <PenpalB as Chain>::RuntimeEvent;
+
+		// Check that token issued to beneficial
+		assert_expected_events!(
+			PenpalB,
+			vec![
+				RuntimeEvent::Assets(pallet_assets::Event::Issued { .. }) => {},
+			]
+		);
+
+		let events = PenpalB::events();
+
+		// Check that token issued to destination account
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Assets(pallet_assets::Event::Issued { amount, owner, ..})
+					if *amount == TOKEN_AMOUNT && *owner == PenpalBReceiver::get()
+			)),
+			"Token minted to beneficiary."
+		);
+	})
 }

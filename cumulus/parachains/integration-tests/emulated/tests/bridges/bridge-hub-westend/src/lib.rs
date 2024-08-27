@@ -64,8 +64,9 @@ mod imports {
 		AssetHubWestendParaReceiver as AssetHubWestendReceiver,
 		AssetHubWestendParaSender as AssetHubWestendSender, BridgeHubRococoPara as BridgeHubRococo,
 		BridgeHubWestendPara as BridgeHubWestend,
-		BridgeHubWestendParaSender as BridgeHubWestendSender, PenpalAPara as PenpalA,
-		PenpalBPara as PenpalB, PenpalBParaSender as PenpalBSender, WestendRelay as Westend,
+		BridgeHubWestendParaSender as BridgeHubWestendSender, PenpalBPara as PenpalB,
+		PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
+		WestendRelay as Westend,
 	};
 
 	pub const ASSET_MIN_BALANCE: u128 = 1000;
