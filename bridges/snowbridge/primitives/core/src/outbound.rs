@@ -462,7 +462,7 @@ impl GasMeter for ConstantGasMeter {
 			Command::SetPricingParameters { .. } => 60_000,
 			Command::TransferToken { .. } => 100_000,
 			Command::RegisterNativeToken { .. } => 1_200_000,
-			Command::TransferNativeToken { .. } => 150_000,
+			Command::TransferNativeToken { .. } => 100_000,
 		}
 	}
 }
