@@ -161,12 +161,12 @@ mod benchmarks {
 
 	#[benchmark]
 	fn register_token() -> Result<(), BenchmarkError> {
-		let origin_para_id = 2000;
-		let origin_location = Location::new(1, [Parachain(origin_para_id)]);
-		let origin = T::Helper::make_xcm_origin(origin_location);
-		fund_sovereign_account::<T>(origin_para_id.into())?;
-		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
+		let caller: T::AccountId = whitelisted_caller();
+
+		let amount: BalanceOf<T> =
+			(10_000_000_000_000_u128).saturated_into::<u128>().saturated_into();
+
+		T::Token::mint_into(&caller, amount)?;
 
 		let relay_token_asset_id: Location = Location::parent();
 		let asset = Box::new(VersionedLocation::V4(relay_token_asset_id));
@@ -177,32 +177,7 @@ mod benchmarks {
 		};
 
 		#[extrinsic_call]
-		_(origin as T::RuntimeOrigin, asset, asset_metadata);
-
-		Ok(())
-	}
-
-	#[benchmark]
-	fn force_register_token() -> Result<(), BenchmarkError> {
-		let origin_para_id = 2000;
-		let origin_location = Location::new(1, [Parachain(origin_para_id)]);
-		let origin = T::Helper::make_xcm_origin(origin_location.clone());
-		fund_sovereign_account::<T>(origin_para_id.into())?;
-		SnowbridgeControl::<T>::create_agent(origin.clone())?;
-		SnowbridgeControl::<T>::create_channel(origin.clone(), OperatingMode::Normal)?;
-
-		let relay_token_asset_id: Location = Location::parent();
-		let asset = Box::new(VersionedLocation::V4(relay_token_asset_id));
-		let asset_metadata = AssetRegistrarMetadata {
-			name: "wnd".as_bytes().to_vec(),
-			symbol: "wnd".as_bytes().to_vec(),
-			decimals: 12,
-		};
-
-		let versioned_origin_location = Box::new(VersionedLocation::V4(origin_location));
-
-		#[extrinsic_call]
-		_(RawOrigin::Root, versioned_origin_location, asset, asset_metadata);
+		_(RawOrigin::Signed(caller), asset, asset_metadata);
 
 		Ok(())
 	}

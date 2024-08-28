@@ -218,7 +218,6 @@ pub mod pallet {
 		RegisterToken {
 			asset_id: VersionedLocation,
 			token_id: H256,
-			agent_id: AgentId,
 		},
 	}
 
@@ -606,46 +605,14 @@ pub mod pallet {
 			asset: Box<VersionedLocation>,
 			metadata: AssetRegistrarMetadata,
 		) -> DispatchResult {
-			let origin_location: Location = T::SiblingOrigin::ensure_origin(origin)?;
-
-			let (para_id, agent_id) = ensure_sibling::<T>(&origin_location)?;
+			let who = ensure_signed(origin)?;
 
 			let asset: Location =
 				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			let pays_fee = PaysFee::<T>::Yes(sibling_sovereign_account::<T>(para_id));
+			let pays_fee = PaysFee::<T>::Yes(who);
 
-			Self::do_register_token(para_id, agent_id, asset, metadata, pays_fee)?;
-
-			Ok(())
-		}
-
-		/// Sends a message to the Gateway contract to register a new
-		/// token that represents `asset`.
-		///
-		/// - `origin`: Must be `MultiLocation`
-		#[pallet::call_index(11)]
-		#[pallet::weight(T::WeightInfo::force_register_token())]
-		pub fn force_register_token(
-			origin: OriginFor<T>,
-			location: Box<VersionedLocation>,
-			asset: Box<VersionedLocation>,
-			metadata: AssetRegistrarMetadata,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-
-			let location: Location =
-				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
-
-			let (para_id, agent_id) =
-				ensure_sibling::<T>(&location).map_err(|_| Error::<T>::InvalidLocation)?;
-
-			let asset: Location =
-				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
-
-			let pays_fee = PaysFee::<T>::No;
-
-			Self::do_register_token(para_id, agent_id, asset, metadata, pays_fee)?;
+			Self::do_register_token(asset, metadata, pays_fee)?;
 
 			Ok(())
 		}
@@ -740,19 +707,10 @@ pub mod pallet {
 		}
 
 		pub(crate) fn do_register_token(
-			para_id: ParaId,
-			agent_id: AgentId,
 			asset_id: Location,
 			metadata: AssetRegistrarMetadata,
 			pays_fee: PaysFee<T>,
 		) -> Result<(), DispatchError> {
-			// Check that the channel exists
-			let channel_id: ChannelId = para_id.into();
-			ensure!(Channels::<T>::contains_key(channel_id), Error::<T>::NoChannel);
-
-			// Check that the agent exists
-			ensure!(Agents::<T>::contains_key(agent_id), Error::<T>::NoAgent);
-
 			// Record the token id or fail if it has already been created
 			let token_id = TokenIdOf::convert_location(&asset_id)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
@@ -761,19 +719,14 @@ pub mod pallet {
 			LocationToToken::<T>::insert(versioned_asset_id, token_id);
 
 			let command = Command::RegisterNativeToken {
-				agent_id,
 				token_id,
 				name: metadata.name,
 				symbol: metadata.symbol,
 				decimals: metadata.decimals,
 			};
-			Self::send(channel_id, command, pays_fee)?;
+			Self::send(ParaId::from(1000).into(), command, pays_fee)?;
 
-			Self::deposit_event(Event::<T>::RegisterToken {
-				asset_id: asset_id.into(),
-				token_id,
-				agent_id,
-			});
+			Self::deposit_event(Event::<T>::RegisterToken { asset_id: asset_id.into(), token_id });
 
 			Ok(())
 		}

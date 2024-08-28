@@ -323,61 +323,25 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 
 #[test]
 fn register_relay_token() {
-	// Fund the origin parachain sovereign account so that it can pay execution fees.
-	let asset_hub_sovereign = BridgeHubWestend::sovereign_account_id_of(Location::new(
-		1,
-		[Parachain(AssetHubWestend::para_id().into())],
-	));
-	BridgeHubWestend::fund_accounts(vec![(asset_hub_sovereign.clone(), INITIAL_FUND)]);
+	BridgeHubWestend::execute_with(|| {
+		type RuntimeOrigin = <BridgeHubWestend as Chain>::RuntimeOrigin;
+		type RuntimeEvent = <BridgeHubWestend as Chain>::RuntimeEvent;
 
-	let sudo_origin = <Westend as Chain>::RuntimeOrigin::root();
-	let destination = Westend::child_location_of(BridgeHubWestend::para_id()).into();
-
-	let asset_id: Location = Location::parent();
-
-	// construct ForceRegisterToken call
-	let register_relay_token_call = SnowbridgeControl::Control(ControlCall::ForceRegisterToken {
-		location: Box::new(VersionedLocation::V4(Location::new(
-			1,
-			[Parachain(AssetHubWestend::para_id().into())],
-		))),
-		asset: Box::new(VersionedLocation::V4(asset_id)),
-		metadata: AssetRegistrarMetadata {
-			name: "wnd".as_bytes().to_vec(),
-			symbol: "wnd".as_bytes().to_vec(),
-			decimals: 12,
-		},
-	});
-	// Construct XCM to register the token
-	let remote_xcm = VersionedXcm::from(Xcm::<()>(vec![
-		UnpaidExecution { weight_limit: Unlimited, check_origin: None },
-		Transact {
-			require_weight_at_most: 3000000000.into(),
-			origin_kind: OriginKind::Superuser,
-			call: register_relay_token_call.encode().into(),
-		},
-	]));
-
-	// Westend Global Consensus send XCM message from Relay Chain to Bridge Hub
-	Westend::execute_with(|| {
-		assert_ok!(<Westend as WestendPallet>::XcmPallet::send(
-			sudo_origin,
-			bx!(destination),
-			bx!(remote_xcm),
+		assert_ok!(<BridgeHubWestend as BridgeHubWestendPallet>::Balances::force_set_balance(
+			RuntimeOrigin::root(),
+			sp_runtime::MultiAddress::Id(BridgeHubWestendSender::get()),
+			INITIAL_FUND * 10,
 		));
 
-		type RuntimeEvent = <Westend as Chain>::RuntimeEvent;
-		// Check that the Transact message was sent
-		assert_expected_events!(
-			Westend,
-			vec![
-				RuntimeEvent::XcmPallet(pallet_xcm::Event::Sent { .. }) => {},
-			]
-		);
-	});
-
-	BridgeHubWestend::execute_with(|| {
-		type RuntimeEvent = <BridgeHubWestend as Chain>::RuntimeEvent;
+		assert_ok!(<BridgeHubWestend as BridgeHubWestendPallet>::EthereumSystem::register_token(
+			RuntimeOrigin::signed(BridgeHubWestendSender::get()),
+			Box::new(VersionedLocation::V4(Location::parent())),
+			AssetRegistrarMetadata {
+				name: "wnd".as_bytes().to_vec(),
+				symbol: "wnd".as_bytes().to_vec(),
+				decimals: 12,
+			},
+		));
 		// Check that a message was sent to Ethereum to create the agent
 		assert_expected_events!(
 			BridgeHubWestend,

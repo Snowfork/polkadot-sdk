@@ -152,8 +152,6 @@ mod v1 {
 		},
 		/// Register token from Polkadot
 		RegisterNativeToken {
-			/// ID of the agent
-			agent_id: H256,
 			/// ID for the token
 			token_id: H256,
 			/// Name of the token
@@ -256,9 +254,8 @@ mod v1 {
 						Token::Address(*recipient),
 						Token::Uint(U256::from(*amount)),
 					])]),
-				Command::RegisterNativeToken { agent_id, token_id, name, symbol, decimals } =>
+				Command::RegisterNativeToken { token_id, name, symbol, decimals } =>
 					ethabi::encode(&[Token::Tuple(vec![
-						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::FixedBytes(token_id.as_bytes().to_owned()),
 						Token::String(name.to_owned()),
 						Token::String(symbol.to_owned()),
