@@ -365,6 +365,23 @@ where
 		)
 	}
 
+	fn reanchored(loc: Location) -> Location {
+		// Remove the GlobalConsensus prefix
+		let suffix_loc = Location::new(loc.parents, loc.interior.split_first().0);
+
+		// Reanchor in the view of AH
+		let reanchored_loc = match suffix_loc.clone().unpack() {
+			(1, interior) => match interior.first() {
+				Some(Parachain(1000)) => Some(suffix_loc.clone().interior.split_first().0.into()),
+				_ => None,
+			},
+			_ => None,
+		}
+		.unwrap_or(suffix_loc.clone());
+
+		reanchored_loc
+	}
+
 	fn convert_send_native_token(
 		message_id: H256,
 		chain_id: u64,
@@ -391,13 +408,12 @@ where
 		let total_fees = asset_hub_fee.saturating_add(dest_para_fee);
 		let total_fee_asset: Asset = (Location::parent(), total_fees).into();
 
-		let versioned_asset_id =
+		let asset_loc =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
 
-		let asset_id: Location =
-			versioned_asset_id.try_into().map_err(|_| ConvertMessageError::InvalidToken)?;
+		let reanchored_asset_loc = Self::reanchored(asset_loc);
 
-		let asset: Asset = (asset_id, amount).into();
+		let asset: Asset = (reanchored_asset_loc, amount).into();
 
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 

@@ -340,7 +340,10 @@ fn register_relay_token() {
 
 		assert_ok!(<BridgeHubWestend as BridgeHubWestendPallet>::EthereumSystem::register_token(
 			RuntimeOrigin::signed(BridgeHubWestendSender::get()),
-			Box::new(VersionedLocation::V4(Location::parent())),
+			Box::new(VersionedLocation::V4(Location {
+				parents: 1,
+				interior: [GlobalConsensus(Westend)].into()
+			})),
 			AssetRegistrarMetadata {
 				name: "wnd".as_bytes().to_vec(),
 				symbol: "wnd".as_bytes().to_vec(),
@@ -371,7 +374,7 @@ fn send_relay_token_to_ethereum() {
 		XCM_VERSION,
 	);
 
-	let asset_id: Location = Location::parent();
+	let asset_id: Location = Location { parents: 1, interior: [GlobalConsensus(Westend)].into() };
 	let token_id = TokenIdOf::convert_location(&asset_id).unwrap();
 
 	// create token
@@ -437,7 +440,7 @@ fn send_relay_token_to_ethereum() {
 
 #[test]
 fn send_relay_token_from_ethereum() {
-	let asset_id: Location = Location::parent();
+	let asset_id: Location = Location { parents: 1, interior: [GlobalConsensus(Westend)].into() };
 	let token_id = TokenIdOf::convert_location(&asset_id).unwrap();
 
 	const TOKEN_AMOUNT: u128 = 100_000_000_000;
@@ -551,9 +554,10 @@ fn send_ah_token_to_ethereum() {
 	let asset_id: Location =
 		[PalletInstance(ASSETS_PALLET_ID), GeneralIndex(RESERVABLE_ASSET_ID.into())].into();
 
-	let asset_on_bh = Location::new(1, [Junction::Parachain(AssetHubWestend::para_id().into())])
-		.appended_with(asset_id.clone().interior)
-		.unwrap();
+	let asset_on_bh =
+		Location::new(1, [GlobalConsensus(Westend), Parachain(AssetHubWestend::para_id().into())])
+			.appended_with(asset_id.clone().interior)
+			.unwrap();
 
 	let token_id = TokenIdOf::convert_location(&asset_on_bh).unwrap();
 
@@ -623,6 +627,101 @@ fn send_ah_token_to_ethereum() {
 }
 
 #[test]
+fn send_ah_token_from_ethereum() {
+	let asset_id: Location =
+		[PalletInstance(ASSETS_PALLET_ID), GeneralIndex(RESERVABLE_ASSET_ID.into())].into();
+
+	let asset_on_bh =
+		Location::new(1, [GlobalConsensus(Westend), Parachain(AssetHubWestend::para_id().into())])
+			.appended_with(asset_id.clone().interior)
+			.unwrap();
+
+	let token_id = TokenIdOf::convert_location(&asset_on_bh).unwrap();
+
+	const TOKEN_AMOUNT: u128 = 100_000_000_000;
+
+	let ethereum_sovereign: AccountId =
+		GlobalConsensusEthereumConvertsFor::<[u8; 32]>::convert_location(&Location::new(
+			2,
+			[GlobalConsensus(EthereumNetwork::get())],
+		))
+		.unwrap()
+		.into();
+
+	AssetHubWestend::fund_accounts(vec![(ethereum_sovereign.clone(), INITIAL_FUND)]);
+
+	AssetHubWestend::mint_asset(
+		<AssetHubWestend as Chain>::RuntimeOrigin::signed(AssetHubWestendAssetOwner::get()),
+		RESERVABLE_ASSET_ID,
+		ethereum_sovereign.clone(),
+		TOKEN_AMOUNT,
+	);
+
+	BridgeHubWestend::execute_with(|| {
+		type Runtime = <BridgeHubWestend as Chain>::Runtime;
+
+		type RuntimeEvent = <BridgeHubWestend as Chain>::RuntimeEvent;
+
+		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, asset_on_bh.clone());
+
+		// Send relay token back to AH
+		let message_id: H256 = [0; 32].into();
+		let message = VersionedMessage::V1(MessageV1 {
+			chain_id: CHAIN_ID,
+			command: Command::SendNativeToken {
+				token_id,
+				destination: Destination::AccountId32 { id: AssetHubWestendReceiver::get().into() },
+				amount: TOKEN_AMOUNT,
+				fee: XCM_FEE,
+			},
+		});
+		// Convert the message to XCM
+		let (xcm, _) = EthereumInboundQueue::do_convert(message_id, message).unwrap();
+		// Send the XCM
+		let _ = EthereumInboundQueue::send_xcm(xcm, AssetHubWestend::para_id().into()).unwrap();
+
+		assert_expected_events!(
+			BridgeHubWestend,
+			vec![
+				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
+			]
+		);
+	});
+
+	AssetHubWestend::execute_with(|| {
+		type RuntimeEvent = <AssetHubWestend as Chain>::RuntimeEvent;
+
+		assert_expected_events!(
+			AssetHubWestend,
+			vec![
+				RuntimeEvent::Assets(pallet_assets::Event::Burned{..}) => {},]
+		);
+
+		let events = AssetHubWestend::events();
+
+		// Check that the native token burnt from some reserved account
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Assets(pallet_assets::Event::Burned { owner, .. })
+					if *owner == ethereum_sovereign.clone(),
+			)),
+			"token burnt from Ethereum sovereign account."
+		);
+
+		// Check that the token was minted to beneficiary
+		assert!(
+			events.iter().any(|event| matches!(
+				event,
+				RuntimeEvent::Assets(pallet_assets::Event::Issued { owner, amount, .. })
+					if *amount >= TOKEN_AMOUNT && *owner == AssetHubWestendReceiver::get()
+			)),
+			"Token minted to beneficiary."
+		);
+	});
+}
+
+#[test]
 fn send_penpal_token_from_ah_to_ethereum() {
 	let assethub_location = BridgeHubWestend::sibling_location_of(AssetHubWestend::para_id());
 	let assethub_sovereign = BridgeHubWestend::sovereign_account_id_of(assethub_location);
@@ -634,10 +733,9 @@ fn send_penpal_token_from_ah_to_ethereum() {
 
 	BridgeHubWestend::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
 
-	let penpal_asset_location_on_ah =
-		Location::new(1, [Junction::Parachain(PenpalB::para_id().into())])
-			.appended_with(PenpalLocalTeleportableToAssetHub::get())
-			.unwrap();
+	let penpal_asset_location_on_ah = Location::new(1, [Parachain(PenpalB::para_id().into())])
+		.appended_with(PenpalLocalTeleportableToAssetHub::get())
+		.unwrap();
 	let v3_location: MultiLocation = penpal_asset_location_on_ah.clone().try_into().unwrap();
 	const TOKEN_AMOUNT: u128 = 100_000_000_000;
 
@@ -648,7 +746,12 @@ fn send_penpal_token_from_ah_to_ethereum() {
 		TOKEN_AMOUNT,
 	);
 
-	let token_id = TokenIdOf::convert_location(&penpal_asset_location_on_ah).unwrap();
+	let penpal_asset_location_on_bh =
+		Location::new(1, [GlobalConsensus(Westend), Parachain(PenpalB::para_id().into())])
+			.appended_with(PenpalLocalTeleportableToAssetHub::get())
+			.unwrap();
+
+	let token_id = TokenIdOf::convert_location(&penpal_asset_location_on_bh).unwrap();
 
 	// create token
 	BridgeHubWestend::execute_with(|| {
@@ -656,7 +759,7 @@ fn send_penpal_token_from_ah_to_ethereum() {
 
 		snowbridge_pallet_system::Tokens::<Runtime>::insert(
 			token_id,
-			penpal_asset_location_on_ah.clone(),
+			penpal_asset_location_on_bh.clone(),
 		);
 	});
 
@@ -735,7 +838,12 @@ fn send_penpal_token_from_ethereum_to_ah() {
 
 	let v3_location: MultiLocation = penpal_asset_location_on_ah.clone().try_into().unwrap();
 
-	let token_id = TokenIdOf::convert_location(&penpal_asset_location_on_ah).unwrap();
+	let penpal_asset_location_on_bh =
+		Location::new(1, [GlobalConsensus(Westend), Parachain(PenpalB::para_id().into())])
+			.appended_with(PenpalLocalTeleportableToAssetHub::get())
+			.unwrap();
+
+	let token_id = TokenIdOf::convert_location(&penpal_asset_location_on_bh).unwrap();
 
 	const TOKEN_AMOUNT: u128 = 100_000_000_000;
 
@@ -764,7 +872,7 @@ fn send_penpal_token_from_ethereum_to_ah() {
 		// create token
 		snowbridge_pallet_system::Tokens::<Runtime>::insert(
 			token_id,
-			penpal_asset_location_on_ah.clone(),
+			penpal_asset_location_on_bh.clone(),
 		);
 
 		// Send token back to AH
@@ -825,7 +933,12 @@ fn send_penpal_token_from_ethereum_to_penpal() {
 
 	let v3_location: MultiLocation = penpal_asset_location_on_ah.clone().try_into().unwrap();
 
-	let token_id = TokenIdOf::convert_location(&penpal_asset_location_on_ah).unwrap();
+	let penpal_asset_location_on_bh =
+		Location::new(1, [GlobalConsensus(Westend), Parachain(PenpalB::para_id().into())])
+			.appended_with(PenpalLocalTeleportableToAssetHub::get())
+			.unwrap();
+
+	let token_id = TokenIdOf::convert_location(&penpal_asset_location_on_bh).unwrap();
 
 	const TOKEN_AMOUNT: u128 = 100_000_000_000;
 
@@ -870,7 +983,7 @@ fn send_penpal_token_from_ethereum_to_penpal() {
 		// create token
 		snowbridge_pallet_system::Tokens::<Runtime>::insert(
 			token_id,
-			penpal_asset_location_on_ah.clone(),
+			penpal_asset_location_on_bh.clone(),
 		);
 
 		// Send token back to AH

@@ -28,7 +28,7 @@ use sp_core::H256;
 use sp_io::hashing::keccak_256;
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use sp_std::prelude::*;
-use xcm::prelude::{GeneralIndex, Junction::Parachain, Location, PalletInstance};
+use xcm::prelude::{GeneralIndex, GlobalConsensus, Junction::Parachain, Location, PalletInstance};
 use xcm_builder::{DescribeAllTerminal, DescribeFamily, DescribeLocation, HashedDescription};
 
 /// The ID of an agent contract
@@ -175,15 +175,17 @@ pub struct AssetRegistrarMetadata {
 
 pub type TokenId = H256;
 
-pub type TokenIdOf =
-	HashedDescription<TokenId, (DescribeSiblingAssetId, DescribeFamily<DescribeAllTerminal>)>;
+pub type TokenIdOf = HashedDescription<TokenId, DescribeGlobal>;
 
-pub struct DescribeSiblingAssetId;
-impl DescribeLocation for DescribeSiblingAssetId {
+pub struct DescribeGlobal;
+impl DescribeLocation for DescribeGlobal {
 	fn describe_location(l: &Location) -> Option<Vec<u8>> {
 		match l.unpack() {
-			(1, [Parachain(id), PalletInstance(instance), GeneralIndex(index)]) =>
-				Some((*id, *instance, *index).encode()),
+			(1, [GlobalConsensus(network)]) => Some((*network).encode()),
+			(
+				1,
+				[GlobalConsensus(network), Parachain(id), PalletInstance(instance), GeneralIndex(index)],
+			) => Some((*network, *id, *instance, *index).encode()),
 			_ => None,
 		}
 	}
