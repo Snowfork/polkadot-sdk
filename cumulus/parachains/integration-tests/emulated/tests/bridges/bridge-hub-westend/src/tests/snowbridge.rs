@@ -373,10 +373,7 @@ fn send_relay_token_to_ethereum() {
 	BridgeHubWestend::execute_with(|| {
 		type Runtime = <BridgeHubWestend as Chain>::Runtime;
 
-		snowbridge_pallet_system::Tokens::<Runtime>::insert(
-			token_id,
-			VersionedLocation::from(asset_id),
-		);
+		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, asset_id.clone());
 	});
 
 	const TOKEN_AMOUNT: u128 = 100_000_000_000;
@@ -456,10 +453,7 @@ fn send_relay_token_from_ethereum() {
 		type RuntimeEvent = <BridgeHubWestend as Chain>::RuntimeEvent;
 
 		// create token
-		snowbridge_pallet_system::Tokens::<Runtime>::insert(
-			token_id,
-			VersionedLocation::from(asset_id),
-		);
+		snowbridge_pallet_system::Tokens::<Runtime>::insert(token_id, asset_id.clone());
 
 		// Send relay token back to AH
 		let message_id: H256 = [0; 32].into();
@@ -552,7 +546,7 @@ fn send_penpal_token_from_ah_to_ethereum() {
 
 		snowbridge_pallet_system::Tokens::<Runtime>::insert(
 			token_id,
-			VersionedLocation::from(penpal_asset_location_on_ah.clone()),
+			penpal_asset_location_on_ah.clone(),
 		);
 	});
 
@@ -660,7 +654,7 @@ fn send_penpal_token_from_ethereum_to_ah() {
 		// create token
 		snowbridge_pallet_system::Tokens::<Runtime>::insert(
 			token_id,
-			VersionedLocation::from(penpal_asset_location_on_ah.clone()),
+			penpal_asset_location_on_ah.clone(),
 		);
 
 		// Send token back to AH
@@ -766,7 +760,7 @@ fn send_penpal_token_from_ethereum_to_penpal() {
 		// create token
 		snowbridge_pallet_system::Tokens::<Runtime>::insert(
 			token_id,
-			VersionedLocation::from(penpal_asset_location_on_ah.clone()),
+			penpal_asset_location_on_ah.clone(),
 		);
 
 		// Send token back to AH

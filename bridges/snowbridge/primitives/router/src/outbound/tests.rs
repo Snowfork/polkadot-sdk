@@ -59,9 +59,9 @@ impl SendMessageFeeProvider for MockErrOutboundQueue {
 }
 
 pub struct MockTokenIdConvert;
-impl MaybeEquivalence<TokenId, VersionedLocation> for MockTokenIdConvert {
-	fn convert(_id: &TokenId) -> Option<VersionedLocation> {
-		Some(VersionedLocation::V4(Location::parent()))
+impl MaybeEquivalence<TokenId, Location> for MockTokenIdConvert {
+	fn convert(_id: &TokenId) -> Option<Location> {
+		Some(Location::parent())
 	}
 	fn convert_back(_loc: &VersionedLocation) -> Option<TokenId> {
 		None

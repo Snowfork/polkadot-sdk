@@ -206,14 +206,11 @@ impl TransactAsset for SuccessfulTransactor {
 }
 
 pub struct MockTokenIdConvert;
-impl MaybeEquivalence<TokenId, VersionedLocation> for MockTokenIdConvert {
-	fn convert(_id: &TokenId) -> Option<VersionedLocation> {
-		Some(VersionedLocation::from(Location {
-			parents: 1,
-			interior: GlobalConsensus(Rococo).into(),
-		}))
+impl MaybeEquivalence<TokenId, Location> for MockTokenIdConvert {
+	fn convert(_id: &TokenId) -> Option<Location> {
+		Some(Location::parent())
 	}
-	fn convert_back(_loc: &VersionedLocation) -> Option<TokenId> {
+	fn convert_back(_loc: &Location) -> Option<TokenId> {
 		None
 	}
 }

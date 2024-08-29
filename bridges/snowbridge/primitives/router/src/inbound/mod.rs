@@ -106,7 +106,7 @@ pub struct MessageToXcm<
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
-	ConvertAssetId: MaybeEquivalence<TokenId, VersionedLocation>,
+	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
 {
 	_phantom: PhantomData<(
 		CreateAssetCall,
@@ -164,7 +164,7 @@ where
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
-	ConvertAssetId: MaybeEquivalence<TokenId, VersionedLocation>,
+	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
 {
 	type Balance = Balance;
 	type AccountId = AccountId;
@@ -217,7 +217,7 @@ where
 	InboundQueuePalletInstance: Get<u8>,
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
-	ConvertAssetId: MaybeEquivalence<TokenId, VersionedLocation>,
+	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
 {
 	fn convert_register_token(
 		message_id: H256,
