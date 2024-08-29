@@ -722,7 +722,7 @@ pub mod pallet {
 				symbol: metadata.symbol,
 				decimals: metadata.decimals,
 			};
-			Self::send(ParaId::from(1000).into(), command, pays_fee)?;
+			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, pays_fee)?;
 
 			Self::deposit_event(Event::<T>::RegisterToken { asset_id: asset_id.into(), token_id });
 
