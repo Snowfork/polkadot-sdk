@@ -28,7 +28,9 @@ use sp_core::{ConstU32, H256};
 use sp_io::hashing::keccak_256;
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use sp_std::prelude::*;
-use xcm::prelude::{GeneralIndex, GlobalConsensus, Junction::Parachain, Location, PalletInstance};
+use xcm::prelude::{
+	GeneralIndex, GeneralKey, GlobalConsensus, Junction::Parachain, Location, PalletInstance,
+};
 use xcm_builder::{DescribeAllTerminal, DescribeFamily, DescribeLocation, HashedDescription};
 
 /// The ID of an agent contract
@@ -175,17 +177,35 @@ pub struct AssetRegistrarMetadata {
 
 pub type TokenId = H256;
 
-pub type TokenIdOf = HashedDescription<TokenId, DescribeGlobal>;
+pub type TokenIdOf = HashedDescription<TokenId, DescribeGlobalPrefix<DescribeInner>>;
 
-pub struct DescribeGlobal;
-impl DescribeLocation for DescribeGlobal {
+pub struct DescribeGlobalPrefix<DescribeInterior>(sp_std::marker::PhantomData<DescribeInterior>);
+impl<Suffix: DescribeLocation> DescribeLocation for DescribeGlobalPrefix<Suffix> {
 	fn describe_location(l: &Location) -> Option<Vec<u8>> {
-		match l.unpack() {
-			(1, [GlobalConsensus(network)]) => Some((*network).encode()),
-			(
-				1,
-				[GlobalConsensus(network), Parachain(id), PalletInstance(instance), GeneralIndex(index)],
-			) => Some((*network, *id, *instance, *index).encode()),
+		match (l.parent_count(), l.first_interior()) {
+			(1, Some(GlobalConsensus(network))) => {
+				let tail = l.clone().split_first_interior().0;
+				let interior = Suffix::describe_location(&tail.into())?;
+				Some((b"pna", network, interior).encode())
+			},
+			_ => None,
+		}
+	}
+}
+
+pub struct DescribeInner;
+impl DescribeLocation for DescribeInner {
+	fn describe_location(l: &Location) -> Option<Vec<u8>> {
+		match l.unpack().1 {
+			[] => Some(Vec::<u8>::new().encode()),
+			[Parachain(id)] => Some((*id).encode()),
+			[Parachain(id), PalletInstance(instance)] => Some((*id, *instance).encode()),
+			[Parachain(id), PalletInstance(instance), GeneralIndex(index)] =>
+				Some((*id, *instance, *index).encode()),
+			[Parachain(id), PalletInstance(instance), GeneralKey { data, .. }] =>
+				Some((*id, *instance, *data).encode()),
+			[Parachain(id), GeneralIndex(index)] => Some((*id, *index).encode()),
+			[Parachain(id), GeneralKey { data, .. }] => Some((*id, *data).encode()),
 			_ => None,
 		}
 	}
