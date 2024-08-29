@@ -718,8 +718,8 @@ pub mod pallet {
 
 			let command = Command::RegisterNativeToken {
 				token_id,
-				name: metadata.name,
-				symbol: metadata.symbol,
+				name: metadata.name.into_inner(),
+				symbol: metadata.symbol.into_inner(),
 				decimals: metadata.decimals,
 			};
 			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, pays_fee)?;

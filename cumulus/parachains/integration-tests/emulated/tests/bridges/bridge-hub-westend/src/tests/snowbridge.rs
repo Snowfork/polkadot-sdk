@@ -345,8 +345,8 @@ fn register_relay_token() {
 				interior: [GlobalConsensus(Westend)].into()
 			})),
 			AssetRegistrarMetadata {
-				name: "wnd".as_bytes().to_vec(),
-				symbol: "wnd".as_bytes().to_vec(),
+				name: "wnd".as_bytes().to_vec().try_into().unwrap(),
+				symbol: "wnd".as_bytes().to_vec().try_into().unwrap(),
 				decimals: 12,
 			},
 		));

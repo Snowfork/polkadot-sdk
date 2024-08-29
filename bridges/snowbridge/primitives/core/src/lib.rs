@@ -21,10 +21,10 @@ pub use ringbuffer::{RingBufferMap, RingBufferMapImpl};
 pub use sp_core::U256;
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::traits::Contains;
+use frame_support::{traits::Contains, BoundedVec};
 use hex_literal::hex;
 use scale_info::TypeInfo;
-use sp_core::H256;
+use sp_core::{ConstU32, H256};
 use sp_io::hashing::keccak_256;
 use sp_runtime::{traits::AccountIdConversion, RuntimeDebug};
 use sp_std::prelude::*;
@@ -168,8 +168,8 @@ pub type AgentIdOf =
 
 #[derive(Clone, Default, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
 pub struct AssetRegistrarMetadata {
-	pub name: Vec<u8>,
-	pub symbol: Vec<u8>,
+	pub name: BoundedVec<u8, ConstU32<32>>,
+	pub symbol: BoundedVec<u8, ConstU32<32>>,
 	pub decimals: u8,
 }
 
