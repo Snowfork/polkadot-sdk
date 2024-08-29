@@ -63,7 +63,7 @@ impl MaybeEquivalence<TokenId, Location> for MockTokenIdConvert {
 	fn convert(_id: &TokenId) -> Option<Location> {
 		Some(Location::parent())
 	}
-	fn convert_back(_loc: &VersionedLocation) -> Option<TokenId> {
+	fn convert_back(_loc: &Location) -> Option<TokenId> {
 		None
 	}
 }

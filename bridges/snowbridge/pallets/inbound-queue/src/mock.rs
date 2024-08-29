@@ -15,7 +15,7 @@ use snowbridge_core::{
 use snowbridge_router_primitives::inbound::MessageToXcm;
 use sp_core::{H160, H256};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, MaybeEquivalence, Verify},
+	traits::{IdentifyAccount, IdentityLookup, MaybeEquivalence, Verify},
 	BuildStorage, FixedU128, MultiSignature,
 };
 use sp_std::{convert::From, default::Default};
