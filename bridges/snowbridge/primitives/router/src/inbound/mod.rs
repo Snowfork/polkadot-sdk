@@ -102,11 +102,15 @@ pub struct MessageToXcm<
 	AccountId,
 	Balance,
 	ConvertAssetId,
+	UniversalLocation,
+	GlobalAssetHubLocation,
 > where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
 	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+	UniversalLocation: Get<InteriorLocation>,
+	GlobalAssetHubLocation: Get<Location>,
 {
 	_phantom: PhantomData<(
 		CreateAssetCall,
@@ -115,6 +119,8 @@ pub struct MessageToXcm<
 		AccountId,
 		Balance,
 		ConvertAssetId,
+		UniversalLocation,
+		GlobalAssetHubLocation,
 	)>,
 }
 
@@ -127,6 +133,7 @@ pub enum ConvertMessageError {
 	InvalidToken,
 	/// The fee asset is not supported for conversion.
 	UnsupportedFeeAsset,
+	CannotReanchor,
 }
 
 /// convert the inbound message to xcm which will be forwarded to the destination chain
@@ -149,6 +156,8 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
+		UniversalLocation,
+		GlobalAssetHubLocation,
 	> ConvertMessage
 	for MessageToXcm<
 		CreateAssetCall,
@@ -157,6 +166,8 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
+		UniversalLocation,
+		GlobalAssetHubLocation,
 	>
 where
 	CreateAssetCall: Get<CallIndex>,
@@ -165,6 +176,8 @@ where
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+	UniversalLocation: Get<InteriorLocation>,
+	GlobalAssetHubLocation: Get<Location>,
 {
 	type Balance = Balance;
 	type AccountId = AccountId;
@@ -202,6 +215,8 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
+		UniversalLocation,
+		GlobalAssetHubLocation,
 	>
 	MessageToXcm<
 		CreateAssetCall,
@@ -210,6 +225,8 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
+		UniversalLocation,
+		GlobalAssetHubLocation,
 	>
 where
 	CreateAssetCall: Get<CallIndex>,
@@ -218,6 +235,8 @@ where
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
+	UniversalLocation: Get<InteriorLocation>,
+	GlobalAssetHubLocation: Get<Location>,
 {
 	fn convert_register_token(
 		message_id: H256,
@@ -365,23 +384,6 @@ where
 		)
 	}
 
-	fn reanchored(loc: Location) -> Location {
-		// Remove the GlobalConsensus prefix
-		let suffix_loc = Location::new(loc.parents, loc.interior.split_first().0);
-
-		// Reanchor in the view of AH
-		let reanchored_loc = match suffix_loc.clone().unpack() {
-			(1, interior) => match interior.first() {
-				Some(Parachain(1000)) => Some(suffix_loc.clone().interior.split_first().0.into()),
-				_ => None,
-			},
-			_ => None,
-		}
-		.unwrap_or(suffix_loc.clone());
-
-		reanchored_loc
-	}
-
 	fn convert_send_native_token(
 		message_id: H256,
 		chain_id: u64,
@@ -411,7 +413,10 @@ where
 		let asset_loc =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
 
-		let reanchored_asset_loc = Self::reanchored(asset_loc);
+		let mut reanchored_asset_loc = asset_loc.clone();
+		reanchored_asset_loc
+			.reanchor(&GlobalAssetHubLocation::get(), &UniversalLocation::get())
+			.map_err(|_| ConvertMessageError::CannotReanchor)?;
 
 		let asset: Asset = (reanchored_asset_loc, amount).into();
 

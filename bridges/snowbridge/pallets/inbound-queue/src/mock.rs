@@ -112,6 +112,9 @@ parameter_types! {
 	pub const SendTokenExecutionFee: u128 = 1_000_000_000;
 	pub const InitialFund: u128 = 1_000_000_000_000;
 	pub const InboundQueuePalletInstance: u8 = 80;
+	pub UniversalLocation: InteriorLocation =
+		[GlobalConsensus(Westend), Parachain(1013)].into();
+	pub GlobalAssetHub: Location = Location::new(1,[GlobalConsensus(Westend),Parachain(1000)]);
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -229,6 +232,8 @@ impl inbound_queue::Config for Test {
 		AccountId,
 		Balance,
 		MockTokenIdConvert,
+		UniversalLocation,
+		GlobalAssetHub,
 	>;
 	type PricingParameters = Parameters;
 	type ChannelLookup = MockChannelLookup;

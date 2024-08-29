@@ -41,11 +41,18 @@ fn test_contract_location_with_incorrect_location_fails_convert() {
 
 #[test]
 fn test_reanchor() {
-	let asset_id: Location = Location { parents: 1, interior: GlobalConsensus(Rococo).into() };
+	let asset_id: Location = Location {
+		parents: 1,
+		interior: [GlobalConsensus(Westend), Parachain(1000), PalletInstance(50), GeneralIndex(2)]
+			.into(),
+	};
 	let asset: Asset = (asset_id, 1).into();
-	let context: InteriorLocation = [GlobalConsensus(Rococo), Parachain(1013)].into();
-	let dest = Location::new(1, [GlobalConsensus(Rococo)]);
+	let context: InteriorLocation = [GlobalConsensus(Westend), Parachain(1013)].into();
+	let dest = Location::new(1, [GlobalConsensus(Westend), Parachain(1000)]);
 	let mut reanchored_assets = asset.clone();
 	assert_ok!(reanchored_assets.reanchor(&dest, &context));
-	assert_eq!(reanchored_assets.fun, 1.into());
+	assert_eq!(
+		reanchored_assets.id.0,
+		Location { parents: 0, interior: [PalletInstance(50), GeneralIndex(2)].into() }
+	);
 }
