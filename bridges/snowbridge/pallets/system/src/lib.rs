@@ -601,17 +601,17 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::register_token())]
 		pub fn register_token(
 			origin: OriginFor<T>,
-			asset: Box<VersionedLocation>,
+			location: Box<VersionedLocation>,
 			metadata: AssetRegistrarMetadata,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let asset: Location =
-				(*asset).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
+			let asset_loc: Location =
+				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
 			let pays_fee = PaysFee::<T>::Yes(who);
 
-			Self::do_register_token(asset, metadata, pays_fee)?;
+			Self::do_register_token(asset_loc, metadata, pays_fee)?;
 
 			Ok(())
 		}
@@ -706,15 +706,15 @@ pub mod pallet {
 		}
 
 		pub(crate) fn do_register_token(
-			asset_id: Location,
+			asset_loc: Location,
 			metadata: AssetRegistrarMetadata,
 			pays_fee: PaysFee<T>,
 		) -> Result<(), DispatchError> {
 			// Record the token id or fail if it has already been created
-			let token_id = TokenIdOf::convert_location(&asset_id)
+			let token_id = TokenIdOf::convert_location(&asset_loc)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
-			Tokens::<T>::insert(token_id, asset_id.clone());
-			LocationToToken::<T>::insert(asset_id.clone(), token_id);
+			Tokens::<T>::insert(token_id, asset_loc.clone());
+			LocationToToken::<T>::insert(asset_loc.clone(), token_id);
 
 			let command = Command::RegisterNativeToken {
 				token_id,
@@ -724,7 +724,7 @@ pub mod pallet {
 			};
 			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, pays_fee)?;
 
-			Self::deposit_event(Event::<T>::RegisterToken { asset_id: asset_id.into(), token_id });
+			Self::deposit_event(Event::<T>::RegisterToken { asset_id: asset_loc.into(), token_id });
 
 			Ok(())
 		}
