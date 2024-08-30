@@ -25,7 +25,7 @@ use rococo_westend_system_emulated_network::{
 	asset_hub_westend_emulated_chain::genesis::AssetHubWestendAssetOwner,
 	penpal_emulated_chain::penpal_runtime::xcm_config::RelayLocation,
 };
-use snowbridge_core::{outbound::OperatingMode, AssetRegistrarMetadata, TokenIdOf};
+use snowbridge_core::{outbound::OperatingMode, AssetMetadata, TokenIdOf};
 use snowbridge_router_primitives::inbound::{
 	Command, ConvertMessage, Destination, GlobalConsensusEthereumConvertsFor, MessageV1,
 	VersionedMessage,
@@ -51,7 +51,7 @@ pub enum ControlCall {
 	ForceRegisterToken {
 		location: Box<VersionedLocation>,
 		asset: Box<VersionedLocation>,
-		metadata: AssetRegistrarMetadata,
+		metadata: AssetMetadata,
 	},
 }
 
@@ -337,7 +337,7 @@ fn transfer_relay_token() {
 		assert_ok!(<BridgeHubWestend as BridgeHubWestendPallet>::EthereumSystem::register_token(
 			RuntimeOrigin::signed(BridgeHubWestendSender::get()),
 			Box::new(VersionedLocation::V4(asset_id.clone())),
-			AssetRegistrarMetadata {
+			AssetMetadata {
 				name: "wnd".as_bytes().to_vec().try_into().unwrap(),
 				symbol: "wnd".as_bytes().to_vec().try_into().unwrap(),
 				decimals: 12,

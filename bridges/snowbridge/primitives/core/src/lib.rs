@@ -169,7 +169,7 @@ pub type AgentIdOf =
 	HashedDescription<AgentId, (DescribeHere, DescribeFamily<DescribeAllTerminal>)>;
 
 #[derive(Clone, Default, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
-pub struct AssetRegistrarMetadata {
+pub struct AssetMetadata {
 	pub name: BoundedVec<u8, ConstU32<32>>,
 	pub symbol: BoundedVec<u8, ConstU32<32>>,
 	pub decimals: u8,

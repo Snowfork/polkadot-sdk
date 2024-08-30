@@ -63,7 +63,7 @@ use frame_system::pallet_prelude::*;
 use snowbridge_core::{
 	meth,
 	outbound::{Command, Initializer, Message, OperatingMode, SendError, SendMessage},
-	sibling_sovereign_account, AgentId, AssetRegistrarMetadata, Channel, ChannelId, ParaId,
+	sibling_sovereign_account, AgentId, AssetMetadata, Channel, ChannelId, ParaId,
 	PricingParameters as PricingParametersRecord, TokenId, TokenIdOf, PRIMARY_GOVERNANCE_CHANNEL,
 	SECONDARY_GOVERNANCE_CHANNEL,
 };
@@ -602,7 +602,7 @@ pub mod pallet {
 		pub fn register_token(
 			origin: OriginFor<T>,
 			location: Box<VersionedLocation>,
-			metadata: AssetRegistrarMetadata,
+			metadata: AssetMetadata,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -707,7 +707,7 @@ pub mod pallet {
 
 		pub(crate) fn do_register_token(
 			asset_loc: Location,
-			metadata: AssetRegistrarMetadata,
+			metadata: AssetMetadata,
 			pays_fee: PaysFee<T>,
 		) -> Result<(), DispatchError> {
 			// Record the token id or fail if it has already been created

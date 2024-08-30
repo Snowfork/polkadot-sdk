@@ -170,7 +170,7 @@ mod benchmarks {
 
 		let relay_token_asset_id: Location = Location::new(1, [GlobalConsensus(Westend)]);
 		let asset = Box::new(VersionedLocation::V4(relay_token_asset_id));
-		let asset_metadata = AssetRegistrarMetadata {
+		let asset_metadata = AssetMetadata {
 			name: "wnd".as_bytes().to_vec().try_into().unwrap(),
 			symbol: "wnd".as_bytes().to_vec().try_into().unwrap(),
 			decimals: 12,
