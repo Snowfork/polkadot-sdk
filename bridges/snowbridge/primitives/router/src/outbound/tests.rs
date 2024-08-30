@@ -1120,12 +1120,8 @@ fn xcm_converter_transfer_native_token_success() {
 	.into();
 	let mut converter =
 		XcmConverter::<MockTokenIdConvert, ()>::new(&message, network, Default::default());
-	let expected_payload = Command::MintForeignToken {
-		agent_id: Default::default(),
-		recipient: beneficiary_address.into(),
-		amount,
-		token_id,
-	};
+	let expected_payload =
+		Command::MintForeignToken { recipient: beneficiary_address.into(), amount, token_id };
 	let result = converter.convert();
 	assert_eq!(result, Ok((expected_payload, [0; 32])));
 }
