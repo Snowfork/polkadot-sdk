@@ -40,7 +40,32 @@ fn test_contract_location_with_incorrect_location_fails_convert() {
 }
 
 #[test]
-fn test_reanchor() {
+fn test_reanchor_pna_on_ah() {
+	let asset_id: Location =
+		Location { parents: 0, interior: [PalletInstance(50), GeneralIndex(2)].into() };
+
+	let asset: Asset = (asset_id, 1).into();
+	let context: InteriorLocation = [GlobalConsensus(Westend), Parachain(1000)].into();
+	let dest = Location::new(2, [GlobalConsensus(Ethereum { chain_id: 1 })]);
+	let mut reanchored_assets = asset.clone();
+	assert_ok!(reanchored_assets.reanchor(&dest, &context));
+	assert_eq!(
+		reanchored_assets.id.0,
+		Location {
+			parents: 1,
+			interior: [
+				GlobalConsensus(Westend),
+				Parachain(1000),
+				PalletInstance(50),
+				GeneralIndex(2)
+			]
+			.into()
+		}
+	);
+}
+
+#[test]
+fn test_reanchor_pna_on_bh() {
 	let asset_id: Location = Location {
 		parents: 1,
 		interior: [GlobalConsensus(Westend), Parachain(1000), PalletInstance(50), GeneralIndex(2)]
