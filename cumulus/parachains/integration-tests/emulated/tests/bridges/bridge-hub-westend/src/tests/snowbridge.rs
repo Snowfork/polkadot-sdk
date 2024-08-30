@@ -83,9 +83,7 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
+			vec![RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},]
 		);
 	});
 
@@ -94,9 +92,7 @@ fn register_weth_token_from_ethereum_to_asset_hub() {
 
 		assert_expected_events!(
 			AssetHubWestend,
-			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Created { .. }) => {},
-			]
+			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Created { .. }) => {},]
 		);
 	});
 }
@@ -155,9 +151,7 @@ fn send_token_from_ethereum_to_asset_hub() {
 		// Check that the message was sent
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
+			vec![RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},]
 		);
 	});
 
@@ -167,9 +161,7 @@ fn send_token_from_ethereum_to_asset_hub() {
 		// Check that the token was received and issued as a foreign asset on AssetHub
 		assert_expected_events!(
 			AssetHubWestend,
-			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-			]
+			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},]
 		);
 	});
 }
@@ -224,8 +216,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		// Check that the send token message was sent using xcm
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-	         RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) =>{},]
+			vec![RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) =>{},]
 		);
 	});
 
@@ -236,9 +227,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		// Check that AssetHub has issued the foreign asset
 		assert_expected_events!(
 			AssetHubWestend,
-			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},
-			]
+			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Issued { .. }) => {},]
 		);
 		let assets = vec![Asset {
 			id: AssetId(Location::new(
@@ -291,10 +280,7 @@ fn send_weth_asset_from_asset_hub_to_ethereum() {
 		// Outbound Queue
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-
-	RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued
-	{..}) => {},             ]
+			vec![RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{ .. }) => {},]
 		);
 		let events = BridgeHubWestend::events();
 		// Check that the local fee was credited to the Snowbridge sovereign account
@@ -360,11 +346,7 @@ fn transfer_relay_token() {
 		// Check that a message was sent to Ethereum to create the agent
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::RegisterToken {
-					..
-				}) => {},
-			]
+			vec![RuntimeEvent::EthereumSystem(snowbridge_pallet_system::Event::RegisterToken { .. }) => {},]
 		);
 	});
 
@@ -415,8 +397,7 @@ fn transfer_relay_token() {
 		// Outbound Queue
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{..}) => {}, 		]
+			vec![RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{ .. }) => {},]
 		);
 
 		// Send relay token back to AH
@@ -437,9 +418,7 @@ fn transfer_relay_token() {
 
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
+			vec![RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},]
 		);
 	});
 
@@ -448,8 +427,7 @@ fn transfer_relay_token() {
 
 		assert_expected_events!(
 			AssetHubWestend,
-			vec![
-				RuntimeEvent::Balances(pallet_balances::Event::Burned{..}) => {},]
+			vec![RuntimeEvent::Balances(pallet_balances::Event::Burned{ .. }) => {},]
 		);
 
 		let events = AssetHubWestend::events();
@@ -544,8 +522,7 @@ fn transfer_ah_token() {
 
 		assert_expected_events!(
 			AssetHubWestend,
-			vec![
-				RuntimeEvent::Assets(pallet_assets::Event::Transferred{ .. }) => {}, 		]
+			vec![RuntimeEvent::Assets(pallet_assets::Event::Transferred{ .. }) => {},]
 		);
 
 		let events = AssetHubWestend::events();
@@ -568,8 +545,7 @@ fn transfer_ah_token() {
 		// Outbound Queue
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{ .. }) => {}, 		]
+			vec![RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{ .. }) => {},]
 		);
 
 		let message = VersionedMessage::V1(MessageV1 {
@@ -588,9 +564,7 @@ fn transfer_ah_token() {
 
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
+			vec![RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},]
 		);
 	});
 
@@ -599,8 +573,7 @@ fn transfer_ah_token() {
 
 		assert_expected_events!(
 			AssetHubWestend,
-			vec![
-				RuntimeEvent::Assets(pallet_assets::Event::Burned{..}) => {},]
+			vec![RuntimeEvent::Assets(pallet_assets::Event::Burned{..}) => {},]
 		);
 
 		let events = AssetHubWestend::events();
@@ -713,8 +686,7 @@ fn transfer_penpal_token() {
 
 		assert_expected_events!(
 			AssetHubWestend,
-			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Transferred{..}) => {},]
+			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Transferred{..}) => {},]
 		);
 
 		let events = AssetHubWestend::events();
@@ -737,8 +709,7 @@ fn transfer_penpal_token() {
 		// Outbound Queue
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{..}) => {}, 		]
+			vec![RuntimeEvent::EthereumOutboundQueue(snowbridge_pallet_outbound_queue::Event::MessageQueued{..}) => {},]
 		);
 
 		let message = VersionedMessage::V1(MessageV1 {
@@ -762,9 +733,7 @@ fn transfer_penpal_token() {
 
 		assert_expected_events!(
 			BridgeHubWestend,
-			vec![
-				RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},
-			]
+			vec![RuntimeEvent::XcmpQueue(cumulus_pallet_xcmp_queue::Event::XcmpMessageSent { .. }) => {},]
 		);
 	});
 
@@ -774,9 +743,7 @@ fn transfer_penpal_token() {
 		// Check that token burnt from some reserved account
 		assert_expected_events!(
 			AssetHubWestend,
-			vec![
-				RuntimeEvent::ForeignAssets(pallet_assets::Event::Burned { .. }) => {},
-			]
+			vec![RuntimeEvent::ForeignAssets(pallet_assets::Event::Burned { .. }) => {},]
 		);
 	});
 
@@ -786,9 +753,7 @@ fn transfer_penpal_token() {
 		// Check that token issued to beneficial
 		assert_expected_events!(
 			PenpalB,
-			vec![
-				RuntimeEvent::Assets(pallet_assets::Event::Issued { .. }) => {},
-			]
+			vec![RuntimeEvent::Assets(pallet_assets::Event::Issued { .. }) => {},]
 		);
 
 		let events = PenpalB::events();
