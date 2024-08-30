@@ -140,7 +140,7 @@ mod v1 {
 			multiplier: UD60x18,
 		},
 		/// Transfer ERC20 tokens
-		TransferToken {
+		TransferNativeToken {
 			/// ID of the agent
 			agent_id: H256,
 			/// Address of the ERC20 token
@@ -150,8 +150,8 @@ mod v1 {
 			/// The amount of tokens to transfer
 			amount: u128,
 		},
-		/// Register token from Polkadot
-		RegisterNativeToken {
+		/// Register foreign token from Polkadot
+		RegisterForeignToken {
 			/// ID for the token
 			token_id: H256,
 			/// Name of the token
@@ -161,8 +161,8 @@ mod v1 {
 			/// Number of decimal places
 			decimals: u8,
 		},
-		/// Transfer token from Polkadot
-		TransferNativeToken {
+		/// Mint foreign token from Polkadot
+		MintForeignToken {
 			/// ID of the agent
 			agent_id: H256,
 			/// ID for the token
@@ -187,9 +187,9 @@ mod v1 {
 				Command::TransferNativeFromAgent { .. } => 6,
 				Command::SetTokenTransferFees { .. } => 7,
 				Command::SetPricingParameters { .. } => 8,
-				Command::TransferToken { .. } => 9,
-				Command::RegisterNativeToken { .. } => 10,
-				Command::TransferNativeToken { .. } => 11,
+				Command::TransferNativeToken { .. } => 9,
+				Command::RegisterForeignToken { .. } => 10,
+				Command::MintForeignToken { .. } => 11,
 			}
 		}
 
@@ -247,21 +247,21 @@ mod v1 {
 						Token::Uint(U256::from(*delivery_cost)),
 						Token::Uint(multiplier.clone().into_inner()),
 					])]),
-				Command::TransferToken { agent_id, token, recipient, amount } =>
+				Command::TransferNativeToken { agent_id, token, recipient, amount } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::Address(*token),
 						Token::Address(*recipient),
 						Token::Uint(U256::from(*amount)),
 					])]),
-				Command::RegisterNativeToken { token_id, name, symbol, decimals } =>
+				Command::RegisterForeignToken { token_id, name, symbol, decimals } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(token_id.as_bytes().to_owned()),
 						Token::String(name.to_owned()),
 						Token::String(symbol.to_owned()),
 						Token::Uint(U256::from(*decimals)),
 					])]),
-				Command::TransferNativeToken { agent_id, token_id, recipient, amount } =>
+				Command::MintForeignToken { agent_id, token_id, recipient, amount } =>
 					ethabi::encode(&[Token::Tuple(vec![
 						Token::FixedBytes(agent_id.as_bytes().to_owned()),
 						Token::FixedBytes(token_id.as_bytes().to_owned()),
@@ -460,9 +460,9 @@ impl GasMeter for ConstantGasMeter {
 			},
 			Command::SetTokenTransferFees { .. } => 60_000,
 			Command::SetPricingParameters { .. } => 60_000,
-			Command::TransferToken { .. } => 100_000,
-			Command::RegisterNativeToken { .. } => 1_200_000,
 			Command::TransferNativeToken { .. } => 100_000,
+			Command::RegisterForeignToken { .. } => 1_200_000,
+			Command::MintForeignToken { .. } => 100_000,
 		}
 	}
 }

@@ -716,7 +716,7 @@ pub mod pallet {
 			Tokens::<T>::insert(token_id, asset_loc.clone());
 			LocationToToken::<T>::insert(asset_loc.clone(), token_id);
 
-			let command = Command::RegisterNativeToken {
+			let command = Command::RegisterForeignToken {
 				token_id,
 				name: metadata.name.into_inner(),
 				symbol: metadata.symbol.into_inner(),

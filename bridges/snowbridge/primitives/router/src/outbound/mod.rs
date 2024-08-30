@@ -295,7 +295,7 @@ where
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
 		Ok((
-			Command::TransferToken { agent_id: self.agent_id, token, recipient, amount },
+			Command::TransferNativeToken { agent_id: self.agent_id, token, recipient, amount },
 			*topic_id,
 		))
 	}
@@ -393,7 +393,7 @@ where
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
 		Ok((
-			Command::TransferNativeToken { agent_id: self.agent_id, token_id, recipient, amount },
+			Command::MintForeignToken { agent_id: self.agent_id, token_id, recipient, amount },
 			*topic_id,
 		))
 	}

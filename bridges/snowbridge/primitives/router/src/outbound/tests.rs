@@ -424,7 +424,7 @@ fn xcm_converter_convert_success() {
 	.into();
 	let mut converter =
 		XcmConverter::<MockTokenIdConvert, ()>::new(&message, network, Default::default());
-	let expected_payload = Command::TransferToken {
+	let expected_payload = Command::TransferNativeToken {
 		agent_id: Default::default(),
 		token: token_address.into(),
 		recipient: beneficiary_address.into(),
@@ -459,7 +459,7 @@ fn xcm_converter_convert_without_buy_execution_yields_success() {
 	.into();
 	let mut converter =
 		XcmConverter::<MockTokenIdConvert, ()>::new(&message, network, Default::default());
-	let expected_payload = Command::TransferToken {
+	let expected_payload = Command::TransferNativeToken {
 		agent_id: Default::default(),
 		token: token_address.into(),
 		recipient: beneficiary_address.into(),
@@ -496,7 +496,7 @@ fn xcm_converter_convert_with_wildcard_all_asset_filter_succeeds() {
 	.into();
 	let mut converter =
 		XcmConverter::<MockTokenIdConvert, ()>::new(&message, network, Default::default());
-	let expected_payload = Command::TransferToken {
+	let expected_payload = Command::TransferNativeToken {
 		agent_id: Default::default(),
 		token: token_address.into(),
 		recipient: beneficiary_address.into(),
@@ -533,7 +533,7 @@ fn xcm_converter_convert_with_fees_less_than_reserve_yields_success() {
 	.into();
 	let mut converter =
 		XcmConverter::<MockTokenIdConvert, ()>::new(&message, network, Default::default());
-	let expected_payload = Command::TransferToken {
+	let expected_payload = Command::TransferNativeToken {
 		agent_id: Default::default(),
 		token: token_address.into(),
 		recipient: beneficiary_address.into(),
@@ -1120,7 +1120,7 @@ fn xcm_converter_transfer_native_token_success() {
 	.into();
 	let mut converter =
 		XcmConverter::<MockTokenIdConvert, ()>::new(&message, network, Default::default());
-	let expected_payload = Command::TransferNativeToken {
+	let expected_payload = Command::MintForeignToken {
 		agent_id: Default::default(),
 		recipient: beneficiary_address.into(),
 		amount,
