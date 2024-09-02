@@ -328,6 +328,11 @@ pub mod pallet {
 			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
 				(update.next_sync_committee_update.is_some() &&
 					update_attested_period == store_period);
+
+			println!("update_has_next_sync_committee {}", update_has_next_sync_committee);
+			println!("update.attested_header.slot {}", update.attested_header.slot);
+			println!("latest_finalized_state.slot {}", latest_finalized_state.slot);
+
 			ensure!(
 				update.attested_header.slot > latest_finalized_state.slot ||
 					update_has_next_sync_committee,
@@ -457,10 +462,13 @@ pub mod pallet {
 						<Error<T>>::InvalidSyncCommitteeUpdate
 					);
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
+					println!("condition 1");
 				} else if update_finalized_period == store_period + 1 {
 					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
+					println!("condition 2");
 				}
+				println!("SyncCommitteeUpdated at period  {}", update_finalized_period);
 				log::info!(
 					target: LOG_TARGET,
 					"💫 SyncCommitteeUpdated at period {}.",

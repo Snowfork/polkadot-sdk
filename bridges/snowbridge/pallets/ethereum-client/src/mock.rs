@@ -63,6 +63,26 @@ pub fn load_next_finalized_header_update_fixture() -> snowbridge_beacon_primitiv
 	load_fixture("next-finalized-header-update.json".to_string()).unwrap()
 }
 
+pub fn load_test_checkpoint_update_fixture(
+) -> snowbridge_beacon_primitives::CheckpointUpdate<{ config::SYNC_COMMITTEE_SIZE }> {
+	load_fixture("initial-checkpoint-test.json".to_string()).unwrap()
+}
+
+pub fn load_test_sync_committee_update_fixture() -> snowbridge_beacon_primitives::Update<
+	{ config::SYNC_COMMITTEE_SIZE },
+	{ config::SYNC_COMMITTEE_BITS_SIZE },
+> {
+	load_fixture("sync-committee-update-test.json".to_string()).unwrap()
+}
+
+pub fn load_second_test_sync_committee_update_fixture() -> snowbridge_beacon_primitives::Update<
+	{ config::SYNC_COMMITTEE_SIZE },
+	{ config::SYNC_COMMITTEE_BITS_SIZE },
+> {
+	load_fixture("second-sync-committee-update-test.json".to_string()).unwrap()
+}
+
+
 pub fn get_message_verification_payload() -> (Log, Proof) {
 	let inbound_fixture = snowbridge_pallet_ethereum_client_fixtures::make_inbound_fixture();
 	(inbound_fixture.message.event_log, inbound_fixture.message.proof)
