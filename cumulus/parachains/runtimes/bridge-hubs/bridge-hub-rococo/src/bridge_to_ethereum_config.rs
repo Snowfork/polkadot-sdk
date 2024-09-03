@@ -37,6 +37,7 @@ use crate::xcm_config::RelayNetwork;
 use benchmark_helpers::DoNothingRouter;
 use frame_support::{parameter_types, weights::ConstantMultiplier};
 use pallet_xcm::EnsureXcm;
+use snowbridge_pallet_system::EnsureRootOnly;
 use sp_runtime::{
 	traits::{ConstU32, ConstU8, Keccak256},
 	FixedU128,
@@ -190,6 +191,7 @@ impl snowbridge_pallet_system::Config for Runtime {
 	type InboundDeliveryCost = EthereumInboundQueue;
 	type UniversalLocation = UniversalLocation;
 	type EthereumNetwork = EthereumNetwork;
+	type RegisterTokenOrigin = EnsureRootOnly<Runtime>;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
