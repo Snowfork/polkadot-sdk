@@ -477,6 +477,7 @@ pub mod pallet {
 					"💫 SyncCommitteeUpdated at period {}.",
 					update_finalized_period
 				);
+				<LatestFreeSyncCommitteeUpdatePeriod<T>>::set(update_finalized_period);
 				Self::deposit_event(Event::SyncCommitteeUpdated {
 					period: update_finalized_period,
 				});
@@ -665,10 +666,12 @@ pub mod pallet {
 			// If the sync committee was successfully updated, the update may be free.
 			let update_period = compute_period(update.finalized_header.slot);
 			let latest_free_update_period = <LatestFreeSyncCommitteeUpdatePeriod<T>>::get();
-			let may_be_free =
+			// If the next sync committee is not known and this update sets it, the update is free.
+			// If the sync committee update is in a period that we have not received an update for,
+			// the update is free.
+			let refundable =
 				!<NextSyncCommittee<T>>::exists() || update_period > latest_free_update_period;
-			if update.next_sync_committee_update.is_some() && may_be_free {
-				<LatestFreeSyncCommitteeUpdatePeriod<T>>::set(update_period);
+			if update.next_sync_committee_update.is_some() && refundable {
 				return Pays::No;
 			}
 
