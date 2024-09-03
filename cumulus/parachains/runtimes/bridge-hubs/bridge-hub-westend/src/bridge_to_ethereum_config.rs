@@ -38,7 +38,7 @@ use crate::xcm_config::RelayNetwork;
 use benchmark_helpers::DoNothingRouter;
 use frame_support::{parameter_types, weights::ConstantMultiplier};
 use pallet_xcm::EnsureXcm;
-use snowbridge_pallet_system::EnsureRootOnly;
+use snowbridge_pallet_system::EnsureOriginWithControlFlag;
 use sp_runtime::{
 	traits::{ConstU32, ConstU8, Keccak256},
 	FixedU128,
@@ -59,6 +59,7 @@ pub type SnowbridgeExporter = EthereumBlobExporter<
 // Ethereum Bridge
 parameter_types! {
 	pub storage EthereumGatewayAddress: H160 = H160(hex_literal::hex!("EDa338E4dC46038493b885327842fD3E301CaB39"));
+	pub storage EnableRegisterToken: bool = false;
 }
 
 parameter_types! {
@@ -191,7 +192,8 @@ impl snowbridge_pallet_system::Config for Runtime {
 	type InboundDeliveryCost = EthereumInboundQueue;
 	type UniversalLocation = UniversalLocation;
 	type EthereumNetwork = EthereumNetwork;
-	type RegisterTokenOrigin = EnsureRootOnly<Runtime>;
+	type RegisterTokenOrigin =
+		EnsureOriginWithControlFlag<Runtime, EnableRegisterToken, TreasuryAccount>;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

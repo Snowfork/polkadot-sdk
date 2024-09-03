@@ -135,36 +135,25 @@ where
 	No,
 }
 
-pub struct EnsureRootOrSigned<T>(core::marker::PhantomData<T>);
-impl<T: Config> EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureRootOrSigned<T> {
-	type Success = (bool, Option<AccountIdOf<T>>);
+pub struct EnsureOriginWithControlFlag<T, F, A>(core::marker::PhantomData<(T, F, A)>);
+impl<T: Config, F: Get<bool>, A: Get<AccountIdOf<T>>>
+	EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureOriginWithControlFlag<T, F, A>
+{
+	type Success = AccountIdOf<T>;
 	fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
 		o.into().and_then(|o| match o {
-			RawOrigin::Root => Ok((true, None)),
-			RawOrigin::Signed(t) => Ok((false, Some(t))),
+			RawOrigin::Root => Ok(A::get()),
+			RawOrigin::Signed(t) if F::get() => Ok(t),
 			r => Err(T::RuntimeOrigin::from(r)),
 		})
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
-		Ok(RawOrigin::Root.into())
-	}
-}
-
-pub struct EnsureRootOnly<T>(core::marker::PhantomData<T>);
-impl<T: Config> EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureRootOnly<T> {
-	type Success = (bool, Option<AccountIdOf<T>>);
-	fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
-		o.into().and_then(|o| match o {
-			RawOrigin::Root => Ok((true, None)),
-			r => Err(T::RuntimeOrigin::from(r)),
-		})
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
-		Ok(RawOrigin::Root.into())
+		let zero_account_id =
+			T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+				.expect("infinite length input; no invalid inputs for type; qed");
+		Ok(RawOrigin::Signed(zero_account_id).into())
 	}
 }
 
@@ -217,10 +206,7 @@ pub mod pallet {
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self::RuntimeOrigin>;
 
-		type RegisterTokenOrigin: EnsureOrigin<
-			Self::RuntimeOrigin,
-			Success = (bool, Option<AccountIdOf<Self>>),
-		>;
+		type RegisterTokenOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = AccountIdOf<Self>>;
 	}
 
 	#[pallet::event]
@@ -662,15 +648,12 @@ pub mod pallet {
 			location: Box<VersionedLocation>,
 			metadata: AssetMetadata,
 		) -> DispatchResultWithPostInfo {
-			let (is_sudo, who) = T::RegisterTokenOrigin::ensure_origin(origin)?;
+			let who = T::RegisterTokenOrigin::ensure_origin(origin)?;
 
 			let location: Location =
 				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			let mut pays_fee = PaysFee::<T>::No;
-			if !is_sudo && who.is_some() {
-				pays_fee = PaysFee::<T>::Yes(who.unwrap());
-			}
+			let pays_fee = PaysFee::<T>::Yes(who);
 
 			Self::do_register_token(&location, metadata, pays_fee)?;
 

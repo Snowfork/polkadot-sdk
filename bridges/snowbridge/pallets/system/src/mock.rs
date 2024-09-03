@@ -22,7 +22,7 @@ use xcm::prelude::*;
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::BenchmarkHelper;
-use crate::EnsureRootOrSigned;
+use crate::EnsureOriginWithControlFlag;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
@@ -190,6 +190,7 @@ parameter_types! {
 		multiplier: FixedU128::from_rational(4, 3)
 	};
 	pub const InboundDeliveryCost: u128 = 1_000_000_000;
+	pub const EnableRegisterToken: bool = false;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -213,7 +214,8 @@ impl crate::Config for Test {
 	type EthereumNetwork = EthereumNetwork;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
-	type RegisterTokenOrigin = EnsureRootOrSigned<Test>;
+	type RegisterTokenOrigin =
+		EnsureOriginWithControlFlag<Test, EnableRegisterToken, TreasuryAccount>;
 }
 
 // Build genesis storage according to the mock runtime.
