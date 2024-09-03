@@ -332,7 +332,6 @@ pub mod pallet {
 			let update_has_next_sync_committee = !<NextSyncCommittee<T>>::exists() &&
 				(update.next_sync_committee_update.is_some() &&
 					update_attested_period == store_period);
-
 			ensure!(
 				update.attested_header.slot > latest_finalized_state.slot ||
 					update_has_next_sync_committee,
