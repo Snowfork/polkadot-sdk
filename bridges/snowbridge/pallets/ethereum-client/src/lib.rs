@@ -180,6 +180,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type NextSyncCommittee<T: Config> = StorageValue<_, SyncCommitteePrepared, ValueQuery>;
 
+	/// The last period where a sync committee was updated for free.
+	#[pallet::storage]
+	pub type LatestFreeSyncCommitteeUpdatePeriod<T: Config> = StorageValue<_, u64, ValueQuery>;
+
 	/// The current operating mode of the pallet.
 	#[pallet::storage]
 	#[pallet::getter(fn operating_mode)]
@@ -329,10 +333,6 @@ pub mod pallet {
 				(update.next_sync_committee_update.is_some() &&
 					update_attested_period == store_period);
 
-			println!("update_has_next_sync_committee {}", update_has_next_sync_committee);
-			println!("update.attested_header.slot {}", update.attested_header.slot);
-			println!("latest_finalized_state.slot {}", latest_finalized_state.slot);
-
 			ensure!(
 				update.attested_header.slot > latest_finalized_state.slot ||
 					update_has_next_sync_committee,
@@ -448,6 +448,13 @@ pub mod pallet {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
 					.ok_or(Error::<T>::NotBootstrapped)?;
+
+			let pays_fee = Self::check_refundable(update, latest_finalized_state.slot);
+			let actual_weight = match update.next_sync_committee_update {
+				None => T::WeightInfo::submit(),
+				Some(_) => T::WeightInfo::submit_with_sync_committee(),
+			};
+
 			if let Some(next_sync_committee_update) = &update.next_sync_committee_update {
 				let store_period = compute_period(latest_finalized_state.slot);
 				let update_finalized_period = compute_period(update.finalized_header.slot);
@@ -462,13 +469,10 @@ pub mod pallet {
 						<Error<T>>::InvalidSyncCommitteeUpdate
 					);
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
-					println!("condition 1");
 				} else if update_finalized_period == store_period + 1 {
 					<CurrentSyncCommittee<T>>::set(<NextSyncCommittee<T>>::get());
 					<NextSyncCommittee<T>>::set(sync_committee_prepared);
-					println!("condition 2");
 				}
-				println!("SyncCommitteeUpdated at period  {}", update_finalized_period);
 				log::info!(
 					target: LOG_TARGET,
 					"💫 SyncCommitteeUpdated at period {}.",
@@ -477,12 +481,6 @@ pub mod pallet {
 				Self::deposit_event(Event::SyncCommitteeUpdated {
 					period: update_finalized_period,
 				});
-			};
-
-			let pays_fee = Self::check_refundable(update, latest_finalized_state.slot);
-			let actual_weight = match update.next_sync_committee_update {
-				None => T::WeightInfo::submit(),
-				Some(_) => T::WeightInfo::submit_with_sync_committee(),
 			};
 
 			if update.finalized_header.slot > latest_finalized_state.slot {
@@ -666,13 +664,20 @@ pub mod pallet {
 		/// successful sync committee updates are free.
 		pub(super) fn check_refundable(update: &Update, latest_slot: u64) -> Pays {
 			// If the sync committee was successfully updated, the update may be free.
-			if update.next_sync_committee_update.is_some() {
+			let update_period = compute_period(update.finalized_header.slot);
+			let latest_free_update_period = <LatestFreeSyncCommitteeUpdatePeriod<T>>::get();
+			let may_be_free =
+				!<NextSyncCommittee<T>>::exists() || update_period > latest_free_update_period;
+			if update.next_sync_committee_update.is_some() && may_be_free {
+				<LatestFreeSyncCommitteeUpdatePeriod<T>>::set(update_period);
 				return Pays::No;
 			}
 
-			// If free headers are allowed and the latest finalized header is larger than the
-			// minimum slot interval, the header import transaction is free.
-			if update.finalized_header.slot >= latest_slot + T::FreeHeadersInterval::get() as u64 {
+			// If the latest finalized header is larger than the minimum slot interval, the header
+			// import transaction is free.
+			if update.finalized_header.slot >=
+				latest_slot.saturating_add(T::FreeHeadersInterval::get() as u64)
+			{
 				return Pays::No;
 			}
 

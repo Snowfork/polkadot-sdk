@@ -358,7 +358,7 @@ fn submit_update_in_current_period() {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
 		let result = EthereumBeaconClient::submit(RuntimeOrigin::signed(1), update.clone());
 		assert_ok!(result);
-		assert_eq!(result.unwrap().pays_fee, Pays::Yes);
+		assert_eq!(result.unwrap().pays_fee, Pays::No);
 		let block_root: H256 = update.finalized_header.hash_tree_root().unwrap();
 		assert!(<FinalizedBeaconState<Test>>::contains_key(block_root));
 	});
@@ -693,32 +693,36 @@ fn duplicate_sync_committee_updates_are_not_free() {
 		// Check that if the same update is submitted, the update is not free.
 		let second_result =
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), sync_committee_update);
-		assert_err!(second_result, Error::<Test>::IrrelevantUpdate);
-		assert_eq!(second_result.unwrap_err().post_info.pays_fee, Pays::Yes);
+		assert_ok!(second_result);
+		assert_eq!(second_result.unwrap().pays_fee, Pays::Yes);
 	});
 }
 
 #[test]
 fn sync_committee_update_for_sync_committee_already_imported_are_not_free() {
-	let checkpoint = Box::new(load_test_checkpoint_update_fixture());
-	let sync_committee_update = Box::new(load_test_sync_committee_update_fixture());
-	let second_sync_committee_update = Box::new(load_second_test_sync_committee_update_fixture());
+	let checkpoint = Box::new(load_checkpoint_update_fixture());
+	let sync_committee_update = Box::new(load_sync_committee_update_fixture());
+	let second_sync_committee_update = Box::new(load_sync_committee_update_period_0_fixture());
+	let third_sync_committee_update = Box::new(load_next_sync_committee_update_fixture());
 
 	new_tester().execute_with(|| {
-		println!("checkpoint =============");
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
-		println!("submit 1 =============");
+
+		// Check that setting the next sync committee for period 0 is free (it is not set yet).
 		let result =
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), sync_committee_update.clone());
 		assert_ok!(result);
 		assert_eq!(result.unwrap().pays_fee, Pays::No);
 
-		println!("submit 2 =============");
-		// Check that if the same update is submitted, the update is not free.
+		// Check that setting the next sync committee for period 0 again is not free.
 		let second_result =
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), second_sync_committee_update);
-		//assert_err!(second_result, Error::<Test>::IrrelevantUpdate);
-		assert_eq!(second_result.unwrap_err().post_info.pays_fee, Pays::Yes);
+		assert_eq!(second_result.unwrap().pays_fee, Pays::Yes);
+
+		// Check that setting the next sync committee for period 1 is free.
+		let third_result =
+			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), third_sync_committee_update);
+		assert_eq!(third_result.unwrap().pays_fee, Pays::No);
 	});
 }
 
