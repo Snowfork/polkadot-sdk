@@ -3,16 +3,20 @@
 use crate as ethereum_beacon_client;
 use crate::config;
 use frame_support::{
-	derive_impl, dispatch::DispatchResult, pallet_prelude::Weight, parameter_types,
+	derive_impl,
+	dispatch::DispatchResult,
+	migrations::MultiStepMigrator,
+	pallet_prelude::Weight,
+	parameter_types,
+	traits::{ConstU32, OnFinalize, OnInitialize},
 };
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::inbound::{Log, Proof};
+use sp_runtime::BuildStorage;
 use sp_std::default::Default;
 use std::{fs::File, path::PathBuf};
 
 type Block = frame_system::mocking::MockBlock<Test>;
-use frame_support::traits::ConstU32;
-use sp_runtime::BuildStorage;
 
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
 where
