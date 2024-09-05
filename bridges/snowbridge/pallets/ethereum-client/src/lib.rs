@@ -438,7 +438,7 @@ pub mod pallet {
 		/// Applies a finalized beacon header update to the beacon client. If a next sync committee
 		/// is present in the update, verify the sync committee by converting it to a
 		/// SyncCommitteePrepared type. Stores the provided finalized header. Updates are free
-		/// if the certain conditions are met, least of which being a successful update.
+		/// if the certain conditions specified in `check_refundable` are met.
 		fn apply_update(update: &Update) -> DispatchResultWithPostInfo {
 			let latest_finalized_state =
 				FinalizedBeaconState::<T>::get(LatestFinalizedBlockRoot::<T>::get())
@@ -662,9 +662,11 @@ pub mod pallet {
 				return Pays::No;
 			}
 
-			// If free headers are allowed and the latest finalized header is larger than the
-			// minimum slot interval, the header import transaction is free.
-			if update.finalized_header.slot >= latest_slot + T::FreeHeadersInterval::get() as u64 {
+			// If the latest finalized header is larger than the minimum slot interval, the header
+			// import transaction is free.
+			if update.finalized_header.slot >=
+				latest_slot.saturating_add(T::FreeHeadersInterval::get() as u64)
+			{
 				return Pays::No;
 			}
 

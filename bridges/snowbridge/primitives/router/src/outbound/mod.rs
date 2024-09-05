@@ -11,7 +11,7 @@ use codec::{Decode, Encode};
 
 use frame_support::{ensure, traits::Get};
 use snowbridge_core::{
-	outbound::{Command, Message, SendMessage},
+	outbound::{AgentExecuteCommand, Command, Message, SendMessage},
 	AgentId, ChannelId, ParaId, TokenId, TokenIdOf,
 };
 use sp_core::{H160, H256};
@@ -44,8 +44,7 @@ impl<UniversalLocation, EthereumNetwork, OutboundQueue, AgentHashedDescription, 
 		OutboundQueue,
 		AgentHashedDescription,
 		ConvertAssetId,
-	>
-where
+	> where
 	UniversalLocation: Get<InteriorLocation>,
 	EthereumNetwork: Get<NetworkId>,
 	OutboundQueue: SendMessage<Balance = u128>,
@@ -295,7 +294,10 @@ where
 		let topic_id = match_expression!(self.next()?, SetTopic(id), id).ok_or(SetTopicExpected)?;
 
 		Ok((
-			Command::TransferNativeToken { agent_id: self.agent_id, token, recipient, amount },
+			Command::AgentExecute {
+				agent_id: self.agent_id,
+				command: AgentExecuteCommand::TransferToken { token, recipient, amount },
+			},
 			*topic_id,
 		))
 	}
@@ -316,6 +318,13 @@ where
 		}
 	}
 
+	/// Convert the xcm for Polkadot-native token from AH into the Command
+	/// To match transfers of Polkadot-native tokens, we expect an input of the form:
+	/// # ReserveAssetDeposited
+	/// # ClearOrigin
+	/// # BuyExecution
+	/// # DepositAsset
+	/// # SetTopic
 	fn send_native_tokens_message(&mut self) -> Result<(Command, [u8; 32]), XcmConverterError> {
 		use XcmConverterError::*;
 

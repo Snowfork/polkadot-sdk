@@ -11,10 +11,7 @@ use sp_std::default::Default;
 use std::{fs::File, path::PathBuf};
 
 type Block = frame_system::mocking::MockBlock<Test>;
-use frame_support::{
-	migrations::MultiStepMigrator,
-	traits::{ConstU32, OnFinalize, OnInitialize},
-};
+use frame_support::traits::ConstU32;
 use sp_runtime::BuildStorage;
 
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
@@ -107,10 +104,12 @@ parameter_types! {
 	};
 }
 
+pub const FREE_SLOTS_INTERVAL: u32 = config::SLOTS_PER_EPOCH as u32;
+
 impl ethereum_beacon_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
-	type FreeHeadersInterval = ConstU32<96>;
+	type FreeHeadersInterval = ConstU32<FREE_SLOTS_INTERVAL>;
 	type WeightInfo = ();
 }
 

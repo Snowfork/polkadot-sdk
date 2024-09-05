@@ -35,8 +35,14 @@
 //!
 //! Typically, Polkadot governance will use the `force_transfer_native_from_agent` and
 //! `force_update_channel` and extrinsics to manage agents and channels for system parachains.
+//!
+//! ## Polkadot-native tokens on Ethereum
+//!
+//! Tokens deposited on AssetHub pallet can be bridged to Ethereum as wrapped ERC20 tokens. As a
+//! prerequisite, the token should be registered first.
+//!
+//! * [`Call::register_token`]: Register a token location as a wrapped ERC20 contract on Ethereum.
 #![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(test)]
 mod mock;
 
@@ -214,10 +220,12 @@ pub mod pallet {
 		PricingParametersChanged {
 			params: PricingParametersOf<T>,
 		},
-		/// Register token
+		/// Register Polkadot-native token as a wrapped ERC20 token on Ethereum
 		RegisterToken {
-			asset_id: VersionedLocation,
-			token_id: H256,
+			/// Location of Polkadot-native token
+			location: VersionedLocation,
+			/// ID of Polkadot-native token on Ethereum
+			foreign_token_id: H256,
 		},
 	}
 
@@ -252,14 +260,15 @@ pub mod pallet {
 	pub type PricingParameters<T: Config> =
 		StorageValue<_, PricingParametersOf<T>, ValueQuery, T::DefaultPricingParameters>;
 
+	/// Lookup table for foreign to native token ID
 	#[pallet::storage]
-	#[pallet::getter(fn tokens)]
-	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, TokenId, Location, OptionQuery>;
+	pub type ForeignToNativeId<T: Config> =
+		StorageMap<_, Twox64Concat, TokenId, xcm::v4::Location, OptionQuery>;
 
+	/// Lookup table for native to foreign token ID
 	#[pallet::storage]
-	#[pallet::getter(fn location_tokens)]
-	pub type LocationToToken<T: Config> =
-		StorageMap<_, Twox64Concat, Location, TokenId, OptionQuery>;
+	pub type NativeToForeignId<T: Config> =
+		StorageMap<_, Twox64Concat, xcm::v4::Location, TokenId, OptionQuery>;
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -593,10 +602,14 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Sends a message to the Gateway contract to register a new
-		/// token that represents `asset`.
+		/// Registers a Polkadot-native token as a wrapped ERC20 token on Ethereum.
+		/// Privileged. Can only be called by root.
 		///
-		/// - `origin`: Must be `MultiLocation` from sibling parachain
+		/// Fee required: No
+		///
+		/// - `origin`: Must be root
+		/// - `location`: Location of the asset
+		/// - `metadata`: Metadata to include in the instantiated ERC20 contract on Ethereum
 		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::register_token())]
 		pub fn register_token(
@@ -604,14 +617,14 @@ pub mod pallet {
 			location: Box<VersionedLocation>,
 			metadata: AssetMetadata,
 		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+			ensure_root(origin)?;
 
-			let asset_loc: Location =
+			let location: Location =
 				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			let pays_fee = PaysFee::<T>::Yes(who);
+			let pays_fee = PaysFee::<T>::No;
 
-			Self::do_register_token(asset_loc, metadata, pays_fee)?;
+			Self::do_register_token(&location, metadata, pays_fee)?;
 
 			Ok(())
 		}
@@ -706,15 +719,16 @@ pub mod pallet {
 		}
 
 		pub(crate) fn do_register_token(
-			asset_loc: Location,
+			location: &Location,
 			metadata: AssetMetadata,
 			pays_fee: PaysFee<T>,
 		) -> Result<(), DispatchError> {
 			// Record the token id or fail if it has already been created
-			let token_id = TokenIdOf::convert_location(&asset_loc)
+			let token_id = TokenIdOf::convert_location(&location)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
-			Tokens::<T>::insert(token_id, asset_loc.clone());
-			LocationToToken::<T>::insert(asset_loc.clone(), token_id);
+
+			ForeignToNativeId::<T>::insert(token_id, location.clone());
+			NativeToForeignId::<T>::insert(location.clone(), token_id);
 
 			let command = Command::RegisterForeignToken {
 				token_id,
@@ -724,7 +738,10 @@ pub mod pallet {
 			};
 			Self::send(SECONDARY_GOVERNANCE_CHANNEL, command, pays_fee)?;
 
-			Self::deposit_event(Event::<T>::RegisterToken { asset_id: asset_loc.into(), token_id });
+			Self::deposit_event(Event::<T>::RegisterToken {
+				location: location.clone().into(),
+				foreign_token_id: token_id,
+			});
 
 			Ok(())
 		}
@@ -751,11 +768,11 @@ pub mod pallet {
 	}
 
 	impl<T: Config> MaybeEquivalence<TokenId, Location> for Pallet<T> {
-		fn convert(id: &TokenId) -> Option<Location> {
-			Tokens::<T>::get(id)
+		fn convert(foreign_id: &TokenId) -> Option<Location> {
+			ForeignToNativeId::<T>::get(foreign_id)
 		}
-		fn convert_back(loc: &Location) -> Option<TokenId> {
-			LocationToToken::<T>::get(loc)
+		fn convert_back(location: &Location) -> Option<TokenId> {
+			NativeToForeignId::<T>::get(location)
 		}
 	}
 }

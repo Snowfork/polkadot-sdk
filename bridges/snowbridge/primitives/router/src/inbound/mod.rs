@@ -168,8 +168,7 @@ impl<
 		ConvertAssetId,
 		UniversalLocation,
 		GlobalAssetHubLocation,
-	>
-where
+	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
@@ -227,8 +226,7 @@ impl<
 		ConvertAssetId,
 		UniversalLocation,
 		GlobalAssetHubLocation,
-	>
-where
+	> where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	InboundQueuePalletInstance: Get<u8>,
@@ -384,6 +382,9 @@ where
 		)
 	}
 
+	/// Constructs an XCM message destined for AssetHub that withdraws assets from the sovereign
+	/// account of the Gateway contract and either deposits those assets into a recipient account or
+	/// forwards the assets to another parachain.
 	fn convert_send_native_token(
 		message_id: H256,
 		chain_id: u64,
@@ -428,22 +429,35 @@ where
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
 			WithdrawAsset(asset.clone().into()),
-			SetFeesMode { jit_withdraw: true },
 		];
+
+		let bridge_location = Location::new(2, GlobalConsensus(network));
 
 		match dest_para_id {
 			Some(dest_para_id) => {
 				let dest_para_fee_asset: Asset = (Location::parent(), dest_para_fee).into();
 
 				instructions.extend(vec![
-					// Perform a deposit reserve to send to destination chain.
+					// `SetFeesMode` to pay transport fee from bridge sovereign, which depends on
+					//  unspent AH fees deposited to the bridge sovereign,
+					//  more context and analysis in https://github.com/paritytech/polkadot-sdk/pull/5546#discussion_r1744682864
+					SetFeesMode { jit_withdraw: true },
+					// `SetAppendix` ensures that `fees` are not trapped in any case
+					SetAppendix(Xcm(vec![DepositAsset {
+						assets: AllCounted(2).into(),
+						beneficiary: bridge_location,
+					}])),
+					// Perform a reserve withdraw to send to destination chain. Leave half of the
+					// asset_hub_fee for the delivery cost
 					InitiateReserveWithdraw {
-						assets: Wild(AllCounted(2)),
+						assets: Definite(
+							vec![asset.clone(), (Location::parent(), dest_para_fee).into()].into(),
+						),
 						reserve: Location::new(1, [Parachain(dest_para_id)]),
 						xcm: vec![
 							// Buy execution on target.
 							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
-							// Deposit asset to beneficiary.
+							// Deposit asset and fee to beneficiary.
 							DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
 							// Forward message id to destination parachain.
 							SetTopic(message_id.into()),
