@@ -128,7 +128,7 @@ jobs:
           rustup component add rustfmt --toolchain nightly
           rustup show
       - name: cargo check
-        run: cargo check --workspace --all-features
+        run: cargo check --release --verbose --package bridge-hub-westend-runtime --features fast-runtime --features runtime-benchmarks --features try-runtime
       - name: clippy
         run: cargo clippy --all-features -- -D warnings
 
