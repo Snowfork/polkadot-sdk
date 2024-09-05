@@ -655,67 +655,6 @@ pub mod bridging {
 
 	pub mod to_ethereum {
 		use super::*;
-		use assets_common::matching::FromNetwork;
-		use sp_std::collections::btree_set::BTreeSet;
-		use testnet_parachains_constants::westend::snowbridge::{
-			EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX,
-		};
-
-		parameter_types! {
-			/// User fee for ERC20 token transfer back to Ethereum.
-			/// (initially was calculated by test `OutboundQueue::calculate_fees` - ETH/WND 1/400 and fee_per_gas 20 GWEI = 2200698000000 + *25%)
-			/// Needs to be more than fee calculated from DefaultFeeConfig FeeConfigRecord in snowbridge:parachain/pallets/outbound-queue/src/lib.rs
-			/// Polkadot uses 10 decimals, Kusama,Rococo,Westend 12 decimals.
-			pub const DefaultBridgeHubEthereumBaseFee: Balance = 2_750_872_500_000;
-			pub storage BridgeHubEthereumBaseFee: Balance = DefaultBridgeHubEthereumBaseFee::get();
-			pub SiblingBridgeHubWithEthereumInboundQueueInstance: Location = Location::new(
-				1,
-				[
-					Parachain(SiblingBridgeHubParaId::get()),
-					PalletInstance(INBOUND_QUEUE_PALLET_INDEX)
-				]
-			);
-
-			/// Set up exporters configuration.
-			/// `Option<Asset>` represents static "base fee" which is used for total delivery fee calculation.
-			pub BridgeTable: sp_std::vec::Vec<NetworkExportTableItem> = sp_std::vec![
-				NetworkExportTableItem::new(
-					EthereumNetwork::get(),
-					Some(sp_std::vec![Junctions::Here]),
-					SiblingBridgeHub::get(),
-					Some((
-						XcmBridgeHubRouterFeeAssetId::get(),
-						BridgeHubEthereumBaseFee::get(),
-					).into())
-				),
-			];
-
-			/// Universal aliases
-			pub UniversalAliases: BTreeSet<(Location, Junction)> = BTreeSet::from_iter(
-				sp_std::vec![
-					(SiblingBridgeHubWithEthereumInboundQueueInstance::get(), GlobalConsensus(EthereumNetwork::get())),
-				]
-			);
-
-			pub EthereumBridgeTable: sp_std::vec::Vec<NetworkExportTableItem> = sp_std::vec::Vec::new().into_iter()
-				.chain(BridgeTable::get())
-				.collect();
-		}
-
-		pub type EthereumNetworkExportTable = xcm_builder::NetworkExportTable<EthereumBridgeTable>;
-
-		pub type IsTrustedBridgedReserveLocationForForeignAsset =
-			IsForeignConcreteAsset<FromNetwork<UniversalLocation, EthereumNetwork>>;
-
-		impl Contains<(Location, Junction)> for UniversalAliases {
-			fn contains(alias: &(Location, Junction)) -> bool {
-				UniversalAliases::get().contains(alias)
-			}
-		}
-	}
-
-	pub mod to_ethereum {
-		use super::*;
 		use alloc::collections::btree_set::BTreeSet;
 		use assets_common::matching::FromNetwork;
 		use testnet_parachains_constants::westend::snowbridge::{

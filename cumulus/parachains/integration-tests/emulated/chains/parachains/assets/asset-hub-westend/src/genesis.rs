@@ -89,13 +89,6 @@ pub fn genesis() -> Storage {
 					true,
 					ED,
 				),
-				// PenpalB's teleportable asset representation
-				(
-					PenpalBTeleportableAssetLocation::get(),
-					PenpalBSiblingSovereignAccount::get(),
-					true,
-					ED,
-				),
 			],
 			..Default::default()
 		},
