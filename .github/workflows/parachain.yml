@@ -124,7 +124,7 @@ jobs:
           rustup component add rustfmt --toolchain nightly
           rustup show
       - name: cargo check
-        run: |
+        run: >
           cargo check -p snowbridge-pallet-ethereum-client
           -p snowbridge-pallet-inbound-queue
           -p snowbridge-pallet-outbound-queue
@@ -136,7 +136,7 @@ jobs:
           -p snowbridge-router-primitives
           -p snowbridge-runtime-common
       - name: clippy
-        run: |
+        run: >
           cargo clippy -p snowbridge-pallet-ethereum-client
           -p snowbridge-pallet-inbound-queue
           -p snowbridge-pallet-outbound-queue
