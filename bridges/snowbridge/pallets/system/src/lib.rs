@@ -84,7 +84,6 @@ use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
-#[cfg(feature = "runtime-benchmarks")]
 use frame_support::traits::OriginTrait;
 
 pub use pallet::*;
@@ -133,28 +132,6 @@ where
 	Partial(AccountIdOf<T>),
 	/// No charge
 	No,
-}
-
-pub struct EnsureOriginWithControlFlag<T, F, A>(core::marker::PhantomData<(T, F, A)>);
-impl<T: Config, F: Get<bool>, A: Get<AccountIdOf<T>>>
-	EnsureOrigin<<T as frame_system::Config>::RuntimeOrigin> for EnsureOriginWithControlFlag<T, F, A>
-{
-	type Success = AccountIdOf<T>;
-	fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
-		o.into().and_then(|o| match o {
-			RawOrigin::Root => Ok(A::get()),
-			RawOrigin::Signed(t) if F::get() => Ok(t),
-			r => Err(T::RuntimeOrigin::from(r)),
-		})
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
-		let zero_account_id =
-			T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
-				.expect("infinite length input; no invalid inputs for type; qed");
-		Ok(RawOrigin::Signed(zero_account_id).into())
-	}
 }
 
 #[frame_support::pallet]
@@ -206,7 +183,7 @@ pub mod pallet {
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self::RuntimeOrigin>;
 
-		type RegisterTokenOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = AccountIdOf<Self>>;
+		type RegisterTokenOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 	}
 
 	#[pallet::event]
@@ -648,18 +625,23 @@ pub mod pallet {
 			location: Box<VersionedLocation>,
 			metadata: AssetMetadata,
 		) -> DispatchResultWithPostInfo {
-			let who = T::RegisterTokenOrigin::ensure_origin(origin)?;
+			T::RegisterTokenOrigin::ensure_origin_or_root(origin.clone())?;
+
+			let pays_fee = match origin.as_system_ref() {
+				Some(&RawOrigin::Root) => Ok((PaysFee::<T>::No, Pays::No)),
+				Some(&RawOrigin::Signed(ref who)) =>
+					Ok((PaysFee::<T>::Yes(who.clone()), Pays::Yes)),
+				_ => Err(BadOrigin),
+			}?;
 
 			let location: Location =
 				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			let pays_fee = PaysFee::<T>::Yes(who);
-
-			Self::do_register_token(&location, metadata, pays_fee)?;
+			Self::do_register_token(&location, metadata, pays_fee.0)?;
 
 			Ok(PostDispatchInfo {
 				actual_weight: Some(T::WeightInfo::register_token()),
-				pays_fee: Pays::No,
+				pays_fee: pays_fee.1,
 			})
 		}
 	}
