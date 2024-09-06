@@ -190,7 +190,6 @@ parameter_types! {
 		multiplier: FixedU128::from_rational(4, 3)
 	};
 	pub const InboundDeliveryCost: u128 = 1_000_000_000;
-	pub const EnableRegisterToken: bool = false;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

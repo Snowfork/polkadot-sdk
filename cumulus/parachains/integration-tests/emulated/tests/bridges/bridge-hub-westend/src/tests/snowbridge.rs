@@ -14,7 +14,7 @@
 // limitations under the License.
 use crate::imports::*;
 use asset_hub_westend_runtime::xcm_config::bridging::to_ethereum::DefaultBridgeHubEthereumBaseFee;
-use bridge_hub_westend_runtime::{xcm_config::TreasuryAccount, EthereumInboundQueue};
+use bridge_hub_westend_runtime::EthereumInboundQueue;
 use codec::{Decode, Encode};
 use emulated_integration_tests_common::{
 	PenpalBSiblingSovereignAccount, RESERVABLE_ASSET_ID, TELEPORTABLE_ASSET_ID,
@@ -294,7 +294,6 @@ fn transfer_relay_token() {
 		BridgeHubWestend::sibling_location_of(AssetHubWestend::para_id()),
 	);
 	BridgeHubWestend::fund_accounts(vec![(assethub_sovereign.clone(), INITIAL_FUND)]);
-	BridgeHubWestend::fund_accounts(vec![(TreasuryAccount::get(), INITIAL_FUND * 10)]);
 
 	let asset_id: Location = Location { parents: 1, interior: [].into() };
 	let expected_asset_id: Location =

@@ -19,29 +19,21 @@
 use bp_asset_hub_westend::ASSET_HUB_WESTEND_PARACHAIN_ID;
 use bp_bridge_hub_westend::BRIDGE_HUB_WESTEND_PARACHAIN_ID;
 use bp_polkadot_core::Signature;
-use bridge_hub_test_utils::{ExtBuilder, RuntimeHelper};
 use bridge_hub_westend_runtime::{
-	bridge_to_ethereum_config::EnableRegisterToken, bridge_to_rococo_config, xcm_config::XcmConfig,
-	AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages, Executive,
-	MessageQueueServiceWeight, Runtime, RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra,
-	UncheckedExtrinsic,
+	bridge_to_rococo_config, xcm_config::XcmConfig, AllPalletsWithoutSystem,
+	BridgeRejectObsoleteHeadersAndMessages, Executive, MessageQueueServiceWeight, Runtime,
+	RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra, UncheckedExtrinsic,
 };
 use codec::{Decode, Encode};
 use cumulus_primitives_core::XcmError::{FailedToTransactAsset, NotHoldingFees};
-use frame_support::{assert_err, assert_ok, parameter_types};
+use frame_support::parameter_types;
 use parachains_common::{AccountId, AuraId, Balance};
-use snowbridge_core::{outbound::SendError, AssetMetadata};
 use snowbridge_pallet_ethereum_client::WeightInfo;
 use sp_core::H160;
-use sp_keyring::AccountKeyring::{Alice, Ferdie};
+use sp_keyring::AccountKeyring::Alice;
 use sp_runtime::{
 	generic::{Era, SignedPayload},
-	traits::BadOrigin,
 	AccountId32,
-};
-use xcm::{
-	prelude::{GlobalConsensus, Location, Westend},
-	VersionedLocation,
 };
 
 parameter_types! {
@@ -207,44 +199,4 @@ fn construct_and_apply_extrinsic(
 	let xt = construct_extrinsic(origin, call);
 	let r = Executive::apply_extrinsic(xt);
 	r.unwrap()
-}
-
-#[test]
-fn enable_register_token_flag_works() {
-	ExtBuilder::<Runtime>::default()
-		.with_collators(collator_session_keys().collators())
-		.with_session_keys(collator_session_keys().session_keys())
-		.with_para_id(BRIDGE_HUB_WESTEND_PARACHAIN_ID.into())
-		.with_tracing()
-		.build()
-		.execute_with(|| {
-			let location: VersionedLocation =
-				VersionedLocation::from(Location::new(1, [GlobalConsensus(Westend)]));
-			let metadata: AssetMetadata = AssetMetadata {
-				name: "wnd".as_bytes().to_vec().try_into().unwrap(),
-				symbol: "wnd".as_bytes().to_vec().try_into().unwrap(),
-				decimals: 12,
-			};
-			assert_err!(
-				<snowbridge_pallet_system::Pallet<Runtime>>::register_token(
-					RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::origin_of(Ferdie.into()),
-					Box::new(location.clone()),
-					metadata.clone(),
-				),
-				BadOrigin
-			);
-			assert_ok!(<frame_system::Pallet<Runtime>>::set_storage(
-				RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::root_origin(),
-				vec![(EnableRegisterToken::key().to_vec(), true.encode())],
-			));
-			// Send error here means the origin check is passed and register token is enabled
-			assert_err!(
-				<snowbridge_pallet_system::Pallet<Runtime>>::register_token(
-					RuntimeHelper::<Runtime, AllPalletsWithoutSystem>::origin_of(Ferdie.into()),
-					Box::new(location.clone()),
-					metadata.clone(),
-				),
-				<snowbridge_pallet_system::Error<Runtime>>::Send(SendError::InvalidChannel)
-			);
-		});
 }
