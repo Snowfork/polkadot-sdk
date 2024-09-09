@@ -7,6 +7,7 @@ use frame_support::{
 	weights::IdentityFee,
 	PalletId,
 };
+use frame_system::EnsureRoot;
 use sp_core::H256;
 use xcm_executor::traits::ConvertLocation;
 
@@ -213,6 +214,7 @@ impl crate::Config for Test {
 	type EthereumNetwork = EthereumNetwork;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
+	type RegisterTokenOrigin = EnsureRoot<AccountId>;
 }
 
 // Build genesis storage according to the mock runtime.

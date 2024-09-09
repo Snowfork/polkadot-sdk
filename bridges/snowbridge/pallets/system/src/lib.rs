@@ -58,6 +58,7 @@ pub mod weights;
 pub use weights::*;
 
 use frame_support::{
+	dispatch::RawOrigin,
 	pallet_prelude::*,
 	traits::{
 		fungible::{Inspect, Mutate},
@@ -83,7 +84,6 @@ use sp_std::prelude::*;
 use xcm::prelude::*;
 use xcm_executor::traits::ConvertLocation;
 
-#[cfg(feature = "runtime-benchmarks")]
 use frame_support::traits::OriginTrait;
 
 pub use pallet::*;
@@ -182,6 +182,8 @@ pub mod pallet {
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self::RuntimeOrigin>;
+
+		type RegisterTokenOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 	}
 
 	#[pallet::event]
@@ -623,18 +625,23 @@ pub mod pallet {
 			location: Box<VersionedLocation>,
 			metadata: AssetMetadata,
 		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
+			T::RegisterTokenOrigin::ensure_origin_or_root(origin.clone())?;
+
+			let pays_fee = match origin.as_system_ref() {
+				Some(&RawOrigin::Root) => Ok((PaysFee::<T>::No, Pays::No)),
+				Some(&RawOrigin::Signed(ref who)) =>
+					Ok((PaysFee::<T>::Yes(who.clone()), Pays::Yes)),
+				_ => Err(BadOrigin),
+			}?;
 
 			let location: Location =
 				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
 
-			let pays_fee = PaysFee::<T>::No;
-
-			Self::do_register_token(&location, metadata, pays_fee)?;
+			Self::do_register_token(&location, metadata, pays_fee.0)?;
 
 			Ok(PostDispatchInfo {
 				actual_weight: Some(T::WeightInfo::register_token()),
-				pays_fee: Pays::No,
+				pays_fee: pays_fee.1,
 			})
 		}
 	}
