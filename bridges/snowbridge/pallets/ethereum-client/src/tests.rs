@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 Snowfork <hello@snowfork.com>
+pub use crate::mock::*;
 use crate::{
+	config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT},
 	functions::compute_period,
 	mock::{
 		get_message_verification_payload, load_checkpoint_update_fixture,
@@ -8,12 +10,9 @@ use crate::{
 		load_next_sync_committee_update_fixture, load_sync_committee_update_fixture,
 	},
 	sync_committee_sum, verify_merkle_branch, BeaconHeader, CompactBeaconState, Error,
-	FinalizedBeaconState, LatestFinalizedBlockRoot, NextSyncCommittee, SyncCommitteePrepared,
+	FinalizedBeaconState, LatestFinalizedBlockRoot, LatestFreeSyncCommitteeUpdatePeriod,
+	NextSyncCommittee, SyncCommitteePrepared,
 };
-
-pub use crate::mock::*;
-
-use crate::config::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT};
 use frame_support::{assert_err, assert_noop, assert_ok, pallet_prelude::Pays};
 use hex_literal::hex;
 use snowbridge_beacon_primitives::{
@@ -707,22 +706,26 @@ fn sync_committee_update_for_sync_committee_already_imported_are_not_free() {
 
 	new_tester().execute_with(|| {
 		assert_ok!(EthereumBeaconClient::process_checkpoint_update(&checkpoint));
+		assert_eq!(<LatestFreeSyncCommitteeUpdatePeriod<Test>>::get(), 0);
 
 		// Check that setting the next sync committee for period 0 is free (it is not set yet).
 		let result =
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), sync_committee_update.clone());
 		assert_ok!(result);
 		assert_eq!(result.unwrap().pays_fee, Pays::No);
+		assert_eq!(<LatestFreeSyncCommitteeUpdatePeriod<Test>>::get(), 0);
 
 		// Check that setting the next sync committee for period 0 again is not free.
 		let second_result =
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), second_sync_committee_update);
 		assert_eq!(second_result.unwrap().pays_fee, Pays::Yes);
+		assert_eq!(<LatestFreeSyncCommitteeUpdatePeriod<Test>>::get(), 0);
 
 		// Check that setting the next sync committee for period 1 is free.
 		let third_result =
 			EthereumBeaconClient::submit(RuntimeOrigin::signed(1), third_sync_committee_update);
 		assert_eq!(third_result.unwrap().pays_fee, Pays::No);
+		assert_eq!(<LatestFreeSyncCommitteeUpdatePeriod<Test>>::get(), 1);
 	});
 }
 
