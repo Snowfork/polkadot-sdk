@@ -102,14 +102,14 @@ pub struct MessageToXcm<
 	AccountId,
 	Balance,
 	ConvertAssetId,
-	UniversalLocation,
+	EthereumUniversalLocation,
 	GlobalAssetHubLocation,
 > where
 	CreateAssetCall: Get<CallIndex>,
 	CreateAssetDeposit: Get<u128>,
 	Balance: BalanceT,
 	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
-	UniversalLocation: Get<InteriorLocation>,
+	EthereumUniversalLocation: Get<InteriorLocation>,
 	GlobalAssetHubLocation: Get<Location>,
 {
 	_phantom: PhantomData<(
@@ -119,7 +119,7 @@ pub struct MessageToXcm<
 		AccountId,
 		Balance,
 		ConvertAssetId,
-		UniversalLocation,
+		EthereumUniversalLocation,
 		GlobalAssetHubLocation,
 	)>,
 }
@@ -156,7 +156,7 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
-		UniversalLocation,
+		EthereumUniversalLocation,
 		GlobalAssetHubLocation,
 	> ConvertMessage
 	for MessageToXcm<
@@ -166,7 +166,7 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
-		UniversalLocation,
+		EthereumUniversalLocation,
 		GlobalAssetHubLocation,
 	>
 where
@@ -176,7 +176,7 @@ where
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
-	UniversalLocation: Get<InteriorLocation>,
+	EthereumUniversalLocation: Get<InteriorLocation>,
 	GlobalAssetHubLocation: Get<Location>,
 {
 	type Balance = Balance;
@@ -215,7 +215,7 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
-		UniversalLocation,
+		EthereumUniversalLocation,
 		GlobalAssetHubLocation,
 	>
 	MessageToXcm<
@@ -225,7 +225,7 @@ impl<
 		AccountId,
 		Balance,
 		ConvertAssetId,
-		UniversalLocation,
+		EthereumUniversalLocation,
 		GlobalAssetHubLocation,
 	>
 where
@@ -235,7 +235,7 @@ where
 	Balance: BalanceT + From<u128>,
 	AccountId: Into<[u8; 32]>,
 	ConvertAssetId: MaybeEquivalence<TokenId, Location>,
-	UniversalLocation: Get<InteriorLocation>,
+	EthereumUniversalLocation: Get<InteriorLocation>,
 	GlobalAssetHubLocation: Get<Location>,
 {
 	fn convert_register_token(
@@ -398,90 +398,43 @@ where
 		let network = Ethereum { chain_id };
 		let asset_hub_fee_asset: Asset = (Location::parent(), asset_hub_fee).into();
 
-		let (dest_para_id, beneficiary, dest_para_fee) = match destination {
+		let beneficiary = match destination {
 			// Final destination is a 32-byte account on AssetHub
 			Destination::AccountId32 { id } =>
-				(None, Location::new(0, [AccountId32 { network: None, id }]), 0),
-			// Final destination is a 32-byte account on a sibling of AssetHub
-			Destination::ForeignAccountId32 { para_id, id, fee } =>
-				(Some(para_id), Location::new(0, [AccountId32 { network: None, id }]), fee),
-			// Final destination is a 20-byte account on a sibling of AssetHub
-			Destination::ForeignAccountId20 { para_id, id, fee } =>
-				(Some(para_id), Location::new(0, [AccountKey20 { network: None, key: id }]), fee),
-		};
+				Ok(Location::new(0, [AccountId32 { network: None, id }])),
+			_ => Err(ConvertMessageError::InvalidDestination),
+		}?;
 
-		let total_fees = asset_hub_fee.saturating_add(dest_para_fee);
-		let total_fee_asset: Asset = (Location::parent(), total_fees).into();
+		let total_fee_asset: Asset = (Location::parent(), asset_hub_fee).into();
 
 		let asset_loc =
 			ConvertAssetId::convert(&token_id).ok_or(ConvertMessageError::InvalidToken)?;
 
 		let mut reanchored_asset_loc = asset_loc.clone();
 		reanchored_asset_loc
-			.reanchor(&GlobalAssetHubLocation::get(), &UniversalLocation::get())
+			.reanchor(&GlobalAssetHubLocation::get(), &EthereumUniversalLocation::get())
 			.map_err(|_| ConvertMessageError::CannotReanchor)?;
 
 		let asset: Asset = (reanchored_asset_loc, amount).into();
 
 		let inbound_queue_pallet_index = InboundQueuePalletInstance::get();
 
-		let mut instructions = vec![
+		let instructions = vec![
 			ReceiveTeleportedAsset(total_fee_asset.clone().into()),
 			BuyExecution { fees: asset_hub_fee_asset, weight_limit: Unlimited },
 			DescendOrigin(PalletInstance(inbound_queue_pallet_index).into()),
 			UniversalOrigin(GlobalConsensus(network)),
 			WithdrawAsset(asset.clone().into()),
+			// Deposit both asset and fees to beneficiary so the fees will not get
+			// trapped. Another benefit is when fees left more than ED on AssetHub could be
+			// used to create the beneficiary account in case it does not exist.
+			DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
+			SetTopic(message_id.into()),
 		];
 
-		let bridge_location = Location::new(2, GlobalConsensus(network));
-
-		match dest_para_id {
-			Some(dest_para_id) => {
-				let dest_para_fee_asset: Asset = (Location::parent(), dest_para_fee).into();
-
-				instructions.extend(vec![
-					// `SetFeesMode` to pay transport fee from bridge sovereign, which depends on
-					//  unspent AH fees deposited to the bridge sovereign,
-					//  more context and analysis in https://github.com/paritytech/polkadot-sdk/pull/5546#discussion_r1744682864
-					SetFeesMode { jit_withdraw: true },
-					// `SetAppendix` ensures that `fees` are not trapped in any case
-					SetAppendix(Xcm(vec![DepositAsset {
-						assets: AllCounted(2).into(),
-						beneficiary: bridge_location,
-					}])),
-					// Perform a reserve withdraw to send to destination chain. Leave half of the
-					// asset_hub_fee for the delivery cost
-					InitiateReserveWithdraw {
-						assets: Definite(
-							vec![asset.clone(), (Location::parent(), dest_para_fee).into()].into(),
-						),
-						reserve: Location::new(1, [Parachain(dest_para_id)]),
-						xcm: vec![
-							// Buy execution on target.
-							BuyExecution { fees: dest_para_fee_asset, weight_limit: Unlimited },
-							// Deposit asset and fee to beneficiary.
-							DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
-							// Forward message id to destination parachain.
-							SetTopic(message_id.into()),
-						]
-						.into(),
-					},
-				]);
-			},
-			None => {
-				instructions.extend(vec![
-					// Deposit both asset and fees to beneficiary so the fees will not get
-					// trapped. Another benefit is when fees left more than ED on AssetHub could be
-					// used to create the beneficiary account in case it does not exist.
-					DepositAsset { assets: Wild(AllCounted(2)), beneficiary },
-				]);
-			},
-		}
-
-		// Forward message id to Asset Hub.
-		instructions.push(SetTopic(message_id.into()));
-
-		Ok((instructions.into(), total_fees.into()))
+		// `total_fees` to burn on this chain when sending `instructions` to run on AH (which also
+		// teleport fees)
+		Ok((instructions.into(), asset_hub_fee.into()))
 	}
 }
 

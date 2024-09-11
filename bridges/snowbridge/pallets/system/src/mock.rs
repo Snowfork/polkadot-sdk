@@ -166,11 +166,12 @@ impl snowbridge_pallet_outbound_queue::Config for Test {
 parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 	pub const AnyNetwork: Option<NetworkId> = None;
-	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Kusama);
+	pub const RelayNetwork: Option<NetworkId> = Some(NetworkId::Polkadot);
 	pub const RelayLocation: Location = Location::parent();
 	pub UniversalLocation: InteriorLocation =
 		[GlobalConsensus(RelayNetwork::get().unwrap()), Parachain(1013)].into();
 	pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 11155111 };
+	pub EthereumDestination: Location = Location::new(2,[GlobalConsensus(EthereumNetwork::get())]);
 }
 
 pub const DOT: u128 = 10_000_000_000;
@@ -209,7 +210,7 @@ impl crate::Config for Test {
 	type WeightInfo = ();
 	type InboundDeliveryCost = InboundDeliveryCost;
 	type UniversalLocation = UniversalLocation;
-	type EthereumNetwork = EthereumNetwork;
+	type EthereumLocation = EthereumDestination;
 	#[cfg(feature = "runtime-benchmarks")]
 	type Helper = ();
 }

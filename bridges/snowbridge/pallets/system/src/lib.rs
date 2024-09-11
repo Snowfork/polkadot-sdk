@@ -177,8 +177,8 @@ pub mod pallet {
 		/// This chain's Universal Location.
 		type UniversalLocation: Get<InteriorLocation>;
 
-		// The bridges configured Ethereum network with chain id.
-		type EthereumNetwork: Get<NetworkId>;
+		// The bridges configured Ethereum location
+		type EthereumLocation: Get<Location>;
 
 		#[cfg(feature = "runtime-benchmarks")]
 		type Helper: BenchmarkHelper<Self::RuntimeOrigin>;
@@ -266,15 +266,15 @@ pub mod pallet {
 	pub type PricingParameters<T: Config> =
 		StorageValue<_, PricingParametersOf<T>, ValueQuery, T::DefaultPricingParameters>;
 
-	/// Lookup table for foreign to native token ID
+	/// Lookup table for foreign token ID to native location relative to ethereum
 	#[pallet::storage]
 	pub type ForeignToNativeId<T: Config> =
-		StorageMap<_, Twox64Concat, TokenId, xcm::v4::Location, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, TokenId, xcm::v4::Location, OptionQuery>;
 
-	/// Lookup table for native to foreign token ID
+	/// Lookup table for native location relative to ethereum to foreign token ID
 	#[pallet::storage]
 	pub type NativeToForeignId<T: Config> =
-		StorageMap<_, Twox64Concat, xcm::v4::Location, TokenId, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, xcm::v4::Location, TokenId, OptionQuery>;
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -732,18 +732,20 @@ pub mod pallet {
 			metadata: AssetMetadata,
 			pays_fee: PaysFee<T>,
 		) -> Result<(), DispatchError> {
-			let bridge_location = Location::new(2, [GlobalConsensus(T::EthereumNetwork::get())]);
-			let mut location = location.clone();
-			location
-				.reanchor(&bridge_location, &T::UniversalLocation::get())
+			let ethereum_location = T::EthereumLocation::get();
+			// reanchor to Ethereum context
+			let location = location
+				.clone()
+				.reanchored(&ethereum_location, &T::UniversalLocation::get())
 				.map_err(|_| Error::<T>::LocationConversionFailed)?;
 
-			// Record the token id or fail if it has already been created
 			let token_id = TokenIdOf::convert_location(&location)
 				.ok_or(Error::<T>::LocationConversionFailed)?;
 
-			ForeignToNativeId::<T>::insert(token_id, location.clone());
-			NativeToForeignId::<T>::insert(location.clone(), token_id);
+			if !ForeignToNativeId::<T>::contains_key(token_id) {
+				NativeToForeignId::<T>::insert(location.clone(), token_id);
+				ForeignToNativeId::<T>::insert(token_id, location.clone());
+			}
 
 			let command = Command::RegisterForeignToken {
 				token_id,

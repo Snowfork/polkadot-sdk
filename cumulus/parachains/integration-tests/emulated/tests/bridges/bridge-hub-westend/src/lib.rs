@@ -52,10 +52,7 @@ mod imports {
 			BridgeHubWestendParaPallet as BridgeHubWestendPallet, BridgeHubWestendXcmConfig,
 		},
 		penpal_emulated_chain::{
-			penpal_runtime::xcm_config::{
-				LocalTeleportableToAssetHub as PenpalLocalTeleportableToAssetHub,
-				UniversalLocation as PenpalUniversalLocation,
-			},
+			penpal_runtime::xcm_config::UniversalLocation as PenpalUniversalLocation,
 			PenpalAssetOwner, PenpalBParaPallet as PenpalBPallet,
 		},
 		westend_emulated_chain::{
@@ -69,9 +66,8 @@ mod imports {
 		BridgeHubWestendPara as BridgeHubWestend,
 		BridgeHubWestendParaReceiver as BridgeHubWestendReceiver,
 		BridgeHubWestendParaSender as BridgeHubWestendSender, PenpalBPara as PenpalB,
-		PenpalBParaReceiver as PenpalBReceiver, PenpalBParaSender as PenpalBSender,
-		WestendRelay as Westend, WestendRelayReceiver as WestendReceiver,
-		WestendRelaySender as WestendSender,
+		PenpalBParaSender as PenpalBSender, WestendRelay as Westend,
+		WestendRelayReceiver as WestendReceiver, WestendRelaySender as WestendSender,
 	};
 
 	pub const ASSET_MIN_BALANCE: u128 = 1000;
