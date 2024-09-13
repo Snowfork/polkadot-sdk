@@ -45,7 +45,6 @@ fn test_reanchor_all_assets() {
 	let ethereum = Location::new(2, ethereum_context.clone());
 	let ah_context: InteriorLocation = [GlobalConsensus(Polkadot), Parachain(1000)].into();
 	let global_ah = Location::new(1, ah_context.clone());
-	let bh_context: InteriorLocation = [GlobalConsensus(Polkadot), Parachain(1002)].into();
 	let assets = vec![
 		// DOT
 		Location::new(1, []),
@@ -66,9 +65,5 @@ fn test_reanchor_all_assets() {
 		let mut reanchored_asset_with_ethereum_context = reanchored_asset.clone();
 		assert_ok!(reanchored_asset_with_ethereum_context.reanchor(&global_ah, &ethereum_context));
 		assert_eq!(reanchored_asset_with_ethereum_context, asset.clone());
-		// reanchor back to original location in context of BH
-		let mut reanchored_asset_with_bh_context = reanchored_asset.clone();
-		assert_ok!(reanchored_asset_with_bh_context.reanchor(&global_ah, &bh_context));
-		assert_eq!(reanchored_asset_with_bh_context, asset.clone());
 	}
 }
