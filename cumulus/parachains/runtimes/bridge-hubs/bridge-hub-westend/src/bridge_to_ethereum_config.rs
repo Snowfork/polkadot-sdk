@@ -30,7 +30,7 @@ use sp_core::H160;
 use testnet_parachains_constants::westend::{
 	currency::*,
 	fee::WeightToFee,
-	snowbridge::{EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX},
+	snowbridge::{EthereumLocation, EthereumNetwork, INBOUND_QUEUE_PALLET_INDEX},
 };
 
 use crate::xcm_config::RelayNetwork;
@@ -42,7 +42,9 @@ use sp_runtime::{
 	traits::{ConstU32, ConstU8, Keccak256},
 	FixedU128,
 };
-use xcm::prelude::{GlobalConsensus, Location, Parachain};
+use xcm::prelude::{GlobalConsensus, InteriorLocation, Location, Parachain};
+
+pub const SLOTS_PER_EPOCH: u32 = snowbridge_pallet_ethereum_client::config::SLOTS_PER_EPOCH as u32;
 
 /// Exports message to the Ethereum Gateway contract.
 pub type SnowbridgeExporter = EthereumBlobExporter<
@@ -67,9 +69,9 @@ parameter_types! {
 		rewards: Rewards { local: 1 * UNITS, remote: meth(1) },
 		multiplier: FixedU128::from_rational(1, 1),
 	};
-	pub GlobalAssetHub: Location = Location::new(1,[GlobalConsensus(RelayNetwork::get()),Parachain(westend_runtime_constants::system_parachain::ASSET_HUB_ID)]);
+	pub AssetHubFromEthereum: Location = Location::new(1,[GlobalConsensus(RelayNetwork::get()),Parachain(westend_runtime_constants::system_parachain::ASSET_HUB_ID)]);
+	pub EthereumUniversalLocation: InteriorLocation = [GlobalConsensus(EthereumNetwork::get())].into();
 }
-
 impl snowbridge_pallet_inbound_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Verifier = snowbridge_pallet_ethereum_client::Pallet<Runtime>;
@@ -89,8 +91,8 @@ impl snowbridge_pallet_inbound_queue::Config for Runtime {
 		AccountId,
 		Balance,
 		EthereumSystem,
-		UniversalLocation,
-		GlobalAssetHub,
+		EthereumUniversalLocation,
+		AssetHubFromEthereum,
 	>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
@@ -170,7 +172,7 @@ parameter_types! {
 impl snowbridge_pallet_ethereum_client::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
-	type FreeHeadersInterval = ConstU32<32>;
+	type FreeHeadersInterval = ConstU32<SLOTS_PER_EPOCH>;
 	type WeightInfo = crate::weights::snowbridge_pallet_ethereum_client::WeightInfo<Runtime>;
 }
 
@@ -186,6 +188,8 @@ impl snowbridge_pallet_system::Config for Runtime {
 	type Helper = ();
 	type DefaultPricingParameters = Parameters;
 	type InboundDeliveryCost = EthereumInboundQueue;
+	type UniversalLocation = UniversalLocation;
+	type EthereumLocation = EthereumLocation;
 }
 
 #[cfg(feature = "runtime-benchmarks")]

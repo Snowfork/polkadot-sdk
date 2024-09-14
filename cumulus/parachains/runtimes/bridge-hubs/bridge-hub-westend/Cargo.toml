@@ -90,7 +90,7 @@ bp-messages = { workspace = true }
 bp-parachains = { workspace = true }
 bp-polkadot-core = { workspace = true }
 bp-relayers = { workspace = true }
-bp-runtime = { features = ["test-helpers"], workspace = true }
+bp-runtime = { workspace = true }
 bp-rococo = { workspace = true }
 bp-westend = { workspace = true }
 pallet-bridge-grandpa = { workspace = true }
@@ -102,24 +102,24 @@ bridge-runtime-common = { workspace = true }
 bridge-hub-common = { workspace = true }
 
 # Ethereum Bridge (Snowbridge)
-snowbridge-beacon-primitives = { path = "../../../../../bridges/snowbridge/primitives/beacon", default-features = false }
-snowbridge-pallet-system = { path = "../../../../../bridges/snowbridge/pallets/system", default-features = false }
-snowbridge-system-runtime-api = { path = "../../../../../bridges/snowbridge/pallets/system/runtime-api", default-features = false }
-snowbridge-core = { path = "../../../../../bridges/snowbridge/primitives/core", default-features = false }
-snowbridge-pallet-ethereum-client = { path = "../../../../../bridges/snowbridge/pallets/ethereum-client", default-features = false }
-snowbridge-pallet-inbound-queue = { path = "../../../../../bridges/snowbridge/pallets/inbound-queue", default-features = false }
-snowbridge-pallet-outbound-queue = { path = "../../../../../bridges/snowbridge/pallets/outbound-queue", default-features = false }
-snowbridge-outbound-queue-runtime-api = { path = "../../../../../bridges/snowbridge/pallets/outbound-queue/runtime-api", default-features = false }
-snowbridge-router-primitives = { path = "../../../../../bridges/snowbridge/primitives/router", default-features = false }
-snowbridge-runtime-common = { path = "../../../../../bridges/snowbridge/runtime/runtime-common", default-features = false }
+snowbridge-beacon-primitives = { workspace = true }
+snowbridge-pallet-system = { workspace = true }
+snowbridge-system-runtime-api = { workspace = true }
+snowbridge-core = { workspace = true }
+snowbridge-pallet-ethereum-client = { workspace = true }
+snowbridge-pallet-inbound-queue = { workspace = true }
+snowbridge-pallet-outbound-queue = { workspace = true }
+snowbridge-outbound-queue-runtime-api = { workspace = true }
+snowbridge-router-primitives = { workspace = true }
+snowbridge-runtime-common = { workspace = true }
 
 
 [dev-dependencies]
-static_assertions = { workspace = true, default-features = true }
 bridge-hub-test-utils = { workspace = true, default-features = true }
 bridge-runtime-common = { features = ["integrity-test"], workspace = true, default-features = true }
+pallet-bridge-relayers = { features = ["integrity-test"], workspace = true }
 sp-keyring = { workspace = true, default-features = true }
-snowbridge-runtime-test-common = { workspace = true }
+snowbridge-runtime-test-common = { workspace = true, default-features = true }
 
 [features]
 default = ["std"]
@@ -190,7 +190,6 @@ std = [
 	"snowbridge-pallet-system/std",
 	"snowbridge-router-primitives/std",
 	"snowbridge-runtime-common/std",
-	"snowbridge-runtime-test-common/std",
 	"snowbridge-system-runtime-api/std",
 	"sp-api/std",
 	"sp-block-builder/std",
@@ -294,6 +293,6 @@ try-runtime = [
 # A feature that should be enabled when the runtime should be built for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller, like logging for example.
-on-chain-release-build = ["sp-api/disable-logging"]
+on-chain-release-build = []
 
 fast-runtime = []

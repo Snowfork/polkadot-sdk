@@ -3,19 +3,20 @@
 use crate as ethereum_beacon_client;
 use crate::config;
 use frame_support::{
-	derive_impl, dispatch::DispatchResult, pallet_prelude::Weight, parameter_types,
+	derive_impl,
+	dispatch::DispatchResult,
+	migrations::MultiStepMigrator,
+	pallet_prelude::Weight,
+	parameter_types,
+	traits::{ConstU32, OnFinalize, OnInitialize},
 };
 use snowbridge_beacon_primitives::{Fork, ForkVersions};
 use snowbridge_core::inbound::{Log, Proof};
+use sp_runtime::BuildStorage;
 use sp_std::default::Default;
 use std::{fs::File, path::PathBuf};
 
 type Block = frame_system::mocking::MockBlock<Test>;
-use frame_support::{
-	migrations::MultiStepMigrator,
-	traits::{ConstU32, OnFinalize, OnInitialize},
-};
-use sp_runtime::BuildStorage;
 
 fn load_fixture<T>(basename: String) -> Result<T, serde_json::Error>
 where
@@ -114,10 +115,12 @@ parameter_types! {
 	};
 }
 
+pub const FREE_SLOTS_INTERVAL: u32 = config::SLOTS_PER_EPOCH as u32;
+
 impl ethereum_beacon_client::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type ForkVersions = ChainForkVersions;
-	type FreeHeadersInterval = ConstU32<96>;
+	type FreeHeadersInterval = ConstU32<FREE_SLOTS_INTERVAL>;
 	type WeightInfo = ();
 }
 
