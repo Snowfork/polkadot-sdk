@@ -4,6 +4,7 @@ use super::*;
 use frame_support::ensure;
 use snowbridge_beacon_primitives::ExecutionProof;
 
+use snowbridge_beacon_primitives::merkle_proof::{generalized_index_length, subtree_index};
 use snowbridge_core::inbound::{
 	VerificationError::{self, *},
 	*,
@@ -115,12 +116,16 @@ impl<T: Config> Pallet<T> {
 			.hash_tree_root()
 			.map_err(|_| Error::<T>::BlockBodyHashTreeRootFailed)?;
 
+		let execution_header_g_index = Self::execution_header_gindex_at_slot(
+			execution_proof.header.slot,
+			T::ForkVersions::get(),
+		);
 		ensure!(
 			verify_merkle_branch(
 				execution_header_root,
 				&execution_proof.execution_branch,
-				config::EXECUTION_HEADER_SUBTREE_INDEX,
-				config::EXECUTION_HEADER_DEPTH,
+				subtree_index(execution_header_g_index),
+				generalized_index_length(execution_header_g_index),
 				execution_proof.header.body_root
 			),
 			Error::<T>::InvalidExecutionHeaderProof
