@@ -744,3 +744,25 @@ fn register_ethereum_native_token_fails() {
 		);
 	});
 }
+
+#[test]
+fn register_token_with_invalid_meta_data_fails() {
+	new_test_ext(true).execute_with(|| {
+		let origin = RuntimeOrigin::root();
+		let location = Location::new(
+			2,
+			[
+				GlobalConsensus(Ethereum { chain_id: 11155111 }),
+				AccountKey20 {
+					network: None,
+					key: hex!("87d1f7fdfEe7f651FaBc8bFCB6E086C278b77A7d"),
+				},
+			],
+		);
+		let versioned_location: Box<VersionedLocation> = Box::new(location.clone().into());
+		assert_noop!(
+			EthereumSystem::register_token(origin, versioned_location, AssetMetadata::default()),
+			Error::<Test>::InvalidMetadata
+		);
+	});
+}

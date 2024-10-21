@@ -625,7 +625,10 @@ pub mod pallet {
 			metadata: AssetMetadata,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			ensure!(metadata.validate(), Error::<T>::InvalidMetadata);
+			ensure!(
+				metadata.decimals > 0 && metadata.name.len() > 0 && metadata.symbol.len() > 0,
+				Error::<T>::InvalidMetadata
+			);
 
 			let location: Location =
 				(*location).try_into().map_err(|_| Error::<T>::UnsupportedLocationVersion)?;
